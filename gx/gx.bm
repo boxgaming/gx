@@ -1,0 +1,1429 @@
+'OPTION _EXPLICIT
+''$include: '../GX/GX.BI'
+'SUB GXOnGameEvent (event AS GXEvent)
+'END SUB
+
+SUB GXSleep (stime)
+    _DELAY stime
+END SUB
+
+FUNCTION GXSoundLoad (filename AS STRING)
+    GXSoundLoad = _SNDOPEN(filename)
+END FUNCTION
+
+SUB GXSoundPlay (sid AS LONG)
+    _SNDPLAY sid
+END SUB
+
+SUB GXSoundRepeat (sid AS LONG)
+    _SNDLOOP sid
+END SUB
+
+SUB GXSoundVolume (sid AS LONG, v)
+    _SNDVOL sid, v / 100
+END SUB
+
+SUB GXSoundPause (sid AS LONG)
+    _SNDPAUSE sid
+END SUB
+
+SUB GXSoundStop (sid AS LONG)
+    _SNDSTOP sid
+END SUB
+
+
+FUNCTION GXImageLoad (filename AS STRING)
+    DIM id AS LONG
+    DIM i AS INTEGER
+    FOR i = 0 TO gx_image_count - 1
+        IF filename = gx_images(i).filename THEN id = gx_images(i).id
+    NEXT i
+    IF id = 0 THEN
+        id = _LOADIMAGE(filename)
+        gx_image_count = gx_image_count + 1
+        REDIM _PRESERVE gx_images(gx_image_count) AS GXImage
+        gx_images(gx_image_count - 1).id = id
+        gx_images(gx_image_count - 1).filename = filename
+    END IF
+    GXImageLoad = id
+END FUNCTION
+
+SUB GXImageDraw (id AS INTEGER, x AS LONG, y AS LONG)
+    _PUTIMAGE (x, y), id
+END SUB
+
+SUB GXEntityAnimate (eid AS INTEGER, seq AS INTEGER, a AS INTEGER)
+    gx_entities(eid).animate = a
+    gx_entities(eid).spriteSeq = seq
+END SUB
+
+SUB GXEntityAnimateOff (eid AS INTEGER)
+    gx_entities(eid).animate = 0
+END SUB
+
+SUB GXEntityAnimateMode (eid AS INTEGER, mode AS INTEGER)
+    gx_entities(eid).animateMode = mode
+END SUB
+
+FUNCTION GXEntityAnimateMode (eid AS INTEGER)
+    GXEntityAnimateMode = gx_entities(eid).animateMode
+END FUNCTION
+
+FUNCTION GXScreenEntityCreate (imageFilename AS STRING, ewidth AS INTEGER, height AS INTEGER, seqFrames AS INTEGER)
+    DIM eid AS INTEGER
+    eid = GXEntityCreate(imageFilename, ewidth, height, seqFrames)
+    gx_entities(eid).screen = 1
+    GXScreenEntityCreate = eid
+END FUNCTION
+
+FUNCTION GXEntityCreate (imageFilename AS STRING, ewidth AS INTEGER, height AS INTEGER, seqFrames AS INTEGER)
+    DIM newent AS GXEntity
+    newent.x = 0
+    newent.y = 0
+    newent.z = 0
+    newent.height = height
+    newent.width = ewidth
+    newent.image = GXImageLoad(imageFilename)
+    newent.spriteFrame = 1
+    newent.spriteSeq = 1
+    newent.seqFrames = seqFrames
+    gx_entity_count = gx_entity_count + 1
+    REDIM _PRESERVE gx_entities(gx_entity_count) AS GXEntity
+    gx_entities(gx_entity_count) = newent
+    GXEntityCreate = gx_entity_count
+END FUNCTION
+
+SUB GXEntityHide (eid AS INTEGER)
+    gx_entities(eid).hidden = 1
+END SUB
+
+SUB GXEntityShow (eid AS INTEGER)
+    gx_entities(eid).hidden = 0
+END SUB
+
+SUB GXEntityDraw (ent AS GXEntity)
+    IF ent.hidden = 1 THEN EXIT SUB
+    DIM x, y AS LONG
+    IF ent.screen = 1 THEN
+        x = ent.x
+        y = ent.y
+    ELSE
+        x = ent.x - gx_scene.x
+        y = ent.y - gx_scene.y
+    END IF
+    GXSpriteDraw ent.image, x, y, ent.spriteSeq, ent.spriteFrame, ent.width, ent.height, gx_scene.image
+END SUB
+
+SUB GXEntityMove (eid AS INTEGER, x AS LONG, y AS LONG)
+    gx_entities(eid).x = gx_entities(eid).x + x
+    gx_entities(eid).y = gx_entities(eid).y + y
+END SUB
+
+SUB GXEntityPos (eid AS INTEGER, x AS LONG, y AS LONG)
+    gx_entities(eid).x = x
+    gx_entities(eid).y = y
+END SUB
+
+FUNCTION GXEntityX (eid AS INTEGER)
+    GXEntityX = gx_entities(eid).x
+END FUNCTION
+
+FUNCTION GXEntityY (eid AS INTEGER)
+    GXEntityY = gx_entities(eid).y
+END FUNCTION
+
+FUNCTION GXEntityWidth (eid AS INTEGER)
+    GXEntityWidth = gx_entities(eid).width
+END FUNCTION
+
+FUNCTION GXEntityHeight (eid AS INTEGER)
+    GXEntityHeight = gx_entities(eid).height
+END FUNCTION
+
+SUB GXEntityFrameNext (eid AS INTEGER)
+    IF gx_entities(eid).animateMode = GXANIMATE_SINGLE THEN
+        IF gx_entities(eid).spriteFrame + 1 >= gx_entities(eid).seqFrames THEN
+            EXIT SUB
+        END IF
+    END IF
+
+    gx_entities(eid).spriteFrame = gx_entities(eid).spriteFrame + 1
+    IF gx_entities(eid).spriteFrame > gx_entities(eid).seqFrames THEN
+        gx_entities(eid).spriteFrame = 1
+    END IF
+END SUB
+
+SUB GXEntityFrameSet (eid AS INTEGER, seq AS INTEGER, frame AS INTEGER)
+    gx_entities(eid).spriteSeq = seq
+    gx_entities(eid).spriteFrame = frame
+END SUB
+
+SUB GXEntityImageSet (eid AS INTEGER, filename AS STRING)
+    gx_entities(eid).image = GXImageLoad(filename)
+END SUB
+
+SUB GXEntityType (eid AS INTEGER, etype AS INTEGER)
+    gx_entities(eid).type = etype
+END SUB
+
+FUNCTION GXEntityType (eid AS INTEGER)
+    GXEntityType = gx_entities(eid).type
+END FUNCTION
+
+SUB GXEntityApplyGravity (eid AS INTEGER, gravity AS INTEGER)
+    gx_entities(eid).applyGravity = gravity
+END SUB
+
+FUNCTION GXEntityApplyGravity (eid AS INTEGER)
+    GXEntityApplyGravity = gx_entities(eid).applyGravity
+END FUNCTION
+
+SUB GXEntityCollisionOffsetSet (eid AS INTEGER, left AS INTEGER, top AS INTEGER, right AS INTEGER, bottom AS INTEGER)
+    gx_entities(eid).coLeft = left
+    gx_entities(eid).coTop = top
+    gx_entities(eid).coRight = right
+    gx_entities(eid).coBottom = bottom
+END SUB
+
+FUNCTION GXEntityCollisionOffsetLeft (eid AS INTEGER)
+    GXEntityCollisionOffsetLeft = gx_entities(eid).coLeft
+END FUNCTION
+
+FUNCTION GXEntityCollisionOffsetTop (eid AS INTEGER)
+    GXEntityCollisionOffsetTop = gx_entities(eid).coTop
+END FUNCTION
+
+FUNCTION GXEntityCollisionOffsetRight (eid AS INTEGER)
+    GXEntityCollisionOffsetRight = gx_entities(eid).coRight
+END FUNCTION
+
+FUNCTION GXEntityCollisionOffsetBottom (eid AS INTEGER)
+    GXEntityCollisionOffsetBottom = gx_entities(eid).coBottom
+END FUNCTION
+
+
+FUNCTION GXPlayerCreate (eid AS INTEGER)
+    gx_player_count = gx_player_count + 1
+    REDIM _PRESERVE gx_players(gx_player_count) AS GXPlayer
+    REDIM _PRESERVE gx_player_keymap(10, gx_player_count) AS GXAction
+    gx_players(gx_player_count).eid = eid
+    gx_players(gx_player_count).walkSpeed = 1
+    gx_players(gx_player_count).runSpeed = 2
+    gx_players(gx_player_count).jumpSpeed = 3
+    GXPlayerCreate = gx_player_count
+END FUNCTION
+
+SUB GXPlayerActionKey (pid AS INTEGER, actionType AS INTEGER, k AS LONG)
+    gx_player_keymap(actionType, pid).key = k
+END SUB
+
+FUNCTION GXPlayerActionKey (pid AS INTEGER, actionType AS INTEGER)
+    GXPlayerActionKey = gx_player_keymap(actionType, pid).key
+END FUNCTION
+
+SUB GXPlayerActionMoveX (pid AS INTEGER, actionType AS INTEGER, movex AS INTEGER)
+    gx_player_keymap(actionType, pid).movex = movex
+END SUB
+
+FUNCTION GXPlayerActionMoveX (pid AS INTEGER, actionType AS INTEGER)
+    GXPlayerActionMoveX = gx_player_keymap(actionType, pid).movex
+END FUNCTION
+
+SUB GXPlayerActionMoveY (pid AS INTEGER, actionType AS INTEGER, movey AS INTEGER)
+    gx_player_keymap(actionType, pid).movey = movey
+END SUB
+
+FUNCTION GXPlayerActionMoveY (pid AS INTEGER, actionType AS INTEGER)
+    GXPlayerActionMoveY = gx_player_keymap(actionType, pid).movey
+END FUNCTION
+
+SUB GXPlayerActionAnimationSeq (pid AS INTEGER, actionType AS INTEGER, animationSeq AS INTEGER)
+    gx_player_keymap(actionType, pid).animationSeq = animationSeq
+END SUB
+
+FUNCTION GXPlayerActionAnimationSeq (pid AS INTEGER, actionType AS INTEGER)
+    GXPlayerActionAnimationSeq = gx_player_keymap(actionType, pid).animationSeq
+END FUNCTION
+
+SUB GXPlayerActionAnimationMode (pid AS INTEGER, actionType AS INTEGER, animationMode AS INTEGER)
+    gx_player_keymap(actionType, pid).animationMode = animationMode
+END SUB
+
+FUNCTION GXPlayerActionAnimationMode (pid AS INTEGER, actionType AS INTEGER)
+    GXPlayerActionAnimationMode = gx_player_keymap(actionType, pid).animationMode
+END FUNCTION
+
+SUB GXPlayerActionAnimationSpeed (pid AS INTEGER, actionType AS INTEGER, animationSpeed AS INTEGER)
+    gx_player_keymap(actionType, pid).animationSpeed = animationSpeed
+END SUB
+
+FUNCTION GXPlayerActionAnimationSpeed (pid AS INTEGER, actionType AS INTEGER)
+    GXPlayerActionAnimationSpeed = gx_player_keymap(actionType, pid).animationSpeed
+END FUNCTION
+
+
+
+SUB GXFullScreenOn
+    _FULLSCREEN _SQUAREPIXELS
+END SUB
+
+SUB GXFullScreenOff
+    _FULLSCREEN _OFF
+END SUB
+
+FUNCTION GXBackgroundAdd (imageFilename AS STRING)
+    gx_bg_count = gx_bg_count + 1
+    REDIM _PRESERVE gx_bg(gx_bg_count) AS GXBackground
+    gx_bg(gx_bg_count).image = GXImageLoad(imageFilename)
+    gx_bg(gx_bg_count).mode = GXBG_STRETCH
+    GXBackgroundAdd = gx_bg_count
+END FUNCTION
+
+SUB GXBackgroundMode (gi AS INTEGER, mode AS INTEGER)
+    gx_bg(gi).mode = mode
+END SUB
+
+SUB GXBackgroundY (gi AS INTEGER, y AS INTEGER)
+    gx_bg(gi).y = y
+END SUB
+
+SUB GXBackgroundHeight (gi AS INTEGER, height AS INTEGER)
+    gx_bg(gi).height = height
+END SUB
+
+SUB GXBackgroundClear
+    gx_bg_count = 0
+    REDIM gx_bg(0) AS GXBackground
+END SUB
+
+SUB GXBackgroundDraw (bi AS INTEGER)
+    DIM factor, xfactor
+    DIM w AS LONG, h AS LONG, x AS LONG, y AS LONG
+
+    IF gx_bg(bi).mode = GXBG_STRETCH THEN
+        _PUTIMAGE , gx_bg(bi).image, gx_scene.image
+
+    ELSEIF gx_bg(bi).mode = GXBG_SCROLL THEN
+        factor = gx_scene.width / gx_scene.height
+        h = _HEIGHT(gx_bg(bi).image)
+        w = h * factor
+        'x = gx_bg(bi).xpos
+        xfactor = GXSceneX / (GXMapColumns * GXTilesetWidth)
+        x = xfactor * (_WIDTH(gx_bg(bi).image) - w)
+        _PUTIMAGE , gx_bg(bi).image, gx_scene.image, (x, 0)-(x + w, h)
+
+    ELSEIF gx_bg(bi).mode = GXBG_WRAP THEN
+        h = gx_bg(bi).height
+        w = GXSceneWidth
+        y = gx_bg(bi).y
+        x = (GXSceneX MOD _WIDTH(gx_bg(bi).image)) / 2
+        _PUTIMAGE (0, y)-(GXSceneWidth, y + h), gx_bg(bi).image, gx_scene.image, (x, 0)-(x + w, _HEIGHT(gx_bg(bi).image))
+        'if x +w > _WIDTH(gx_bg(bi).image) then
+        '    dim w2 as LONG
+        '    w2 = _Width(gx_bg(bi).image - x+w)
+        '    _PUTIMAGE (GXSceneWidth-w2,y)-(GXSceneWidth,y+h) , gx_bg(bi).image, gx_img_scene, (0, 0)-(w2, _HEIGHT(gx_bg(bi).image))
+        'end if
+
+    END IF
+END SUB
+
+SUB GXSceneBGSet (imageFilename AS STRING)
+    gx_bg_count = 1
+    REDIM _PRESERVE gx_bg(gx_bg_count) AS GXBackground
+    gx_bg(gx_bg_count).image = GXImageLoad(imageFilename)
+    gx_bg(gx_bg_count).mode = GXBG_STRETCH
+END SUB
+
+SUB GXSceneBGClear
+    GXBackgroundClear
+END SUB
+
+SUB GXSceneEmbedded (embedded AS INTEGER)
+    gx_scene.embedded = embedded
+END SUB
+
+FUNCTION GXSceneEmbedded
+    GXSceneEmbedded = gx_scene.embedded
+END FUNCTION
+
+SUB GXSceneCreate (swidth AS INTEGER, sheight AS INTEGER)
+    gx_scene.width = swidth
+    gx_scene.height = sheight
+
+    IF gx_scene.embedded = 0 THEN
+        SCREEN _NEWIMAGE(gx_scene.width, gx_scene.height, 32)
+    END IF
+
+    IF gx_scene.image THEN _FREEIMAGE gx_scene.image
+    gx_scene.image = _NEWIMAGE(gx_scene.width, gx_scene.height, 32)
+
+    IF NOT gx_img_blank THEN gx_img_blank = _NEWIMAGE(1, 1, 32)
+END SUB
+
+SUB GXSceneResize (swidth AS INTEGER, sheight AS INTEGER)
+    gx_scene.width = swidth
+    gx_scene.height = sheight
+
+    IF gx_scene.image THEN _FREEIMAGE (gx_scene.image)
+    gx_scene.image = _NEWIMAGE(gx_scene.width, gx_scene.height, 32)
+
+    IF (gx_scene.embedded = 0) THEN
+        SCREEN _NEWIMAGE(gx_scene.width, gx_scene.height, 32)
+    END IF
+    GX_UpdateSceneSize
+END SUB
+
+SUB GXSceneDestroy
+    GXSceneStop
+    _FREEIMAGE gx_scene.image
+    _FREEIMAGE gx_img_blank
+    gx_scene.image = 0
+    gx_img_blank = 0
+    DIM i AS INTEGER
+    FOR i = 0 TO gx_image_count - 1
+        _FREEIMAGE gx_images(i).id
+    NEXT i
+    gx_image_count = 0
+    REDIM gx_images(0) AS GXImage
+END SUB
+
+SUB GX_CustomEvent (eventType AS INTEGER)
+    DIM e AS GXEvent
+    e.event = eventType
+    GXOnGameEvent e
+END SUB
+
+SUB GX_CustomDrawEvent (eventType AS INTEGER)
+    _DEST gx_scene.image
+    GX_CustomEvent eventType
+    _DEST 0
+END SUB
+
+SUB GXFrameRate (frameRate AS INTEGER)
+    gx_framerate = frameRate
+END SUB
+
+FUNCTION GXFrameRate
+    GXFrameRate = gx_framerate
+END FUNCTION
+
+SUB GXSceneDraw
+    IF gx_map_loading THEN EXIT SUB
+    DIM ei AS INTEGER
+    DIM ei2 AS INTEGER
+    DIM frame AS INTEGER
+    DIM aframe AS INTEGER
+    frame = gx_ticks MOD gx_framerate + 1
+
+    ' Clear the background
+    _DONTBLEND gx_scene.image
+    _PUTIMAGE , gx_img_blank, gx_scene.image
+    _BLEND gx_scene.image
+
+    ' Draw background images, if present
+    DIM bi AS INTEGER
+    FOR bi = 1 TO gx_bg_count
+        GXBackgroundDraw bi
+    NEXT bi
+
+    'Call out to any custom screen drawing
+    GX_CustomDrawEvent GXEVENT_DRAWBG
+
+    ' Draw the map tiles
+    GXMapDraw
+
+    'Call out to any custom screen drawing
+    GX_CustomDrawEvent GXEVENT_DRAWMAP
+
+    ' Draw the entities
+    DIM e AS GXEntity
+    FOR ei = 1 TO gx_entity_count
+        e = gx_entities(ei)
+        IF e.screen = 0 THEN
+            IF GX_RectCollide(e.x, e.y, e.width, e.height, GXSceneX, GXSceneY, GXSceneWidth, GXSceneHeight) THEN
+                GXEntityDraw e
+            END IF
+        END IF
+        IF e.animate > 0 THEN
+            IF frame MOD (gx_framerate / e.animate) = 0 THEN
+                GXEntityFrameNext ei
+            END IF
+        END IF
+    NEXT ei
+
+    ' Draw the screen entities which should appear on top of the other game entities
+    ' and have a fixed position
+    FOR ei2 = 1 TO gx_entity_count
+        IF gx_entities(ei2).screen = 1 THEN
+            GXEntityDraw gx_entities(ei2)
+        END IF
+    NEXT ei2
+
+    'Call out to any custom screen drawing
+    '_DONTBLEND gx_scene.image
+    GX_CustomDrawEvent GXEVENT_DRAWSCREEN
+    '_BLEND gx_scene.image
+
+    ' Copy the background image to the screen
+    GX_CustomEvent GXEVENT_PAINTBEFORE
+    _DONTBLEND
+    _PUTIMAGE , gx_scene.image
+    _BLEND
+    GX_CustomEvent GXEVENT_PAINTAFTER
+
+END SUB
+
+SUB GXSceneMove (dx AS LONG, dy AS LONG)
+    gx_scene.x = gx_scene.x + dx
+    gx_scene.y = gx_scene.y + dy
+END SUB
+
+SUB GXScenePos (x AS LONG, y AS LONG)
+    gx_scene.x = x
+    gx_scene.y = y
+END SUB
+
+FUNCTION GXSceneX
+    GXSceneX = gx_scene.x
+END FUNCTION
+
+FUNCTION GXSceneY
+    GXSceneY = gx_scene.y
+END FUNCTION
+
+FUNCTION GXSceneWidth
+    GXSceneWidth = gx_scene.width
+END FUNCTION
+
+FUNCTION GXSceneHeight
+    GXSceneHeight = gx_scene.height
+END FUNCTION
+
+FUNCTION GXSceneColumns
+    GXSceneColumns = gx_scene.columns
+END FUNCTION
+
+FUNCTION GXSceneRows
+    GXSceneRows = gx_scene.rows
+END FUNCTION
+
+SUB GXSceneStart
+    gx_ticks = 0
+    gx_scene.active = 1
+    DO
+        _LIMIT gx_framerate
+        gx_ticks = gx_ticks + 1
+
+        ' Call custom game update logic
+        GX_CustomEvent GXEVENT_UPDATE
+
+        ' Perform any movement for registered player entities
+        DIM i AS INTEGER
+        FOR i = 1 TO gx_player_count
+            GX_PlayerAction i
+        NEXT i
+
+        ' Check for entity collisions
+        ' TODO: filter out non-moving entities
+        DIM e AS GXEntity
+        DIM eid AS INTEGER, ci AS INTEGER
+        REDIM centities(0) AS INTEGER
+        DIM ecount AS INTEGER
+        FOR eid = 1 TO gx_entity_count
+            e = gx_entities(eid)
+            IF e.screen = 0 THEN
+                ecount = GX_EntityCollision(eid, 0, 0, centities())
+                FOR ci = 1 TO ecount
+                    DIM ee AS GXEvent
+                    ee.event = GXEVENT_COLLISION_ENTITY
+                    ee.entity = eid
+                    ee.collisionEntity = centities(ci)
+                    GXOnGameEvent ee
+                NEXT ci
+            END IF
+        NEXT eid
+
+        'Redraw the scene
+        GXSceneDraw
+        _DISPLAY
+    LOOP WHILE gx_scene.active
+END SUB
+
+FUNCTION GXTicks
+    GXTicks = gx_ticks
+END FUNCTION
+
+SUB GXSceneStop
+    gx_scene.active = 0
+END SUB
+
+
+
+SUB GXMapCreate (columns AS INTEGER, rows AS INTEGER)
+    gx_map.columns = columns
+    gx_map.rows = rows
+
+    REDIM gx_map(gx_map.rows, gx_map.columns) AS GXMapTile
+END SUB
+
+FUNCTION GXMapColumns
+    GXMapColumns = gx_map.columns
+END FUNCTION
+
+FUNCTION GXMapRows
+    GXMapRows = gx_map.rows
+END FUNCTION
+
+SUB GXMapDraw
+    IF gx_map.rows < 1 THEN EXIT SUB
+
+    DIM tpos AS GXPosition
+    DIM srow, scol, row, col, layer AS LONG
+    DIM xoffset, yoffset, pcol, prow AS LONG
+    DIM t AS INTEGER
+    DIM rowOffset AS LONG
+    DIM colOffset AS LONG
+
+    xoffset = gx_scene.x MOD gx_tileset.width
+    pcol = FIX(gx_scene.x / gx_tileset.width)
+    yoffset = gx_scene.y MOD gx_tileset.height
+    prow = FIX(gx_scene.y / gx_tileset.height)
+
+    srow = 0
+    rowOffset = 0
+    FOR row = prow TO prow + GXSceneRows + 1
+        scol = 0
+        colOffset = 0
+        IF GXMapIsometric AND row MOD 2 = 1 THEN colOffset = GXTilesetWidth / 2
+        FOR col = pcol TO pcol + GXSceneColumns + 1
+            FOR layer = 1 TO GXMapTileDepth(col, row)
+                t = GXMapTile(col, row, layer)
+                GX_TilesetGetPos t, tpos
+                GXSpriteDraw gx_tileset.image, scol * gx_tileset.width - xoffset + colOffset, srow * gx_tileset.height - yoffset - rowOffset, tpos.y, tpos.x, gx_tileset.width, gx_tileset.height, gx_scene.image
+            NEXT layer
+            scol = scol + 1
+        NEXT col
+        srow = srow + 1
+        IF GXMapIsometric THEN rowOffset = rowOffset + (GXTilesetHeight * .75)
+    NEXT row
+END SUB
+
+FUNCTION GXMapTile (col AS INTEGER, row AS INTEGER, layer AS INTEGER)
+    IF col < 0 OR col >= gx_map.columns OR row < 0 OR row >= gx_map.rows THEN
+        GXMapTile = 0
+    ELSE
+        DIM mtile AS GXMapTile
+        mtile = gx_map(row, col)
+        IF layer = 1 THEN GXMapTile = mtile.layer1
+        IF layer = 2 THEN GXMapTile = mtile.layer2
+        IF layer = 3 THEN GXMapTile = mtile.layer3
+    END IF
+END FUNCTION
+
+FUNCTION GXMapTileDepth (col AS INTEGER, row AS INTEGER)
+    IF col < 0 OR col >= gx_map.columns OR row < 0 OR row >= gx_map.rows THEN
+        GXMapTileDepth = 0
+    ELSE
+        GXMapTileDepth = gx_map(row, col).depth
+    END IF
+END FUNCTION
+
+SUB GXMapTileAdd (tile AS INTEGER, col AS INTEGER, row AS INTEGER)
+    DIM layer AS INTEGER
+    IF (col >= 0 AND col <= gx_map.columns AND row >= 0 AND row < gx_map.rows) THEN
+        layer = gx_map(row, col).depth + 1
+        IF layer < 4 THEN
+            gx_map(row, col).depth = layer
+            IF layer = 1 THEN
+                gx_map(row, col).layer1 = tile
+            ELSEIF layer = 2 THEN
+                gx_map(row, col).layer2 = tile
+            ELSEIF layer = 3 THEN
+                gx_map(row, col).layer3 = tile
+            END IF
+        END IF
+    END IF
+END SUB
+
+SUB GXMapTileRemove (col AS INTEGER, row AS INTEGER)
+    DIM depth AS INTEGER
+    depth = gx_map(row, col).depth
+    IF depth > 0 THEN
+        gx_map(row, col).depth = depth - 1
+    END IF
+END SUB
+
+SUB GXMapTileClear (col AS INTEGER, row AS INTEGER)
+    DIM mt AS GXMapTile
+    gx_map(row, col) = mt
+END SUB
+
+SUB GXMapLoadOld (filename AS STRING)
+    gx_map.rows = 12
+    gx_map.columns = 400
+    REDIM gx_map(gx_map.rows, gx_map.columns) AS GXMapTile
+    DIM stuff(gx_map.columns - 1) AS _UNSIGNED _BYTE
+
+    OPEN filename FOR BINARY AS #1
+    DIM row, col AS INTEGER
+    row = 0
+    DO UNTIL EOF(1)
+        GET #1, , stuff()
+
+        IF row < gx_map.rows THEN
+            FOR col = 0 TO gx_map.columns - 1
+                GXMapTileAdd stuff(col), col, row
+            NEXT col
+        END IF
+
+        row = row + 1
+    LOOP
+    CLOSE #1
+END SUB
+
+SUB GXMapSave (filename AS STRING)
+    DIM version AS INTEGER
+    DIM col AS INTEGER
+    DIM row AS INTEGER
+    DIM layer AS INTEGER
+    DIM tile AS INTEGER
+    DIM depth AS INTEGER
+
+    version = 1
+
+    IF _FILEEXISTS(filename) THEN
+        KILL filename
+    END IF
+    OPEN filename FOR BINARY AS #1
+
+    ' Save the map version
+    PUT #1, , version
+
+    ' Save the map tile data
+    PUT #1, , gx_map.columns
+    PUT #1, , gx_map.rows
+
+    FOR row = 0 TO gx_map.rows - 1
+        FOR col = 0 TO gx_map.columns - 1
+            depth = GXMapTileDepth(col, row)
+            PUT #1, , depth
+            IF depth > 0 THEN
+                FOR layer = 1 TO depth
+                    tile = GXMapTile(col, row, layer)
+                    PUT #1, , tile
+                NEXT layer
+            END IF
+        NEXT col
+    NEXT row
+
+    ' Save the tilemap information
+    GX_WriteString gx_tileset.filename
+    PUT #1, , gx_tileset.width
+    PUT #1, , gx_tileset.height
+
+    ' Save the tileset image data
+    DIM tsize AS LONG
+    OPEN gx_tileset.filename FOR BINARY AS #2
+    tsize = LOF(2)
+    PUT #1, , tsize
+
+    DIM bytes(tsize) AS _UNSIGNED _BYTE
+    GET #2, , bytes()
+    PUT #1, , bytes()
+    CLOSE #2
+
+    CLOSE #1
+END SUB
+
+SUB GXMapLoad (filename AS STRING)
+    DIM version AS INTEGER
+    DIM col AS INTEGER
+    DIM row AS INTEGER
+    DIM layer AS INTEGER
+    DIM depth AS INTEGER
+    DIM tile AS INTEGER
+
+    gx_map_loading = 1
+
+    OPEN filename FOR BINARY AS #1
+
+    GET #1, 1, version
+    GET #1, , gx_map.columns
+    GET #1, , gx_map.rows
+
+    REDIM gx_map(gx_map.rows, gx_map.columns) AS GXMapTile
+
+    FOR row = 0 TO gx_map.rows - 1
+        FOR col = 0 TO gx_map.columns - 1
+            GET #1, , depth
+            IF depth > 0 THEN
+                FOR layer = 1 TO depth
+                    GET #1, , tile
+                    GXMapTileAdd tile, col, row
+                NEXT layer
+            END IF
+        NEXT col
+    NEXT row
+
+    ' Read the tileset information
+    DIM tilesetFilename AS STRING
+    DIM tilewidth AS INTEGER
+    DIM tileheight AS INTEGER
+    tilesetFilename = GX_ReadString
+    GET #1, , tilewidth
+    GET #1, , tileheight
+
+    ' If the map has an embedded tileset image, save it to a temp file location
+    DIM tsize AS LONG
+    GET #1, , tsize
+    IF NOT EOF(1) THEN
+        DIM tmpfile AS STRING
+        'DIM i AS LONG
+        'DIM b AS _UNSIGNED _BYTE
+        DIM bytes(tsize) AS _UNSIGNED _BYTE
+        tmpfile = GX_RemoveFileExtension(GX_GetFilename(filename)) + ".ts1"
+        IF NOT _DIREXISTS("./tmp") THEN MKDIR ("./tmp")
+        tilesetFilename = "./tmp/" + tmpfile
+        GET #1, , bytes()
+        OPEN tilesetFilename FOR BINARY AS #2
+        PUT #2, , bytes()
+        CLOSE #2
+    END IF
+
+    GXTilesetCreate tilesetFilename, tilewidth, tileheight
+
+    CLOSE #1
+
+    gx_map_loading = 0
+END SUB
+
+
+FUNCTION GXMapIsometric
+    GXMapIsometric = gx_map.isometric
+END FUNCTION
+
+SUB GXMapIsometric (iso AS INTEGER)
+    gx_map.isometric = iso
+    GX_UpdateSceneSize
+END SUB
+
+'SUB GXMapISOOn
+'    gx_map_iso = 1
+'    GX_UpdateSceneSize
+'END SUB
+
+'SUB GXMapISOOff
+'    gx_map_iso = 0
+'    GX_UpdateSceneSize
+'END SUB
+
+SUB GX_UpdateSceneSize
+    IF gx_tileset.width < 1 OR gx_tileset.height < 1 THEN EXIT SUB
+    IF GXMapIsometric THEN
+        gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
+        gx_scene.rows = FIX(gx_scene.height / (gx_tileset.height * .25))
+    ELSE
+        gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
+        gx_scene.rows = FIX(gx_scene.height / gx_tileset.height)
+    END IF
+END SUB
+
+SUB GX_WriteString (s AS STRING)
+    DIM l AS INTEGER
+    l = LEN(s)
+    PUT #1, , l
+    PUT #1, , s
+END SUB
+
+FUNCTION GX_ReadString$
+    DIM s AS STRING
+    DIM l AS INTEGER
+    DIM i AS INTEGER
+    DIM b AS _UNSIGNED _BYTE
+    GET #1, , l
+    FOR i = 1 TO l
+        GET #1, , b
+        s = s + CHR$(b)
+    NEXT i
+    GX_ReadString = s
+END FUNCTION
+
+
+SUB GXSpriteDraw (i AS LONG, x AS LONG, y AS LONG, seq AS INTEGER, frame AS INTEGER, swidth AS INTEGER, sheight AS INTEGER, imgdest AS LONG)
+    DIM xoffset, yoffset
+    xoffset = (frame - 1) * swidth
+    yoffset = (seq - 1) * sheight
+    IF imgdest THEN
+        _PUTIMAGE (x, y), i, imgdest, (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
+    ELSE
+        _PUTIMAGE (x, y), i, , (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
+    END IF
+END SUB
+
+
+SUB GXTilesetCreate (tilesetFilename AS STRING, tileWidth AS INTEGER, tileHeight AS INTEGER)
+    gx_tileset.filename = tilesetFilename
+    gx_tileset.width = tileWidth
+    gx_tileset.height = tileHeight
+
+    DIM tswidth, tsheight
+    gx_tileset.image = GXImageLoad(tilesetFilename)
+    tswidth = _WIDTH(gx_tileset.image)
+    tsheight = _HEIGHT(gx_tileset.image)
+
+    gx_tileset.columns = tswidth / gx_tileset.width
+    gx_tileset.rows = tsheight / gx_tileset.height
+
+    gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
+    gx_scene.rows = FIX(gx_scene.height / gx_tileset.height)
+END SUB
+
+
+SUB GX_TilesetGetPos (tilenum AS INTEGER, p AS GXPosition)
+    IF gx_tileset.columns = 0 THEN
+        p.x = 0
+        p.y = 0
+    ELSE
+        p.y = FIX(tilenum / gx_tileset.columns)
+        p.y = p.y + 1
+        p.x = tilenum MOD gx_tileset.columns + 1
+    END IF
+END SUB
+
+FUNCTION GXTilesetWidth
+    GXTilesetWidth = gx_tileset.width
+END FUNCTION
+
+FUNCTION GXTilesetHeight
+    GXTilesetHeight = gx_tileset.height
+END FUNCTION
+
+FUNCTION GXTilesetColumns
+    GXTilesetColumns = gx_tileset.columns
+END FUNCTION
+
+FUNCTION GXTilesetRows
+    GXTilesetRows = gx_tileset.rows
+END FUNCTION
+
+FUNCTION GXTilesetFilename$
+    GXTilesetFilename = gx_tileset.filename
+END FUNCTION
+
+FUNCTION GXTilesetImage
+    GXTilesetImage = gx_tileset.image
+END FUNCTION
+
+
+
+FUNCTION GX_GetFilename$ (filepath AS STRING)
+    DIM s AS STRING, i AS INTEGER
+    s = filepath
+    s = GX_StrReplace(s, "\", "/")
+    i = GX_StrLastIndexOf(s, "/")
+    s = MID$(s, i + 1)
+    GX_GetFilename = s
+END FUNCTION
+
+FUNCTION GX_GetParentPath$ (filepath AS STRING)
+    DIM s AS STRING, i AS INTEGER
+    s = filepath
+    s = GX_StrReplace(s, "\", "/")
+    i = GX_StrLastIndexOf(s, "/")
+    s = MID$(s, 1, i - 1)
+    GX_GetParentPath = s
+END FUNCTION
+
+FUNCTION GX_GetFileExtension$ (filename AS STRING)
+    DIM i AS INTEGER
+    i = GX_StrLastIndexOf(filename, ".")
+    GX_GetFileExtension = MID$(filename, i + 1)
+END FUNCTION
+
+FUNCTION GX_RemoveFileExtension$ (filename AS STRING)
+    DIM i AS INTEGER
+    i = GX_StrLastIndexOf(filename, ".")
+    GX_RemoveFileExtension = MID$(filename, 1, i - 1)
+END FUNCTION
+
+
+FUNCTION GX_StrIndexOf (s AS STRING, searchString AS STRING)
+    DIM idx AS INTEGER, i AS INTEGER
+
+    DIM slen AS INTEGER
+    slen = LEN(searchString)
+
+    FOR i = 1 TO LEN(s) - slen + 1
+        IF MID$(s, i, slen) = searchString THEN
+            idx = i
+            EXIT FOR
+        END IF
+    NEXT i
+
+    GX_StrIndexOf = idx
+END FUNCTION
+
+FUNCTION GX_StrLastIndexOf (s AS STRING, searchString AS STRING)
+    DIM idx AS INTEGER, i AS INTEGER
+
+    DIM slen AS INTEGER
+    slen = LEN(searchString)
+
+    FOR i = LEN(s) - slen + 1 TO 1 STEP -1
+        IF MID$(s, i, slen) = searchString THEN
+            idx = i
+            EXIT FOR
+        END IF
+    NEXT i
+
+    GX_StrLastIndexOf = idx
+END FUNCTION
+
+FUNCTION GX_StrReplace$ (s AS STRING, searchString AS STRING, newString AS STRING)
+    DIM ns AS STRING
+    'DIM idx AS INTEGER
+    DIM i AS INTEGER
+
+    DIM slen AS INTEGER
+    slen = LEN(searchString)
+
+    FOR i = 1 TO LEN(s) - slen + 1
+        IF MID$(s, i, slen) = searchString THEN
+            ns = ns + newString
+            i = i + slen - 1
+        ELSE
+            ns = ns + MID$(s, i, 1)
+        END IF
+    NEXT i
+
+    GX_StrReplace = ns
+END FUNCTION
+
+FUNCTION GXEntityCollide (eid1, eid2)
+    GXEntityCollide = GX_RectCollide(GXEntityX(eid1), GXEntityY(eid1), GXEntityWidth(eid1), GXEntityHeight(eid1), GXEntityX(eid2), GXEntityY(eid2), GXEntityWidth(eid2), GXEntityHeight(eid2))
+END FUNCTION
+
+FUNCTION GX_RectCollide (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
+
+    DIM r1x2%, r1y2%, r2x2%, r2y2%
+    r1x2% = r1x1% + r1w%
+    r1y2% = r1y1% + r1h%
+    r2x2% = r2x1% + r2w%
+    r2y2% = r2y1% + r2h%
+
+    '  !(x_1 > x_2+width_2 || x_1+width_1 < x_2 || y_1 > y_2+height_2 || y_1+height_1 < y_2);
+    'IF r1x1% > r2x1% OR r1x2% < r2x1% OR r1y1% > r2x2% OR r1y2% < r2y1% THEN
+    '    GX_RectCollide = 0
+    'ELSE
+    '    GX_RectCollide = 1
+    'END IF
+
+    GX_RectCollide = 0
+    IF r1x2% >= r2x1% THEN
+        IF r1x1% <= r2x2% THEN
+            IF r1y2% >= r2y1% THEN
+                IF r1y1% <= r2y2% THEN
+                    GX_RectCollide = 1
+                END IF
+            END IF
+        END IF
+    END IF
+
+END FUNCTION
+
+FUNCTION GXFontCreate (filename AS STRING, charWidth AS INTEGER, charHeight AS INTEGER, charref AS STRING)
+    gx_font_count = gx_font_count + 1
+    REDIM _PRESERVE gx_fonts(gx_font_count) AS GXFont
+    REDIM _PRESERVE gx_font_charmap(256, gx_font_count) AS GXPosition
+
+    ' Create a new game entity
+    gx_fonts(gx_font_count).eid = GXEntityCreate(filename, charWidth, charHeight, 1)
+    ' Hide the entity as we will not be displaying it as a normal sprite
+    GXEntityHide gx_fonts(gx_font_count).eid
+
+    ' map the character codes to the image location
+    DIM cx AS INTEGER, cy AS INTEGER, i AS INTEGER, a AS INTEGER
+    cx = 1
+    cy = 1
+    FOR i = 1 TO LEN(charref)
+        a = ASC(MID$(charref, i, 1))
+        IF a = 10 THEN
+            cx = 1
+            cy = cy + 1
+        ELSE
+            IF a >= 33 AND a <= 256 THEN
+                gx_font_charmap(a, gx_font_count).x = cx
+                gx_font_charmap(a, gx_font_count).y = cy
+            END IF
+            cx = cx + 1
+        END IF
+    NEXT i
+
+    GXFontCreate = gx_font_count
+END FUNCTION
+
+FUNCTION GXFontCharSpacing (fid AS LONG)
+    GXFontCharSpacing = gx_fonts(fid).charSpacing
+END FUNCTION
+
+SUB GXFontCharSpacing (fid AS LONG, charSpacing AS INTEGER)
+    gx_fonts(fid).charSpacing = charSpacing
+END SUB
+
+FUNCTION GXFontLineSpacing (fid AS LONG)
+    GXFontLineSpacing = gx_fonts(fid).lineSpacing
+END FUNCTION
+
+SUB GXFontLineSpacing (fid AS LONG, lineSpacing AS INTEGER)
+    gx_fonts(fid).lineSpacing = lineSpacing
+END SUB
+
+SUB GXBlitString (fid AS INTEGER, sx AS LONG, sy AS LONG, s AS STRING)
+    DIM i AS INTEGER
+    DIM a AS INTEGER
+    DIM c AS STRING
+    DIM cpos AS GXPosition
+    DIM x AS LONG: x = sx
+    DIM y AS LONG: y = sy
+    DIM font AS GXFont: font = gx_fonts(fid)
+    DIM e AS GXEntity: e = gx_entities(font.eid)
+
+    FOR i = 1 TO LEN(s)
+        c = MID$(s, i, 1)
+        a = ASC(c)
+        IF a = 10 THEN ' Line feed, move down to the next line
+            x = sx
+            y = y + e.height + font.lineSpacing
+        ELSEIF NOT a = 13 THEN ' Ignore Carriage Return
+            IF NOT a = 32 THEN ' Space character, nothing to draw
+                cpos = gx_font_charmap(a, fid)
+                GXSpriteDraw e.image, x, y, cpos.y, cpos.x, e.width, e.height, 0
+            END IF
+            x = x + e.width + font.charSpacing
+        END IF
+    NEXT i
+END SUB
+
+
+FUNCTION GX_ApplyGravity (eid AS LONG, movex AS INTEGER, movey AS INTEGER)
+    DIM tpos AS GXPosition
+    DIM tmove
+    DIM centity AS INTEGER
+    'DIM entity AS GXEntity
+    'entity = gx_entities(eid)
+
+    ' test to see if the entity is jumping or falling
+    IF gx_entities(eid).jumping = 1 OR GX_EntityTestMove(eid, 0, 1, tpos, centity) THEN
+
+        ' if just starting the fall or jump get a timestamp
+        IF gx_entities(eid).jumpstart = 0 THEN
+            gx_entities(eid).jumpstart = GXTicks
+
+        ELSE ' otherwise apply gravity to the y-movement
+
+            ' calculate the number of seconds since the gravity started being applied
+            DIM t
+            t = (GXTicks - gx_entities(eid).jumpstart) / GXFrameRate
+
+            ' calculate the y movement
+            DIM dy
+            dy = 9.8 * t ^ 2 / 2 + 1 - gx_entities(eid).jumpspeed
+            movey = dy
+
+            ' test to see if we have hit the block above or below
+            tmove = GX_EntityTestMove(eid, 0, movey, tpos, centity)
+            IF movey < 0 THEN
+
+                ' if we hit a block above, then zero out the jump speed
+                ' and make sure the entity does not move amove the collision offset
+                IF tmove = 0 THEN
+                    gx_entities(eid).jumping = 0
+                    gx_entities(eid).jumpspeed = 0
+                    IF (centity) THEN
+                        movey = (GXEntityY(centity) + GXEntityHeight(centity)) - (GXEntityY(eid) - GXEntityCollisionOffsetTop(eid))
+                    ELSE
+                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) - GXEntityHeight(eid) + GXEntityCollisionOffsetTop(eid))
+                    END IF
+                END IF
+
+            ELSEIF movey > 0 THEN
+
+                ' if we hit a block below, then zero out the jump speed and end the "fall"
+                ' and make sure the entity does not move below the collision offset
+                IF tmove = 0 THEN
+                    gx_entities(eid).jumping = 0
+                    IF (centity) THEN
+                        movey = GXEntityY(eid) - (GXEntityY(centity) - GXEntityHeight(eid))
+                    ELSE
+                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) + GXEntityHeight(eid) - GXEntityCollisionOffsetBottom(eid))
+                    END IF
+                    gx_entities(eid).jumpstart = 0
+                    gx_entities(eid).jumpspeed = 0
+                END IF
+            END IF
+            GX_ApplyGravity = 1
+        END IF
+    ELSE
+        ' no longer falling, reset the start time and jump speed
+        gx_entities(eid).jumpstart = 0
+        gx_entities(eid).jumpspeed = 0
+        GX_ApplyGravity = 0
+    END IF
+END FUNCTION
+
+FUNCTION GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS GXPosition, collisionEntity AS INTEGER)
+    tpos.x = -1
+    tpos.y = -1
+    'IF nocollision THEN GX_EntityTestMove = 1: EXIT FUNCTION
+
+    DIM tcount AS INTEGER
+    REDIM tiles(0) AS GXPosition
+    GX_EntityCollisionTiles entity, mx, my, tiles(), tcount
+
+
+    DIM move AS INTEGER
+    move = 1
+
+    ' Test for tile collision
+    DIM i AS INTEGER, j AS INTEGER
+    DIM tile AS INTEGER
+    FOR i = 0 TO tcount - 1
+        FOR j = 1 TO GXMapTileDepth(tiles(i).x, tiles(i).y)
+            tile = GXMapTile(tiles(i).x, tiles(i).y, j)
+            DIM e AS GXEvent
+            e.entity = entity
+            e.event = GXEVENT_COLLISION_TILE
+            e.collisionTile = tile
+            GXOnGameEvent e
+            IF e.collisionResult THEN
+                move = 0
+                tpos = tiles(i)
+            END IF
+        NEXT j
+    NEXT i
+
+    ' Test for entity collision
+    DIM entities(0) AS INTEGER
+    DIM ecount AS INTEGER
+    ecount = GX_EntityCollision(entity, mx, my, entities())
+    FOR i = 1 TO ecount
+        DIM ee AS GXEvent
+        ee.entity = entity
+        ee.event = GXEVENT_COLLISION_ENTITY
+        ee.collisionEntity = entities(i)
+        GXOnGameEvent ee
+        IF ee.collisionResult THEN
+            move = 0
+            collisionEntity = entities(i)
+        END IF
+    NEXT i
+
+    GX_EntityTestMove = move
+END FUNCTION
+
+
+FUNCTION GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGER, entities() AS INTEGER) ', ecount AS INTEGER)
+    DIM ecount AS INTEGER
+    ecount = 0
+
+    DIM i AS INTEGER
+    FOR i = 1 TO gx_entity_count
+        IF i <> eid THEN
+            ' TODO: only include entities that should be considered (e.g. visible)
+            IF GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
+                              GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
+                              GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
+                              GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid), _
+                              GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
+                              GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
+                              GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i), _
+                              GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)) THEN
+                ecount = ecount + 1
+                REDIM _PRESERVE entities(ecount) AS INTEGER
+                entities(ecount) = i
+            END IF
+        END IF
+    NEXT i
+
+    GX_EntityCollision = ecount
+END FUNCTION
+
+
+SUB GX_EntityCollisionTiles (entity AS INTEGER, movex AS INTEGER, movey AS INTEGER, tiles() AS GXPosition, tcount AS INTEGER)
+    DIM tx AS INTEGER, ty AS INTEGER
+    DIM tx0 AS INTEGER, txn AS INTEGER
+    DIM ty0 AS INTEGER, tyn AS INTEGER
+    DIM x AS INTEGER, y AS INTEGER, i AS INTEGER
+
+    IF movex <> 0 THEN
+        DIM startx AS INTEGER
+        startx = -1 + GXEntityCollisionOffsetLeft(entity) 'cx
+        IF movex > 0 THEN startx = GXEntityWidth(entity) + movex - GXEntityCollisionOffsetRight(entity) 'cx2
+        tx = FIX((GXEntityX(entity) + startx) / GXTilesetWidth)
+
+        ' This is a real brute force way to find the intersecting tiles.
+        ' We're basically testing every pixel along the edge of the entity's
+        ' collision rect and incrementing the collision tile count.
+        ' With a bit more math I'm sure we could avoid some extra loops here.
+        tcount = 0
+        ty0 = 0
+        FOR y = GXEntityY(entity) + GXEntityCollisionOffsetTop(entity) TO GXEntityY(entity) + GXEntityHeight(entity) - 1 - GXEntityCollisionOffsetBottom(entity)
+            ty = FIX(y / GXTilesetHeight)
+            IF tcount = 0 THEN ty0 = ty
+            IF NOT ty = tyn THEN
+                tcount = tcount + 1
+            END IF
+            tyn = ty
+        NEXT y
+
+        ' Add the range of detected tile positions to the return list
+        REDIM tiles(tcount) AS GXPosition
+        i = 0
+        FOR ty = ty0 TO tyn
+            tiles(i).x = tx
+            tiles(i).y = ty
+            i = i + 1
+        NEXT ty
+    END IF
+
+    IF movey <> 0 THEN
+        DIM starty AS INTEGER
+        starty = -1 + GXEntityCollisionOffsetTop(entity) 'cy
+        IF movey > 0 THEN starty = GXEntityHeight(entity) + movey - GXEntityCollisionOffsetBottom(entity) 'cy2
+        ty = FIX((GXEntityY(entity) + starty) / GXTilesetHeight)
+
+        ' This is a real brute force way to find the intersecting tiles.
+        ' We're basically testing every pixel along the edge of the entity's
+        ' collision rect and incrementing the collision tile count.
+        ' With a bit more math I'm sure we could avoid some extra loops here.
+        tcount = 0
+        tx0 = 0
+        FOR x = GXEntityX(entity) + GXEntityCollisionOffsetLeft(entity) TO GXEntityX(entity) + GXEntityWidth(entity) - 1 - GXEntityCollisionOffsetRight(entity)
+            tx = FIX(x / GXTilesetWidth)
+            IF tcount = 0 THEN tx0 = tx
+            IF NOT tx = txn THEN
+                tcount = tcount + 1
+            END IF
+            txn = tx
+        NEXT x
+
+
+        REDIM tiles(tcount) AS GXPosition
+        i = 0
+        FOR tx = tx0 TO txn
+            tiles(i).x = tx
+            tiles(i).y = ty
+            i = i + 1
+        NEXT tx
+    END IF
+END SUB
+
+
+FUNCTION GXKeyDown (k AS LONG)
+    IF k < 8 THEN
+        GXKeyDown = 0
+    ELSE
+        GXKeyDown = _KEYDOWN(k)
+
+        ' test for letter keys regardless of case
+        ' TODO: do the same thing for number keys
+        IF NOT GXKeyDown AND k >= 97 AND k <= 122 THEN
+            k = k - 32
+            GXKeyDown = _KEYDOWN(k)
+        END IF
+    END IF
+END FUNCTION
+
+
+SUB GX_PlayerAction (pid AS INTEGER)
+    DIM tpos AS GXPosition
+    DIM movex AS INTEGER, movey AS INTEGER
+    DIM centity AS INTEGER
+
+    DIM player AS GXPlayer
+    player = gx_players(pid)
+
+    DIM actionLeft AS GXAction, actionRight AS GXAction, actionUp AS GXAction, actionDown AS GXAction
+    DIM actionJump AS GXAction, actionJumpRight AS GXAction, actionJumpLeft AS GXAction
+    actionLeft = gx_player_keymap(GXACTION_MOVE_LEFT, pid)
+    actionRight = gx_player_keymap(GXACTION_MOVE_RIGHT, pid)
+    actionUp = gx_player_keymap(GXACTION_MOVE_UP, pid)
+    actionDown = gx_player_keymap(GXACTION_MOVE_DOWN, pid)
+    actionJump = gx_player_keymap(GXACTION_JUMP, pid)
+    actionJumpRight = gx_player_keymap(GXACTION_JUMP_RIGHT, pid)
+    actionJumpLeft = gx_player_keymap(GXACTION_JUMP_LEFT, pid)
+
+    IF GXKeyDown(actionDown.key) THEN
+        GXEntityAnimate player.eid, actionDown.animationSeq, actionDown.animationSpeed
+        IF GX_EntityTestMove(player.eid, 0, player.walkSpeed, tpos, centity) THEN
+            movey = player.walkSpeed
+        ELSE
+            movey = 0
+        END IF
+        movex = 0
+
+    ELSEIF GXKeyDown(actionUp.key) THEN
+        GXEntityAnimate player.eid, actionUp.animationSeq, actionUp.animationSpeed
+        IF GX_EntityTestMove(player.eid, 0, -player.walkSpeed, tpos, centity) THEN
+            movey = -player.walkSpeed
+        ELSE
+            movey = 0
+        END IF
+        movex = 0
+
+    ELSEIF GXKeyDown(actionRight.key) THEN
+        GXEntityAnimate player.eid, actionRight.animationSeq, actionRight.animationSpeed
+        IF GX_EntityTestMove(player.eid, player.walkSpeed, 0, tpos, centity) THEN
+            movex = player.walkSpeed
+        ELSE
+            movex = 0
+        END IF
+        movey = 0
+
+    ELSEIF GXKeyDown(actionLeft.key) THEN
+        GXEntityAnimate player.eid, actionLeft.animationSeq, actionLeft.animationSpeed
+        IF GX_EntityTestMove(player.eid, -player.walkSpeed, 0, tpos, centity) THEN
+            movex = -player.walkSpeed
+        ELSE
+            movex = 0
+        END IF
+        movey = 0
+
+    ELSE
+        GXEntityAnimateOff player.eid
+        movex = 0: movey = 0
+    END IF
+
+    IF gx_entities(player.eid).applyGravity THEN
+        IF GXKeyDown(actionJump.key) OR GXKeyDown(actionJumpLeft.key) OR GXKeyDown(actionJumpRight.key) THEN
+            IF gx_entities(player.eid).jumping = 0 AND GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
+                gx_entities(player.eid).jumpspeed = 3
+                gx_entities(player.eid).jumping = 1
+                GXEntityMove player.eid, 0, -1
+            END IF
+        END IF
+
+        IF GX_ApplyGravity(player.eid, movex, movey) THEN
+        END IF
+
+        IF gx_entities(player.eid).jumping THEN
+            IF movex < 0 AND actionJumpLeft.animationSeq THEN GXEntityAnimate player.eid, actionJumpLeft.animationSeq, actionJumpLeft.animationSpeed
+            IF movex > 0 AND actionJumpRight.animationSeq THEN GXEntityAnimate player.eid, actionJumpRight.animationSeq, actionJumpRight.animationSpeed
+
+        END IF
+    END IF
+
+
+    IF (movex <> 0 OR movey <> 0) THEN
+        GXEntityMove player.eid, movex, movey
+        'IF mode = MODE_PLATFORMER THEN
+        ' TODO: Add code for various methods of locking the screen to an entity position
+        IF gx_entities(player.eid).applyGravity THEN ' this is temporary until the above TODO is implemented
+            IF GXEntityX(player.eid) > GXSceneX + GXSceneWidth / 2 AND GXSceneX < GXMapColumns * GXTilesetWidth - GXSceneWidth THEN
+                GXSceneMove 1, 0
+            END IF
+        END IF
+    END IF
+
+END SUB
+

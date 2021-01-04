@@ -1,0 +1,90 @@
+
+FUNCTION GetOpenFileName$ (Title$, InitialDir$, Filter$, FilterIndex, Flags&) ', hWnd&)
+    '  Title$      - The dialog title.
+    '  InitialDir$ - If this left blank, it will use the directory where the last opened file is
+    '  located. Specify ".\" if you want to always use the current directory.
+    '  Filter$     - File filters separated by pipes (|) in the same format as using VB6 common dialogs.
+    '  FilterIndex - The initial file filter to use. Will be altered by user during the call.
+    '  Flags&      - Dialog flags. Will be altered by the user during the call.
+    '  hWnd&       - Your program's window handle that should be aquired by the FindWindow function.
+    '
+    ' Returns: Blank when cancel is clicked otherwise, the file name selected by the user.
+    ' FilterIndex and Flags& will be changed depending on the user's selections.
+
+    DIM OpenCall AS FILEDIALOGTYPE ' Needed for dialog call
+
+    fFilter$ = Filter$
+    FOR R = 1 TO LEN(fFilter$) ' Replace the pipes with character zero
+        IF MID$(fFilter$, R, 1) = "|" THEN MID$(fFilter$, R, 1) = CHR$(0)
+    NEXT R
+    fFilter$ = fFilter$ + CHR$(0)
+
+    lpstrFile$ = STRING$(2048, 0) ' For the returned file name
+    lpstrDefExt$ = STRING$(10, 0) ' Extension will not be added when this is not specified
+    OpenCall.lStructSize = LEN(OpenCall)
+    OpenCall.hwndOwner = _WINDOWHANDLE 'hWnd&
+    OpenCall.lpstrFilter = _OFFSET(fFilter$)
+    OpenCall.nFilterIndex = FilterIndex
+    OpenCall.lpstrFile = _OFFSET(lpstrFile$)
+    OpenCall.nMaxFile = LEN(lpstrFile$) - 1
+    OpenCall.lpstrFileTitle = OpenCall.lpstrFile
+    OpenCall.nMaxFileTitle = OpenCall.nMaxFile
+    OpenCall.lpstrInitialDir = _OFFSET(InitialDir$)
+    OpenCall.lpstrTitle = _OFFSET(Title$)
+    OpenCall.lpstrDefExt = _OFFSET(lpstrDefExt$)
+    OpenCall.flags = Flags&
+
+    Result = GetOpenFileNameA&(OpenCall) '            Do Open File dialog call!
+
+    IF Result THEN ' Trim the remaining zeros
+        GetOpenFileName$ = LEFT$(lpstrFile$, INSTR(lpstrFile$, CHR$(0)) - 1)
+        Flags& = OpenCall.flags
+        FilterIndex = OpenCall.nFilterIndex
+    END IF
+
+END FUNCTION
+
+FUNCTION GetSaveFileName$ (Title$, InitialDir$, Filter$, FilterIndex, Flags&) ', hWnd&)
+    '  Title$      - The dialog title.
+    '  InitialDir$ - If this left blank, it will use the directory where the last opened file is
+    '     located. Specify ".\" if you want to always use the current directory.
+    '  Filter$     - File filters separated by pipes (|) in the same format as VB6 common dialogs.
+    '  FilterIndex - The initial file filter to use. Will be altered by user during the call.
+    '  Flags&      - Dialog flags. Will be altered by the user during the call.
+    '  hWnd&       - Your program's window handle that should be aquired by the FindWindow function.
+
+    ' Returns: Blank when cancel is clicked otherwise, the file name entered by the user.
+    ' FilterIndex and Flags& will be changed depending on the user's selections.
+
+    DIM SaveCall AS FILEDIALOGTYPE ' Needed for dialog call
+
+    fFilter$ = Filter$
+    FOR R = 1 TO LEN(fFilter$) ' Replace the pipes with zeros
+        IF MID$(fFilter$, R, 1) = "|" THEN MID$(fFilter$, R, 1) = CHR$(0)
+    NEXT R
+    fFilter$ = fFilter$ + CHR$(0)
+
+    lpstrFile$ = STRING$(2048, 0) ' For the returned file name
+    lpstrDefExt$ = STRING$(10, 0) ' Extension will not be added when this is not specified
+    SaveCall.lStructSize = LEN(SaveCall)
+    SaveCall.hwndOwner = _WINDOWHANDLE 'hWnd&
+    SaveCall.lpstrFilter = _OFFSET(fFilter$)
+    SaveCall.nFilterIndex = FilterIndex
+    SaveCall.lpstrFile = _OFFSET(lpstrFile$)
+    SaveCall.nMaxFile = LEN(lpstrFile$) - 1
+    SaveCall.lpstrFileTitle = SaveCall.lpstrFile
+    SaveCall.nMaxFileTitle = SaveCall.nMaxFile
+    SaveCall.lpstrInitialDir = _OFFSET(InitialDir$)
+    SaveCall.lpstrTitle = _OFFSET(Title$)
+    SaveCall.lpstrDefExt = _OFFSET(lpstrDefExt$)
+    SaveCall.flags = Flags&
+
+    Result& = GetSaveFileNameA&(SaveCall) ' Do dialog call!
+
+    IF Result& THEN ' Trim the remaining zeros
+        GetSaveFileName$ = LEFT$(lpstrFile$, INSTR(lpstrFile$, CHR$(0)) - 1)
+        Flags& = SaveCall.flags
+        FilterIndex = SaveCall.nFilterIndex
+    END IF
+END FUNCTION
+
