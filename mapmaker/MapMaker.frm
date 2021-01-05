@@ -8,7 +8,7 @@ SUB __UI_LoadForm
     $RESIZE:ON
     DIM __UI_NewID AS LONG, __UI_RegisterResult AS LONG
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Form, "Form1", 857, 707, 0, 0, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_Form, "MainForm", 857, 707, 0, 0, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "GX Map Maker"
     Control(__UI_NewID).Font = SetFont("segoeui.ttf", 12)
@@ -36,7 +36,7 @@ SUB __UI_LoadForm
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tileset"
 
-    __UI_NewID = __UI_NewControl(__UI_Type_PictureBox, "PictureBox1", 543, 414, 2, 26, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_PictureBox, "Map", 543, 414, 2, 26, 0)
     __UI_RegisterResult = 0
     Control(__UI_NewID).BackColor = _RGB32(0, 0, 0)
     Control(__UI_NewID).HasBorder = True
@@ -150,13 +150,13 @@ SUB __UI_LoadForm
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "E&xit"
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "CreateNewMapLB", 150, 27, 17, 8, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblNewMap", 150, 27, 17, 8, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Create New Map"
     Control(__UI_NewID).Font = SetFont("segoeuib.ttf", 16)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "TileWidthLB", 123, 23, 17, 121, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileWidth", 123, 23, 17, 121, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tile Width:"
     Control(__UI_NewID).VAlign = __UI_Middle
@@ -214,13 +214,13 @@ SUB __UI_LoadForm
     SetCaption __UI_NewID, "Cancel"
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "CreateNewMapLB2", 150, 27, 17, 8, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblReplaceTileset", 150, 27, 17, 8, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Replace Tileset"
     Control(__UI_NewID).Font = SetFont("segoeuib.ttf", 16)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "TileWidthLB2", 123, 23, 17, 69, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileWidth2", 123, 23, 17, 69, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tile Width:"
     Control(__UI_NewID).VAlign = __UI_Middle
@@ -257,11 +257,11 @@ SUB __UI_LoadForm
 END SUB
 
 SUB __UI_AssignIDs
-    Form1 = __UI_GetID("Form1")
+    MainForm = __UI_GetID("MainForm")
     FileMenu = __UI_GetID("FileMenu")
     ViewMenu = __UI_GetID("ViewMenu")
     frmNewMap = __UI_GetID("frmNewMap")
-    PictureBox1 = __UI_GetID("PictureBox1")
+    Map = __UI_GetID("Map")
     FileMenuNew = __UI_GetID("FileMenuNew")
     Tiles = __UI_GetID("Tiles")
     ViewMenuZoomIn = __UI_GetID("ViewMenuZoomIn")
@@ -281,8 +281,8 @@ SUB __UI_AssignIDs
     btnCancel = __UI_GetID("btnCancel")
     FileMenuSaveAs = __UI_GetID("FileMenuSaveAs")
     FileMenuExit = __UI_GetID("FileMenuExit")
-    CreateNewMapLB = __UI_GetID("CreateNewMapLB")
-    TileWidthLB = __UI_GetID("TileWidthLB")
+    lblNewMap = __UI_GetID("lblNewMap")
+    lblTileWidth = __UI_GetID("lblTileWidth")
     lblTileHeight = __UI_GetID("lblTileHeight")
     txtTileWidth = __UI_GetID("txtTileWidth")
     txtTileHeight = __UI_GetID("txtTileHeight")
@@ -292,8 +292,8 @@ SUB __UI_AssignIDs
     btnRTSelectTilesetImage = __UI_GetID("btnRTSelectTilesetImage")
     btnReplaceTileset = __UI_GetID("btnReplaceTileset")
     btnRTCancel = __UI_GetID("btnRTCancel")
-    CreateNewMapLB2 = __UI_GetID("CreateNewMapLB2")
-    TileWidthLB2 = __UI_GetID("TileWidthLB2")
+    lblReplaceTileset = __UI_GetID("lblReplaceTileset")
+    lblTileWidth2 = __UI_GetID("lblTileWidth2")
     lblTileHeight2 = __UI_GetID("lblTileHeight2")
     txtRTTileWidth = __UI_GetID("txtRTTileWidth")
     txtRTTileHeight = __UI_GetID("txtRTTileHeight")

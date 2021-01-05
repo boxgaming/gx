@@ -12,6 +12,7 @@ FUNCTION GetOpenFileName$ (Title$, InitialDir$, Filter$, FilterIndex, Flags&) ',
     ' FilterIndex and Flags& will be changed depending on the user's selections.
 
     DIM OpenCall AS FILEDIALOGTYPE ' Needed for dialog call
+    DIM fFilter$, R, lpstrFile$, lpstrDefExt$, Result
 
     fFilter$ = Filter$
     FOR R = 1 TO LEN(fFilter$) ' Replace the pipes with character zero
@@ -57,6 +58,7 @@ FUNCTION GetSaveFileName$ (Title$, InitialDir$, Filter$, FilterIndex, Flags&) ',
     ' FilterIndex and Flags& will be changed depending on the user's selections.
 
     DIM SaveCall AS FILEDIALOGTYPE ' Needed for dialog call
+    DIM fFilter$, R, lpstrFile$, lpstrDefExt$, Result&
 
     fFilter$ = Filter$
     FOR R = 1 TO LEN(fFilter$) ' Replace the pipes with zeros

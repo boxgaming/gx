@@ -1,5 +1,5 @@
 'OPTION _EXPLICIT
-''$include: '../GX/GX.BI'
+''$include: '../gx/gx.bi'
 'SUB GXOnGameEvent (event AS GXEvent)
 'END SUB
 
@@ -1011,13 +1011,6 @@ FUNCTION GX_RectCollide (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
     r2x2% = r2x1% + r2w%
     r2y2% = r2y1% + r2h%
 
-    '  !(x_1 > x_2+width_2 || x_1+width_1 < x_2 || y_1 > y_2+height_2 || y_1+height_1 < y_2);
-    'IF r1x1% > r2x1% OR r1x2% < r2x1% OR r1y1% > r2x2% OR r1y2% < r2y1% THEN
-    '    GX_RectCollide = 0
-    'ELSE
-    '    GX_RectCollide = 1
-    'END IF
-
     GX_RectCollide = 0
     IF r1x2% >= r2x1% THEN
         IF r1x1% <= r2x2% THEN
@@ -1229,7 +1222,7 @@ FUNCTION GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGER,
     DIM i AS INTEGER
     FOR i = 1 TO gx_entity_count
         IF i <> eid THEN
-            ' TODO: only include entities that should be considered (e.g. visible)
+            ' TODO: only include entities that should be considered (e.g. visible, non-screen-level)
             IF GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
                               GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
                               GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
@@ -1416,7 +1409,6 @@ SUB GX_PlayerAction (pid AS INTEGER)
 
     IF (movex <> 0 OR movey <> 0) THEN
         GXEntityMove player.eid, movex, movey
-        'IF mode = MODE_PLATFORMER THEN
         ' TODO: Add code for various methods of locking the screen to an entity position
         IF gx_entities(player.eid).applyGravity THEN ' this is temporary until the above TODO is implemented
             IF GXEntityX(player.eid) > GXSceneX + GXSceneWidth / 2 AND GXSceneX < GXMapColumns * GXTilesetWidth - GXSceneWidth THEN
