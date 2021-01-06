@@ -8,8 +8,9 @@ The current alpha build has support for:
 - Scene(viewport) management
 - Entity(sprite) management
 - Player management
-- Tiled map creation and management (iso is a work in progress)
+- Tiled map creation and management
   - Including a world/map editor
+  - (Isometric support is a work in progress)
 - Bitmap font support
 - Collision detection
 - Basic gravity
