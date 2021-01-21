@@ -6,9 +6,8 @@ TYPE GXPosition
 END TYPE
 
 TYPE GXEntity
-    x AS LONG
-    y AS LONG
-    z AS LONG
+    x AS DOUBLE
+    y AS DOUBLE
     height AS INTEGER
     width AS INTEGER
     image AS INTEGER
@@ -25,11 +24,14 @@ TYPE GXEntity
     coRight AS INTEGER ' right collision offset
     coBottom AS INTEGER ' bottom collision offset
     applyGravity AS INTEGER ' used for applying gravity
+    ' TODO: some clarification may be needed here as these variables are used
+    '       both falling and jumping
     jumping AS INTEGER ' used for applying gravity
     jumpstart AS INTEGER ' used for applying gravity
-    jumpspeed AS INTEGER 'used for applying gravity
+    uid AS STRING * 10
+    vx AS INTEGER ' move vector x
+    vy AS INTEGER ' move vector y
 END TYPE
-
 
 TYPE GXEvent
     event AS INTEGER
@@ -87,6 +89,9 @@ TYPE GXScene
     image AS LONG
     active AS INTEGER
     embedded AS INTEGER
+    followMode AS INTEGER
+    followEntity AS INTEGER
+    constrainMode AS INTEGER
 END TYPE
 
 TYPE GXFont
@@ -118,7 +123,7 @@ gx_framerate = 90
 
 DIM SHARED gx_tileset AS GXTileset
 REDIM SHARED gx_map(0, 0) AS GXMapTile
-dim shared gx_map_loading as integer
+DIM SHARED gx_map_loading AS INTEGER
 
 REDIM SHARED gx_images(0) AS GXImage
 DIM SHARED gx_image_count AS INTEGER
@@ -140,6 +145,9 @@ DIM SHARED gx_font_count AS INTEGER
 REDIM SHARED gx_players(0) AS GXPlayer
 REDIM SHARED gx_player_keymap(0, 10) AS GXAction
 DIM SHARED gx_player_count AS INTEGER
+
+CONST GX_TRUE = -1
+CONST GX_FALSE = 0
 
 CONST GXEVENT_KEYDOWN = 1
 CONST GXEVENT_KEYUP = 2
@@ -180,9 +188,12 @@ CONST GXKEY_LEFT = 19200
 CONST GXKEY_RIGHT = 19712
 CONST GXKEY_UP = 18432
 CONST GXKEY_DOWN = 20480
-CONST GXKEY_PAGEUP = 18688
-CONST GXKEY_PAGEDOWN = 20736
+CONST GXKEY_PGUP = 18688
+CONST GXKEY_PGDN = 20736
+CONST GXKEY_INS = 200000
 CONST GXKEY_DEL = 21248
+CONST GXKEY_HOME = 200007
+CONST GXKEY_END = 200001
 CONST GXKEY_LCTRL = 100306
 CONST GXKEY_RCTRL = 100305
 CONST GXKEY_LALT = 100308
@@ -228,7 +239,6 @@ CONST GXKEY_X = 120
 CONST GXKEY_Y = 121
 CONST GXKEY_Z = 122
 
-'CONST GXMOVE_NONE = 0
 CONST GXACTION_MOVE_LEFT = 1
 CONST GXACTION_MOVE_RIGHT = 2
 CONST GXACTION_MOVE_UP = 3
@@ -236,7 +246,16 @@ CONST GXACTION_MOVE_DOWN = 4
 CONST GXACTION_JUMP = 5
 CONST GXACTION_JUMP_RIGHT = 6
 CONST GXACTION_JUMP_LEFT = 7
-CONST GXACTION_FIRE = 8
+
+CONST GXSCENE_FOLLOW_NONE = 0 '                no automatic scene positioning (default)
+CONST GXSCENE_FOLLOW_ENTITY_CENTER = 1 '       center the view on a specified entity
+CONST GXSCENE_FOLLOW_ENTITY_CENTER_X = 2 '     center the x axis of the scene on the specified entity
+CONST GXSCENE_FOLLOW_ENTITY_CENTER_Y = 3 '     center the y axis of the scene on the specified entity
+CONST GXSCENE_FOLLOW_ENTITY_CENTER_X_POS = 4 ' center the x axis of the scene only when moving to the right
+CONST GXSCENE_FOLLOW_ENTITY_CENTER_X_NEG = 5 ' center the x axis of the scene only when moving to the left
+
+CONST GXSCENE_CONSTRAIN_NONE = 0 '   no checking on scene position: can be negative, can exceed map size (default)
+CONST GXSCENE_CONSTRAIN_TO_MAP = 1 ' do not allow screen position outside the bounds of the map size
 
 DIM SHARED gx_ticks AS _UNSIGNED LONG
 
@@ -244,4 +263,3 @@ DIM SHARED GX_CRLF AS STRING: GX_CRLF = CHR$(13) + CHR$(10)
 DIM SHARED GX_LF AS STRING: GX_LF = CHR$(10)
 DIM SHARED GX_CR AS STRING: GX_CR = CHR$(13)
 
-DIM SHARED mode AS INTEGER ' REMOVE ME LATER

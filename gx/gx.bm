@@ -1,5 +1,5 @@
 'OPTION _EXPLICIT
-''$include: '../gx/gx.bi'
+''$include: '../../gx/gx.bi'
 'SUB GXOnGameEvent (event AS GXEvent)
 'END SUB
 
@@ -80,7 +80,6 @@ FUNCTION GXEntityCreate (imageFilename AS STRING, ewidth AS INTEGER, height AS I
     DIM newent AS GXEntity
     newent.x = 0
     newent.y = 0
-    newent.z = 0
     newent.height = height
     newent.width = ewidth
     newent.image = GXImageLoad(imageFilename)
@@ -119,10 +118,28 @@ SUB GXEntityMove (eid AS INTEGER, x AS LONG, y AS LONG)
     gx_entities(eid).y = gx_entities(eid).y + y
 END SUB
 
+
 SUB GXEntityPos (eid AS INTEGER, x AS LONG, y AS LONG)
     gx_entities(eid).x = x
     gx_entities(eid).y = y
 END SUB
+
+SUB GXEntityVX (eid AS INTEGER, vx AS INTEGER)
+    gx_entities(eid).vx = vx
+END SUB
+
+FUNCTION GXEntityVX (eid AS INTEGER)
+    GXEntityVX = gx_entities(eid).vx
+END FUNCTION
+
+SUB GXEntityVY (eid AS INTEGER, vy AS INTEGER)
+    gx_entities(eid).vy = vy
+END SUB
+
+FUNCTION GXEntityVY (eid AS INTEGER)
+    GXEntityVY = gx_entities(eid).vy
+END FUNCTION
+
 
 FUNCTION GXEntityX (eid AS INTEGER)
     GXEntityX = gx_entities(eid).x
@@ -170,6 +187,31 @@ FUNCTION GXEntityType (eid AS INTEGER)
     GXEntityType = gx_entities(eid).type
 END FUNCTION
 
+
+' TODO: Replace this implementation with a hash table lookup so we can scale
+'       efficiently when managing very large numbers of entities
+' ----------------------------------------------------------------------------
+SUB GXEntityUID (eid AS INTEGER, uid AS STRING * 10)
+    gx_entities(eid).uid = uid
+END SUB
+
+FUNCTION GXEntityUID$ (eid AS INTEGER)
+    GXEntityUID = gx_entities(eid).uid
+END FUNCTION
+
+FUNCTION GXEntityFind (uid AS STRING * 10)
+    GXEntityFind = 0
+    DIM i AS INTEGER
+    FOR i = 1 TO gx_entity_count
+        IF RTRIM$(gx_entities(i).uid) = uid THEN
+            GXEntityFind = i
+            EXIT FUNCTION
+        END IF
+    NEXT i
+END FUNCTION
+' ----------------------------------------------------------------------------
+
+
 SUB GXEntityApplyGravity (eid AS INTEGER, gravity AS INTEGER)
     gx_entities(eid).applyGravity = gravity
 END SUB
@@ -207,11 +249,19 @@ FUNCTION GXPlayerCreate (eid AS INTEGER)
     REDIM _PRESERVE gx_players(gx_player_count) AS GXPlayer
     REDIM _PRESERVE gx_player_keymap(10, gx_player_count) AS GXAction
     gx_players(gx_player_count).eid = eid
-    gx_players(gx_player_count).walkSpeed = 1
-    gx_players(gx_player_count).runSpeed = 2
-    gx_players(gx_player_count).jumpSpeed = 3
+    gx_players(gx_player_count).walkSpeed = 60
+    gx_players(gx_player_count).runSpeed = 120
+    gx_players(gx_player_count).jumpSpeed = 120
     GXPlayerCreate = gx_player_count
 END FUNCTION
+
+SUB GXPlayerMoveSpeed (pid AS INTEGER, moveSpeed AS INTEGER)
+    gx_players(pid).walkSpeed = moveSpeed
+END SUB
+
+SUB GXPlayerJumpSpeed (pid AS INTEGER, jumpSpeed AS INTEGER)
+    gx_players(pid).jumpSpeed = jumpSpeed
+END SUB
 
 SUB GXPlayerActionKey (pid AS INTEGER, actionType AS INTEGER, k AS LONG)
     gx_player_keymap(actionType, pid).key = k
@@ -370,7 +420,7 @@ SUB GXSceneResize (swidth AS INTEGER, sheight AS INTEGER)
     IF (gx_scene.embedded = 0) THEN
         SCREEN _NEWIMAGE(gx_scene.width, gx_scene.height, 32)
     END IF
-    GX_UpdateSceneSize
+    __GX_UpdateSceneSize
 END SUB
 
 SUB GXSceneDestroy
@@ -387,15 +437,15 @@ SUB GXSceneDestroy
     REDIM gx_images(0) AS GXImage
 END SUB
 
-SUB GX_CustomEvent (eventType AS INTEGER)
+SUB __GX_CustomEvent (eventType AS INTEGER)
     DIM e AS GXEvent
     e.event = eventType
     GXOnGameEvent e
 END SUB
 
-SUB GX_CustomDrawEvent (eventType AS INTEGER)
+SUB __GX_CustomDrawEvent (eventType AS INTEGER)
     _DEST gx_scene.image
-    GX_CustomEvent eventType
+    __GX_CustomEvent eventType
     _DEST 0
 END SUB
 
@@ -412,7 +462,7 @@ SUB GXSceneDraw
     DIM ei AS INTEGER
     DIM ei2 AS INTEGER
     DIM frame AS INTEGER
-    DIM aframe AS INTEGER
+    'DIM aframe AS INTEGER
     frame = gx_ticks MOD gx_framerate + 1
 
     ' Clear the background
@@ -427,20 +477,20 @@ SUB GXSceneDraw
     NEXT bi
 
     'Call out to any custom screen drawing
-    GX_CustomDrawEvent GXEVENT_DRAWBG
+    __GX_CustomDrawEvent GXEVENT_DRAWBG
 
     ' Draw the map tiles
     GXMapDraw
 
     'Call out to any custom screen drawing
-    GX_CustomDrawEvent GXEVENT_DRAWMAP
+    __GX_CustomDrawEvent GXEVENT_DRAWMAP
 
     ' Draw the entities
     DIM e AS GXEntity
     FOR ei = 1 TO gx_entity_count
         e = gx_entities(ei)
         IF e.screen = 0 THEN
-            IF GX_RectCollide(e.x, e.y, e.width, e.height, GXSceneX, GXSceneY, GXSceneWidth, GXSceneHeight) THEN
+            IF __GX_RectCollide(e.x, e.y, e.width, e.height, GXSceneX, GXSceneY, GXSceneWidth, GXSceneHeight) THEN
                 GXEntityDraw e
             END IF
         END IF
@@ -460,16 +510,14 @@ SUB GXSceneDraw
     NEXT ei2
 
     'Call out to any custom screen drawing
-    '_DONTBLEND gx_scene.image
-    GX_CustomDrawEvent GXEVENT_DRAWSCREEN
-    '_BLEND gx_scene.image
+    __GX_CustomDrawEvent GXEVENT_DRAWSCREEN
 
     ' Copy the background image to the screen
-    GX_CustomEvent GXEVENT_PAINTBEFORE
+    __GX_CustomEvent GXEVENT_PAINTBEFORE
     _DONTBLEND
     _PUTIMAGE , gx_scene.image
     _BLEND
-    GX_CustomEvent GXEVENT_PAINTAFTER
+    __GX_CustomEvent GXEVENT_PAINTAFTER
 
 END SUB
 
@@ -510,43 +558,175 @@ END FUNCTION
 SUB GXSceneStart
     gx_ticks = 0
     gx_scene.active = 1
+
     DO
         _LIMIT gx_framerate
         gx_ticks = gx_ticks + 1
 
         ' Call custom game update logic
-        GX_CustomEvent GXEVENT_UPDATE
+        __GX_CustomEvent GXEVENT_UPDATE
 
         ' Perform any movement for registered player entities
         DIM i AS INTEGER
         FOR i = 1 TO gx_player_count
-            GX_PlayerAction i
+            __GX_PlayerAction i
         NEXT i
 
-        ' Check for entity collisions
+        ' Check for entity movement and collisions
         ' TODO: filter out non-moving entities
-        DIM e AS GXEntity
-        DIM eid AS INTEGER, ci AS INTEGER
-        REDIM centities(0) AS INTEGER
-        DIM ecount AS INTEGER
-        FOR eid = 1 TO gx_entity_count
-            e = gx_entities(eid)
-            IF e.screen = 0 THEN
-                ecount = GX_EntityCollision(eid, 0, 0, centities())
-                FOR ci = 1 TO ecount
-                    DIM ee AS GXEvent
-                    ee.event = GXEVENT_COLLISION_ENTITY
-                    ee.entity = eid
-                    ee.collisionEntity = centities(ci)
-                    GXOnGameEvent ee
-                NEXT ci
+        __GX_SceneMoveEntities
+
+        ' Perform any auto-scene moves
+        DIM sx AS LONG, sy AS LONG
+        IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X THEN
+            sx = (GXEntityX(gx_scene.followEntity) + GXEntityWidth(gx_scene.followEntity) / 2) - GXSceneWidth / 2
+            GXScenePos sx, GXSceneY
+        END IF
+        IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
+            sy = (GXEntityY(gx_scene.followEntity) + GXEntityHeight(gx_scene.followEntity) / 2) - GXSceneHeight / 2
+            GXScenePos GXSceneX, sy
+        END IF
+        'IF gx_player_count > 0 THEN
+        '    DIM player AS GXPlayer
+        '    player = gx_players(1)
+        '    IF gx_entities(player.eid).applyGravity THEN ' this is temporary until the above TODO is implemented
+        '        IF GXEntityX(player.eid) > GXSceneX + GXSceneWidth / 2 AND GXSceneX < GXMapColumns * GXTilesetWidth - GXSceneWidth THEN
+        ''GXSceneMove 1, 0
+        '            GXScenePos GXEntityX(player.eid) - GXSceneWidth / 2, 0
+        '        END IF
+        '    END IF
+        'END IF
+        ' Check the scene move constraints
+        IF gx_scene.constrainMode = GXSCENE_CONSTRAIN_TO_MAP THEN
+            DIM mwidth AS INTEGER
+            DIM mheight AS INTEGER
+            mwidth = GXMapColumns * GXTilesetWidth
+            mheight = GXMapRows * GXTilesetHeight
+            sx = GXSceneX
+            IF sx < 0 THEN
+                sx = 0
+            ELSEIF sx + GXSceneWidth > mwidth THEN
+                sx = mwidth - GXSceneWidth
+                IF sx < 0 THEN sx = 0
             END IF
-        NEXT eid
+
+            sy = GXSceneY
+            'PRINT "GXSceneHeight:"; GXSceneHeight
+            'PRINT "sy-before:"; sy
+            IF sy < 0 THEN
+                sy = 0
+            ELSEIF sy + GXSceneHeight > mheight THEN
+                sy = mheight - GXSceneHeight
+                IF sy < 0 THEN sy = 0
+            END IF
+            'PRINT "sy-after:"; sy
+            '_DISPLAY
+            '_DELAY 2
+            GXScenePos sx, sy
+        END IF
 
         'Redraw the scene
         GXSceneDraw
         _DISPLAY
     LOOP WHILE gx_scene.active
+END SUB
+
+' TODO: revisit "follow" wording.
+SUB GXSceneFollowEntity (eid AS INTEGER, mode AS INTEGER)
+    gx_scene.followEntity = eid
+    gx_scene.followMode = mode
+END SUB
+
+SUB GXSceneConstrain (mode AS INTEGER)
+    gx_scene.constrainMode = mode
+END SUB
+
+SUB __GX_SceneMoveEntities
+    DIM frameFactor AS DOUBLE
+    frameFactor = 1 / gx_framerate
+
+    'DIM e AS GXEntity
+    DIM eid AS INTEGER, ci AS INTEGER
+    REDIM centities(0) AS INTEGER
+    DIM ecount AS INTEGER
+    FOR eid = 1 TO gx_entity_count
+        'e = gx_entities(eid)
+        IF gx_entities(eid).screen = 0 THEN
+            ' Check for entity collisions
+            ecount = __GX_EntityCollision(eid, 0, 0, centities())
+            FOR ci = 1 TO ecount
+                DIM ee AS GXEvent
+                ee.event = GXEVENT_COLLISION_ENTITY
+                ee.entity = eid
+                ee.collisionEntity = centities(ci)
+                GXOnGameEvent ee
+            NEXT ci
+
+            ' Move the entity
+            IF gx_entities(eid).applyGravity = 1 THEN
+                DIM tpos AS GXPosition
+                DIM centity AS INTEGER
+                DIM tmove AS INTEGER
+                tmove = __GX_EntityTestMove(eid, 0, 1, tpos, centity)
+                centity = 0
+                IF (gx_entities(eid).jumping = 1 AND gx_entities(eid).vy < 0) OR tmove THEN
+                    IF gx_entities(eid).jumpstart = 0 THEN
+                        gx_entities(eid).jumpstart = GXTicks - 45
+                    ELSE
+                        ' calculate the number of seconds since the gravity started being applied
+                        DIM t
+                        t = (GXTicks - gx_entities(eid).jumpstart) / GXFrameRate
+                        gx_entities(eid).vy = gx_entities(eid).vy + 9.8 * t ^ 2 / 2
+                    END IF
+                    'ELSE
+                END IF
+
+                ' test to see if we have hit the block or entity above or below
+                tmove = __GX_EntityTestMove(eid, 0, gx_entities(eid).vy * frameFactor, tpos, centity)
+                IF tmove = 0 THEN
+                    IF gx_entities(eid).vy < 0 THEN
+
+                        ' if we hit a block above, then reverse the current velocity
+                        ' and make sure the entity does not move above the collision offset
+                        gx_entities(eid).vy = -gx_entities(eid).vy
+                        '                    gx_entities(eid).jumpspeed = 0
+                        IF (centity) THEN
+                            gx_entities(eid).y = GXEntityY(centity) + GXEntityHeight(centity) - GXEntityCollisionOffsetTop(eid)
+                        ELSE
+                            gx_entities(eid).y = GXTilesetHeight * (tpos.y + 1) - GXEntityCollisionOffsetTop(eid)
+                        END IF
+
+                    ELSEIF gx_entities(eid).vy > 0 THEN
+
+                        ' if we hit a block below, then zero out the jump speed and end the "fall"
+                        ' and make sure the entity does not move below the collision offset
+                        gx_entities(eid).jumpstart = 0
+                        gx_entities(eid).jumping = 0
+                        gx_entities(eid).vy = 0
+
+                        IF (centity) THEN
+                            gx_entities(eid).y = GXEntityY(centity) - GXEntityHeight(eid)
+                        ELSE
+                            gx_entities(eid).y = GXTilesetHeight * (tpos.y) - (GXEntityHeight(eid) - GXEntityCollisionOffsetBottom(eid))
+                        END IF
+                    END IF
+
+                    'END IF
+                END IF
+
+            END IF ' end if apply gravity
+
+            ' apply the move vector to the entity's position
+            IF gx_entities(eid).vx THEN
+                gx_entities(eid).x = gx_entities(eid).x + gx_entities(eid).vx * frameFactor
+            END IF
+            IF gx_entities(eid).vy THEN
+                gx_entities(eid).y = gx_entities(eid).y + gx_entities(eid).vy * frameFactor
+            END IF
+        END IF
+    NEXT eid
 END SUB
 
 FUNCTION GXTicks
@@ -717,7 +897,7 @@ SUB GXMapSave (filename AS STRING)
     NEXT row
 
     ' Save the tilemap information
-    GX_WriteString gx_tileset.filename
+    __GX_WriteString gx_tileset.filename
     PUT #1, , gx_tileset.width
     PUT #1, , gx_tileset.height
 
@@ -769,7 +949,7 @@ SUB GXMapLoad (filename AS STRING)
     DIM tilesetFilename AS STRING
     DIM tilewidth AS INTEGER
     DIM tileheight AS INTEGER
-    tilesetFilename = GX_ReadString
+    tilesetFilename = __GX_ReadString
     GET #1, , tilewidth
     GET #1, , tileheight
 
@@ -781,7 +961,7 @@ SUB GXMapLoad (filename AS STRING)
         'DIM i AS LONG
         'DIM b AS _UNSIGNED _BYTE
         DIM bytes(tsize) AS _UNSIGNED _BYTE
-        tmpfile = GX_RemoveFileExtension(GX_GetFilename(filename)) + ".ts1"
+        tmpfile = __GX_RemoveFileExtension(__GX_GetFilename(filename)) + ".ts1"
         IF NOT _DIREXISTS("./tmp") THEN MKDIR ("./tmp")
         tilesetFilename = "./tmp/" + tmpfile
         GET #1, , bytes()
@@ -804,7 +984,7 @@ END FUNCTION
 
 SUB GXMapIsometric (iso AS INTEGER)
     gx_map.isometric = iso
-    GX_UpdateSceneSize
+    __GX_UpdateSceneSize
 END SUB
 
 'SUB GXMapISOOn
@@ -817,7 +997,7 @@ END SUB
 '    GX_UpdateSceneSize
 'END SUB
 
-SUB GX_UpdateSceneSize
+SUB __GX_UpdateSceneSize
     IF gx_tileset.width < 1 OR gx_tileset.height < 1 THEN EXIT SUB
     IF GXMapIsometric THEN
         gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
@@ -828,14 +1008,14 @@ SUB GX_UpdateSceneSize
     END IF
 END SUB
 
-SUB GX_WriteString (s AS STRING)
+SUB __GX_WriteString (s AS STRING)
     DIM l AS INTEGER
     l = LEN(s)
     PUT #1, , l
     PUT #1, , s
 END SUB
 
-FUNCTION GX_ReadString$
+FUNCTION __GX_ReadString$
     DIM s AS STRING
     DIM l AS INTEGER
     DIM i AS INTEGER
@@ -845,7 +1025,7 @@ FUNCTION GX_ReadString$
         GET #1, , b
         s = s + CHR$(b)
     NEXT i
-    GX_ReadString = s
+    __GX_ReadString = s
 END FUNCTION
 
 
@@ -916,38 +1096,38 @@ END FUNCTION
 
 
 
-FUNCTION GX_GetFilename$ (filepath AS STRING)
+FUNCTION __GX_GetFilename$ (filepath AS STRING)
     DIM s AS STRING, i AS INTEGER
     s = filepath
-    s = GX_StrReplace(s, "\", "/")
-    i = GX_StrLastIndexOf(s, "/")
+    s = __GX_StrReplace(s, "\", "/")
+    i = __GX_StrLastIndexOf(s, "/")
     s = MID$(s, i + 1)
-    GX_GetFilename = s
+    __GX_GetFilename = s
 END FUNCTION
 
-FUNCTION GX_GetParentPath$ (filepath AS STRING)
+FUNCTION __GX_GetParentPath$ (filepath AS STRING)
     DIM s AS STRING, i AS INTEGER
     s = filepath
-    s = GX_StrReplace(s, "\", "/")
-    i = GX_StrLastIndexOf(s, "/")
+    s = __GX_StrReplace(s, "\", "/")
+    i = __GX_StrLastIndexOf(s, "/")
     s = MID$(s, 1, i - 1)
-    GX_GetParentPath = s
+    __GX_GetParentPath = s
 END FUNCTION
 
-FUNCTION GX_GetFileExtension$ (filename AS STRING)
+FUNCTION __GX_GetFileExtension$ (filename AS STRING)
     DIM i AS INTEGER
-    i = GX_StrLastIndexOf(filename, ".")
-    GX_GetFileExtension = MID$(filename, i + 1)
+    i = __GX_StrLastIndexOf(filename, ".")
+    __GX_GetFileExtension = MID$(filename, i + 1)
 END FUNCTION
 
-FUNCTION GX_RemoveFileExtension$ (filename AS STRING)
+FUNCTION __GX_RemoveFileExtension$ (filename AS STRING)
     DIM i AS INTEGER
-    i = GX_StrLastIndexOf(filename, ".")
-    GX_RemoveFileExtension = MID$(filename, 1, i - 1)
+    i = __GX_StrLastIndexOf(filename, ".")
+    __GX_RemoveFileExtension = MID$(filename, 1, i - 1)
 END FUNCTION
 
 
-FUNCTION GX_StrIndexOf (s AS STRING, searchString AS STRING)
+FUNCTION __GX_StrIndexOf (s AS STRING, searchString AS STRING)
     DIM idx AS INTEGER, i AS INTEGER
 
     DIM slen AS INTEGER
@@ -960,10 +1140,10 @@ FUNCTION GX_StrIndexOf (s AS STRING, searchString AS STRING)
         END IF
     NEXT i
 
-    GX_StrIndexOf = idx
+    __GX_StrIndexOf = idx
 END FUNCTION
 
-FUNCTION GX_StrLastIndexOf (s AS STRING, searchString AS STRING)
+FUNCTION __GX_StrLastIndexOf (s AS STRING, searchString AS STRING)
     DIM idx AS INTEGER, i AS INTEGER
 
     DIM slen AS INTEGER
@@ -976,10 +1156,10 @@ FUNCTION GX_StrLastIndexOf (s AS STRING, searchString AS STRING)
         END IF
     NEXT i
 
-    GX_StrLastIndexOf = idx
+    __GX_StrLastIndexOf = idx
 END FUNCTION
 
-FUNCTION GX_StrReplace$ (s AS STRING, searchString AS STRING, newString AS STRING)
+FUNCTION __GX_StrReplace$ (s AS STRING, searchString AS STRING, newString AS STRING)
     DIM ns AS STRING
     'DIM idx AS INTEGER
     DIM i AS INTEGER
@@ -996,14 +1176,14 @@ FUNCTION GX_StrReplace$ (s AS STRING, searchString AS STRING, newString AS STRIN
         END IF
     NEXT i
 
-    GX_StrReplace = ns
+    __GX_StrReplace = ns
 END FUNCTION
 
-FUNCTION GXEntityCollide (eid1, eid2)
-    GXEntityCollide = GX_RectCollide(GXEntityX(eid1), GXEntityY(eid1), GXEntityWidth(eid1), GXEntityHeight(eid1), GXEntityX(eid2), GXEntityY(eid2), GXEntityWidth(eid2), GXEntityHeight(eid2))
+FUNCTION __GX_EntityCollide (eid1, eid2)
+    __GX_EntityCollide = __GX_RectCollide(GXEntityX(eid1), GXEntityY(eid1), GXEntityWidth(eid1), GXEntityHeight(eid1), GXEntityX(eid2), GXEntityY(eid2), GXEntityWidth(eid2), GXEntityHeight(eid2))
 END FUNCTION
 
-FUNCTION GX_RectCollide (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
+FUNCTION __GX_RectCollide (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
 
     DIM r1x2%, r1y2%, r2x2%, r2y2%
     r1x2% = r1x1% + r1w%
@@ -1011,12 +1191,12 @@ FUNCTION GX_RectCollide (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
     r2x2% = r2x1% + r2w%
     r2y2% = r2y1% + r2h%
 
-    GX_RectCollide = 0
+    __GX_RectCollide = 0
     IF r1x2% >= r2x1% THEN
         IF r1x1% <= r2x2% THEN
             IF r1y2% >= r2y1% THEN
                 IF r1y1% <= r2y2% THEN
-                    GX_RectCollide = 1
+                    __GX_RectCollide = 1
                 END IF
             END IF
         END IF
@@ -1098,80 +1278,80 @@ SUB GXBlitString (fid AS INTEGER, sx AS LONG, sy AS LONG, s AS STRING)
 END SUB
 
 
-FUNCTION GX_ApplyGravity (eid AS LONG, movex AS INTEGER, movey AS INTEGER)
-    DIM tpos AS GXPosition
-    DIM tmove
-    DIM centity AS INTEGER
-    'DIM entity AS GXEntity
-    'entity = gx_entities(eid)
+'FUNCTION GX_ApplyGravity (eid AS LONG, movex AS INTEGER, movey AS INTEGER)
+'    DIM tpos AS GXPosition
+'    DIM tmove
+'    DIM centity AS INTEGER
+'    'DIM entity AS GXEntity
+'    'entity = gx_entities(eid)
 
-    ' test to see if the entity is jumping or falling
-    IF gx_entities(eid).jumping = 1 OR GX_EntityTestMove(eid, 0, 1, tpos, centity) THEN
+'    ' test to see if the entity is jumping or falling
+'    IF gx_entities(eid).jumping = 1 OR GX_EntityTestMove(eid, 0, 1, tpos, centity) THEN
 
-        ' if just starting the fall or jump get a timestamp
-        IF gx_entities(eid).jumpstart = 0 THEN
-            gx_entities(eid).jumpstart = GXTicks
+'        ' if just starting the fall or jump get a timestamp
+'        IF gx_entities(eid).jumpstart = 0 THEN
+'            gx_entities(eid).jumpstart = GXTicks
 
-        ELSE ' otherwise apply gravity to the y-movement
+'        ELSE ' otherwise apply gravity to the y-movement
 
-            ' calculate the number of seconds since the gravity started being applied
-            DIM t
-            t = (GXTicks - gx_entities(eid).jumpstart) / GXFrameRate
+'            ' calculate the number of seconds since the gravity started being applied
+'            DIM t
+'            t = (GXTicks - gx_entities(eid).jumpstart) / GXFrameRate
 
-            ' calculate the y movement
-            DIM dy
-            dy = 9.8 * t ^ 2 / 2 + 1 - gx_entities(eid).jumpspeed
-            movey = dy
+'            ' calculate the y movement
+'            DIM dy
+'            dy = 9.8 * t ^ 2 / 2 + 1 - gx_entities(eid).jumpspeed
+'            movey = dy
 
-            ' test to see if we have hit the block above or below
-            tmove = GX_EntityTestMove(eid, 0, movey, tpos, centity)
-            IF movey < 0 THEN
+'            ' test to see if we have hit the block above or below
+'            tmove = GX_EntityTestMove(eid, 0, movey, tpos, centity)
+'            IF movey < 0 THEN
 
-                ' if we hit a block above, then zero out the jump speed
-                ' and make sure the entity does not move amove the collision offset
-                IF tmove = 0 THEN
-                    gx_entities(eid).jumping = 0
-                    gx_entities(eid).jumpspeed = 0
-                    IF (centity) THEN
-                        movey = (GXEntityY(centity) + GXEntityHeight(centity)) - (GXEntityY(eid) - GXEntityCollisionOffsetTop(eid))
-                    ELSE
-                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) - GXEntityHeight(eid) + GXEntityCollisionOffsetTop(eid))
-                    END IF
-                END IF
+'                ' if we hit a block above, then zero out the jump speed
+'                ' and make sure the entity does not move amove the collision offset
+'                IF tmove = 0 THEN
+'                    gx_entities(eid).jumping = 0
+'                    gx_entities(eid).jumpspeed = 0
+'                    IF (centity) THEN
+'                        movey = (GXEntityY(centity) + GXEntityHeight(centity)) - (GXEntityY(eid) - GXEntityCollisionOffsetTop(eid))
+'                    ELSE
+'                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) - GXEntityHeight(eid) + GXEntityCollisionOffsetTop(eid))
+'                    END IF
+'                END IF
 
-            ELSEIF movey > 0 THEN
+'            ELSEIF movey > 0 THEN
 
-                ' if we hit a block below, then zero out the jump speed and end the "fall"
-                ' and make sure the entity does not move below the collision offset
-                IF tmove = 0 THEN
-                    gx_entities(eid).jumping = 0
-                    IF (centity) THEN
-                        movey = GXEntityY(eid) - (GXEntityY(centity) - GXEntityHeight(eid))
-                    ELSE
-                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) + GXEntityHeight(eid) - GXEntityCollisionOffsetBottom(eid))
-                    END IF
-                    gx_entities(eid).jumpstart = 0
-                    gx_entities(eid).jumpspeed = 0
-                END IF
-            END IF
-            GX_ApplyGravity = 1
-        END IF
-    ELSE
-        ' no longer falling, reset the start time and jump speed
-        gx_entities(eid).jumpstart = 0
-        gx_entities(eid).jumpspeed = 0
-        GX_ApplyGravity = 0
-    END IF
-END FUNCTION
+'                ' if we hit a block below, then zero out the jump speed and end the "fall"
+'                ' and make sure the entity does not move below the collision offset
+'                IF tmove = 0 THEN
+'                    gx_entities(eid).jumping = 0
+'                    IF (centity) THEN
+'                        movey = GXEntityY(eid) - (GXEntityY(centity) - GXEntityHeight(eid))
+'                    ELSE
+'                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) + GXEntityHeight(eid) - GXEntityCollisionOffsetBottom(eid))
+'                    END IF
+'                    gx_entities(eid).jumpstart = 0
+'                    gx_entities(eid).jumpspeed = 0
+'                END IF
+'            END IF
+'            GX_ApplyGravity = 1
+'        END IF
+'    ELSE
+'        ' no longer falling, reset the start time and jump speed
+'        gx_entities(eid).jumpstart = 0
+'        gx_entities(eid).jumpspeed = 0
+'        GX_ApplyGravity = 0
+'    END IF
+'END FUNCTION
 
-FUNCTION GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS GXPosition, collisionEntity AS INTEGER)
+FUNCTION __GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS GXPosition, collisionEntity AS INTEGER)
     tpos.x = -1
     tpos.y = -1
     'IF nocollision THEN GX_EntityTestMove = 1: EXIT FUNCTION
 
     DIM tcount AS INTEGER
     REDIM tiles(0) AS GXPosition
-    GX_EntityCollisionTiles entity, mx, my, tiles(), tcount
+    __GX_EntityCollisionTiles entity, mx, my, tiles(), tcount
 
 
     DIM move AS INTEGER
@@ -1198,7 +1378,7 @@ FUNCTION GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS G
     ' Test for entity collision
     DIM entities(0) AS INTEGER
     DIM ecount AS INTEGER
-    ecount = GX_EntityCollision(entity, mx, my, entities())
+    ecount = __GX_EntityCollision(entity, mx, my, entities())
     FOR i = 1 TO ecount
         DIM ee AS GXEvent
         ee.entity = entity
@@ -1211,11 +1391,11 @@ FUNCTION GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS G
         END IF
     NEXT i
 
-    GX_EntityTestMove = move
+    __GX_EntityTestMove = move
 END FUNCTION
 
 
-FUNCTION GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGER, entities() AS INTEGER) ', ecount AS INTEGER)
+FUNCTION __GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGER, entities() AS INTEGER) ', ecount AS INTEGER)
     DIM ecount AS INTEGER
     ecount = 0
 
@@ -1223,14 +1403,14 @@ FUNCTION GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGER,
     FOR i = 1 TO gx_entity_count
         IF i <> eid THEN
             ' TODO: only include entities that should be considered (e.g. visible, non-screen-level)
-            IF GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
-                              GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
-                              GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
-                              GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid), _
-                              GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
-                              GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
-                              GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i), _
-                              GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)) THEN
+            IF __GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
+                                GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
+                                GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
+                                GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid), _
+                                GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
+                                GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
+                                GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i), _
+                                GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)) THEN
                 ecount = ecount + 1
                 REDIM _PRESERVE entities(ecount) AS INTEGER
                 entities(ecount) = i
@@ -1238,11 +1418,11 @@ FUNCTION GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGER,
         END IF
     NEXT i
 
-    GX_EntityCollision = ecount
+    __GX_EntityCollision = ecount
 END FUNCTION
 
 
-SUB GX_EntityCollisionTiles (entity AS INTEGER, movex AS INTEGER, movey AS INTEGER, tiles() AS GXPosition, tcount AS INTEGER)
+SUB __GX_EntityCollisionTiles (entity AS INTEGER, movex AS INTEGER, movey AS INTEGER, tiles() AS GXPosition, tcount AS INTEGER)
     DIM tx AS INTEGER, ty AS INTEGER
     DIM tx0 AS INTEGER, txn AS INTEGER
     DIM ty0 AS INTEGER, tyn AS INTEGER
@@ -1319,7 +1499,7 @@ FUNCTION GXKeyDown (k AS LONG)
         GXKeyDown = _KEYDOWN(k)
 
         ' test for letter keys regardless of case
-        ' TODO: do the same thing for number keys
+        ' TODO: do the same thing for number keys other dual/mode keys
         IF NOT GXKeyDown AND k >= 97 AND k <= 122 THEN
             k = k - 32
             GXKeyDown = _KEYDOWN(k)
@@ -1328,9 +1508,9 @@ FUNCTION GXKeyDown (k AS LONG)
 END FUNCTION
 
 
-SUB GX_PlayerAction (pid AS INTEGER)
+SUB __GX_PlayerAction (pid AS INTEGER)
     DIM tpos AS GXPosition
-    DIM movex AS INTEGER, movey AS INTEGER
+    'DIM movex AS INTEGER, movey AS INTEGER
     DIM centity AS INTEGER
 
     DIM player AS GXPlayer
@@ -1348,72 +1528,65 @@ SUB GX_PlayerAction (pid AS INTEGER)
 
     IF GXKeyDown(actionDown.key) THEN
         GXEntityAnimate player.eid, actionDown.animationSeq, actionDown.animationSpeed
-        IF GX_EntityTestMove(player.eid, 0, player.walkSpeed, tpos, centity) THEN
-            movey = player.walkSpeed
+        IF __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) THEN
+            gx_entities(player.eid).vy = player.walkSpeed
         ELSE
-            movey = 0
+            IF NOT gx_entities(player.eid).applyGravity THEN gx_entities(player.eid).vy = 0
         END IF
-        movex = 0
+        'IF NOT gx_entities(player.eid).applyGravity THEN
+        gx_entities(player.eid).vx = 0
 
     ELSEIF GXKeyDown(actionUp.key) THEN
         GXEntityAnimate player.eid, actionUp.animationSeq, actionUp.animationSpeed
-        IF GX_EntityTestMove(player.eid, 0, -player.walkSpeed, tpos, centity) THEN
-            movey = -player.walkSpeed
+        IF __GX_EntityTestMove(player.eid, 0, -1, tpos, centity) THEN
+            gx_entities(player.eid).vy = -player.walkSpeed
         ELSE
-            movey = 0
+            IF NOT gx_entities(player.eid).applyGravity THEN gx_entities(player.eid).vy = 0
         END IF
-        movex = 0
+        'IF gx_entities(player.eid).applyGravity = 0 THEN
+        gx_entities(player.eid).vx = 0
 
     ELSEIF GXKeyDown(actionRight.key) THEN
         GXEntityAnimate player.eid, actionRight.animationSeq, actionRight.animationSpeed
-        IF GX_EntityTestMove(player.eid, player.walkSpeed, 0, tpos, centity) THEN
-            movex = player.walkSpeed
+        IF __GX_EntityTestMove(player.eid, 1, 0, tpos, centity) THEN
+            gx_entities(player.eid).vx = player.walkSpeed
         ELSE
-            movex = 0
+            gx_entities(player.eid).vx = 0
         END IF
-        movey = 0
+        IF gx_entities(player.eid).applyGravity = 0 THEN gx_entities(player.eid).vy = 0
 
     ELSEIF GXKeyDown(actionLeft.key) THEN
         GXEntityAnimate player.eid, actionLeft.animationSeq, actionLeft.animationSpeed
-        IF GX_EntityTestMove(player.eid, -player.walkSpeed, 0, tpos, centity) THEN
-            movex = -player.walkSpeed
+        IF __GX_EntityTestMove(player.eid, -1, 0, tpos, centity) THEN
+            gx_entities(player.eid).vx = -player.walkSpeed
         ELSE
-            movex = 0
+            gx_entities(player.eid).vx = 0
         END IF
-        movey = 0
+        IF gx_entities(player.eid).applyGravity = 0 THEN gx_entities(player.eid).vy = 0
 
     ELSE
         GXEntityAnimateOff player.eid
-        movex = 0: movey = 0
+        gx_entities(player.eid).vx = 0
+        IF gx_entities(player.eid).applyGravity = 0 THEN
+            gx_entities(player.eid).vy = 0
+        END IF
     END IF
 
-    IF gx_entities(player.eid).applyGravity THEN
+    IF gx_entities(player.eid).applyGravity = 1 THEN
         IF GXKeyDown(actionJump.key) OR GXKeyDown(actionJumpLeft.key) OR GXKeyDown(actionJumpRight.key) THEN
-            IF gx_entities(player.eid).jumping = 0 AND GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
-                gx_entities(player.eid).jumpspeed = 3
+            'IF gx_entities(player.eid).jumpstart = 0 AND GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
+            'IF gx_entities(player.eid).vy = 0 AND GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
+            IF __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
+                gx_entities(player.eid).vy = -player.jumpSpeed
+                'gx_entities(player.eid).jumpstart = GXTicks - 45
                 gx_entities(player.eid).jumping = 1
-                GXEntityMove player.eid, 0, -1
+                'GXEntityMove player.eid, 0, -1
             END IF
-        END IF
-
-        IF GX_ApplyGravity(player.eid, movex, movey) THEN
         END IF
 
         IF gx_entities(player.eid).jumping THEN
-            IF movex < 0 AND actionJumpLeft.animationSeq THEN GXEntityAnimate player.eid, actionJumpLeft.animationSeq, actionJumpLeft.animationSpeed
-            IF movex > 0 AND actionJumpRight.animationSeq THEN GXEntityAnimate player.eid, actionJumpRight.animationSeq, actionJumpRight.animationSpeed
-
-        END IF
-    END IF
-
-
-    IF (movex <> 0 OR movey <> 0) THEN
-        GXEntityMove player.eid, movex, movey
-        ' TODO: Add code for various methods of locking the screen to an entity position
-        IF gx_entities(player.eid).applyGravity THEN ' this is temporary until the above TODO is implemented
-            IF GXEntityX(player.eid) > GXSceneX + GXSceneWidth / 2 AND GXSceneX < GXMapColumns * GXTilesetWidth - GXSceneWidth THEN
-                GXSceneMove 1, 0
-            END IF
+            IF gx_entities(player.eid).vx < 0 AND actionJumpLeft.animationSeq THEN GXEntityAnimate player.eid, actionJumpLeft.animationSeq, actionJumpLeft.animationSpeed
+            IF gx_entities(player.eid).vx > 0 AND actionJumpRight.animationSeq THEN GXEntityAnimate player.eid, actionJumpRight.animationSeq, actionJumpRight.animationSpeed
         END IF
     END IF
 
