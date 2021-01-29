@@ -8,33 +8,45 @@ SUB __UI_LoadForm
     $RESIZE:ON
     DIM __UI_NewID AS LONG, __UI_RegisterResult AS LONG
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Form, "MainForm", 857, 707, 0, 0, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_Form, "MainForm", 857, 735, 0, 0, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "GX Map Maker"
-    Control(__UI_NewID).Font = SetFont("segoeui.ttf", 12)
+    Control(__UI_NewID).Font = SetFont("", 16)
     Control(__UI_NewID).CanResize = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "FileMenu", 34, 22, 8, 0, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "FileMenu", 48, 24, 8, 0, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "&File"
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "ViewMenu", 41, 22, 42, 0, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "ViewMenu", 48, 24, 56, 0, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "&View"
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Frame, "frmNewMap", 314, 253, 2, 445, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_Frame, "frmNewMap", 327, 242, 361, 455, 0)
     __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Create New Map"
+    Control(__UI_NewID).HasBorder = True
     Control(__UI_NewID).Value = 16
     Control(__UI_NewID).BorderSize = 1
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Frame, "frmReplaceTileset", 520, 256, 327, 445, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_Frame, "frmReplaceTileset", 319, 243, 528, 455, 0)
     __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Replace Tileset"
+    Control(__UI_NewID).BorderColor = _RGB32(220, 166, 170)
+    Control(__UI_NewID).HasBorder = True
     Control(__UI_NewID).Value = 10
     Control(__UI_NewID).BorderSize = 1
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "MenuTileset", 50, 22, 83, 0, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "MenuTileset", 72, 24, 104, 0, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tileset"
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Frame, "frmFile", 533, 391, 7, 306, 0)
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Open "
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).Value = 11
+    Control(__UI_NewID).BorderSize = 1
 
     __UI_NewID = __UI_NewControl(__UI_Type_PictureBox, "Map", 543, 414, 2, 26, 0)
     __UI_RegisterResult = 0
@@ -44,7 +56,7 @@ SUB __UI_LoadForm
     Control(__UI_NewID).VAlign = __UI_Middle
     Control(__UI_NewID).BorderSize = 1
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuNew", 73, 20, 0, 4, __UI_GetID("FileMenu"))
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuNew", 76, 22, 0, 4, __UI_GetID("FileMenu"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "&New-"
     __UI_RegisterResult = RegisterKeyCombo("Ctrl+N", __UI_NewID)
@@ -65,27 +77,29 @@ SUB __UI_LoadForm
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Zoom Out"
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuOpen", 73, 20, 0, 31, __UI_GetID("FileMenu"))
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuOpen", 76, 22, 0, 33, __UI_GetID("FileMenu"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "&Open"
     __UI_RegisterResult = RegisterKeyCombo("Ctrl+O", __UI_NewID)
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuSave", 68, 20, 0, 51, __UI_GetID("FileMenu"))
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuSave", 76, 22, 0, 55, __UI_GetID("FileMenu"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "&Save"
     __UI_RegisterResult = RegisterKeyCombo("Ctrl+S", __UI_NewID)
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblColumns", 123, 23, 17, 43, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblColumns", 123, 23, 17, 20, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Columns:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblRows", 123, 23, 17, 69, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblRows", 123, 23, 17, 46, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Rows:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtColumns", 50, 23, 114, 43, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtColumns", 50, 23, 136, 20, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     Text(__UI_NewID) = "0"
     Control(__UI_NewID).HasBorder = True
@@ -95,7 +109,7 @@ SUB __UI_LoadForm
     Control(__UI_NewID).BorderSize = 1
     Control(__UI_NewID).NumericOnly = __UI_NumericWithBounds
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRows", 50, 23, 114, 69, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRows", 50, 23, 136, 46, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     Text(__UI_NewID) = "0"
     Control(__UI_NewID).HasBorder = True
@@ -105,68 +119,66 @@ SUB __UI_LoadForm
     Control(__UI_NewID).BorderSize = 1
     Control(__UI_NewID).NumericOnly = __UI_NumericWithBounds
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTilesetImage", 123, 23, 17, 95, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTilesetImage", 123, 23, 17, 72, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tileset Image:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtTilesetImage", 346, 23, 114, 95, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtTilesetImage", 346, 23, 136, 72, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     Control(__UI_NewID).HasBorder = True
     Control(__UI_NewID).CanHaveFocus = True
     Control(__UI_NewID).Disabled = True
     Control(__UI_NewID).BorderSize = 1
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnSelectTilesetImage", 29, 23, 465, 95, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnSelectTilesetImage", 29, 23, 487, 72, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "..."
     ToolTip(__UI_NewID) = "Select Tileset Image"
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblIsometric", 123, 23, 17, 172, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblIsometric", 123, 23, 17, 149, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Isometric?"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_ToggleSwitch, "toggleIsometric", 40, 17, 114, 175, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_ToggleSwitch, "toggleIsometric", 40, 17, 136, 152, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnCreateMap", 89, 23, 17, 214, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnCreateMap", 108, 23, 17, 199, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Create Map"
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnCancel", 80, 23, 113, 214, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnCancel", 80, 23, 134, 199, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Cancel"
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuSaveAs", 98, 20, 0, 71, __UI_GetID("FileMenu"))
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuSaveAs", 132, 22, 0, 77, __UI_GetID("FileMenu"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Save &As...-"
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuExit", 62, 20, 0, 98, __UI_GetID("FileMenu"))
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "FileMenuExit", 76, 22, 0, 106, __UI_GetID("FileMenu"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "E&xit"
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblNewMap", 150, 27, 17, 8, __UI_GetID("frmNewMap"))
-    __UI_RegisterResult = 0
-    SetCaption __UI_NewID, "Create New Map"
-    Control(__UI_NewID).Font = SetFont("segoeuib.ttf", 16)
-    Control(__UI_NewID).VAlign = __UI_Middle
-
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileWidth", 123, 23, 17, 121, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileWidth", 123, 23, 17, 98, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tile Width:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileHeight", 123, 23, 17, 147, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileHeight", 123, 23, 17, 124, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tile Height:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtTileWidth", 50, 23, 114, 121, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtTileWidth", 50, 23, 136, 98, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     Text(__UI_NewID) = "0"
     Control(__UI_NewID).HasBorder = True
@@ -176,7 +188,7 @@ SUB __UI_LoadForm
     Control(__UI_NewID).BorderSize = 1
     Control(__UI_NewID).NumericOnly = __UI_NumericWithBounds
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtTileHeight", 50, 23, 114, 147, __UI_GetID("frmNewMap"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtTileHeight", 50, 23, 136, 124, __UI_GetID("frmNewMap"))
     __UI_RegisterResult = 0
     Text(__UI_NewID) = "0"
     Control(__UI_NewID).HasBorder = True
@@ -186,51 +198,48 @@ SUB __UI_LoadForm
     Control(__UI_NewID).BorderSize = 1
     Control(__UI_NewID).NumericOnly = __UI_NumericWithBounds
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTilesetImage2", 123, 23, 17, 43, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTilesetImage2", 123, 23, 17, 21, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tileset Image:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRTTilesetImage", 346, 23, 114, 43, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRTTilesetImage", 346, 23, 135, 21, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     Control(__UI_NewID).HasBorder = True
     Control(__UI_NewID).CanHaveFocus = True
     Control(__UI_NewID).Disabled = True
     Control(__UI_NewID).BorderSize = 1
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnRTSelectTilesetImage", 29, 23, 466, 43, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnRTSelectTilesetImage", 29, 23, 487, 21, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "..."
     ToolTip(__UI_NewID) = "Select Tileset Image"
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnReplaceTileset", 89, 23, 17, 135, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnReplaceTileset", 144, 23, 17, 127, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Replace Tileset"
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnRTCancel", 80, 23, 113, 135, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnRTCancel", 80, 23, 167, 127, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Cancel"
     Control(__UI_NewID).CanHaveFocus = True
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblReplaceTileset", 150, 27, 17, 8, __UI_GetID("frmReplaceTileset"))
-    __UI_RegisterResult = 0
-    SetCaption __UI_NewID, "Replace Tileset"
-    Control(__UI_NewID).Font = SetFont("segoeuib.ttf", 16)
-    Control(__UI_NewID).VAlign = __UI_Middle
-
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileWidth2", 123, 23, 17, 69, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileWidth2", 123, 23, 17, 47, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tile Width:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileHeight2", 123, 23, 17, 95, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblTileHeight2", 123, 23, 17, 73, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tile Height:"
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
     Control(__UI_NewID).VAlign = __UI_Middle
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRTTileWidth", 50, 23, 114, 69, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRTTileWidth", 50, 23, 135, 47, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     Text(__UI_NewID) = "0"
     Control(__UI_NewID).HasBorder = True
@@ -240,7 +249,7 @@ SUB __UI_LoadForm
     Control(__UI_NewID).BorderSize = 1
     Control(__UI_NewID).NumericOnly = __UI_NumericWithBounds
 
-    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRTTileHeight", 50, 23, 114, 95, __UI_GetID("frmReplaceTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtRTTileHeight", 50, 23, 135, 73, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
     Text(__UI_NewID) = "0"
     Control(__UI_NewID).HasBorder = True
@@ -250,9 +259,91 @@ SUB __UI_LoadForm
     Control(__UI_NewID).BorderSize = 1
     Control(__UI_NewID).NumericOnly = __UI_NumericWithBounds
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "TilesetMenuReplace", 122, 20, 0, 4, __UI_GetID("MenuTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "TilesetMenuReplace", 164, 22, 0, 4, __UI_GetID("MenuTileset"))
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Replace Tileset"
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblLine", 500, 1, 17, 111, __UI_GetID("frmReplaceTileset"))
+    __UI_RegisterResult = 0
+    Control(__UI_NewID).ForeColor = _RGB32(80, 80, 80)
+    Control(__UI_NewID).BackColor = _RGB32(0, 0, 0)
+    Control(__UI_NewID).BorderColor = _RGB32(200, 200, 200)
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).VAlign = __UI_Middle
+    Control(__UI_NewID).BorderSize = 1
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblLine2", 500, 1, 17, 184, __UI_GetID("frmNewMap"))
+    __UI_RegisterResult = 0
+    Control(__UI_NewID).BorderColor = _RGB32(200, 200, 200)
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).VAlign = __UI_Middle
+    Control(__UI_NewID).BorderSize = 1
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblFDFilename", 92, 23, 17, 17, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "File Name:"
+    Control(__UI_NewID).VAlign = __UI_Middle
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblFDPath", 92, 23, 17, 45, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Path:"
+    Control(__UI_NewID).VAlign = __UI_Middle
+
+    __UI_NewID = __UI_NewControl(__UI_Type_TextBox, "txtFDFilename", 415, 23, 105, 17, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).CanHaveFocus = True
+    Control(__UI_NewID).BorderSize = 1
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblFDPathValue", 414, 23, 105, 45, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).VAlign = __UI_Middle
+    Control(__UI_NewID).BorderSize = 1
+
+    __UI_NewID = __UI_NewControl(__UI_Type_CheckBox, "chkFDFilterExt", 250, 23, 274, 318, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Show compatible files only"
+    Control(__UI_NewID).CanHaveFocus = True
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnFDOK", 80, 23, 17, 352, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "OK"
+    Control(__UI_NewID).CanHaveFocus = True
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Button, "btnFDCancel", 80, 23, 105, 352, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Cancel"
+    Control(__UI_NewID).CanHaveFocus = True
+
+    __UI_NewID = __UI_NewControl(__UI_Type_ListBox, "lstFDFiles", 245, 216, 17, 100, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).CanHaveFocus = True
+    Control(__UI_NewID).BorderSize = 1
+
+    __UI_NewID = __UI_NewControl(__UI_Type_ListBox, "lstFDPaths", 245, 216, 274, 100, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).CanHaveFocus = True
+    Control(__UI_NewID).BorderSize = 1
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblFDFiles", 92, 23, 17, 76, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Files"
+    Control(__UI_NewID).VAlign = __UI_Bottom
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblFDPaths", 92, 23, 275, 76, __UI_GetID("frmFile"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Paths"
+    Control(__UI_NewID).VAlign = __UI_Bottom
+
+    __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblStatus", 846, 27, 5, 704, 0)
+    __UI_RegisterResult = 0
+    Control(__UI_NewID).BackColor = _RGB32(225, 223, 227)
+    Control(__UI_NewID).HasBorder = True
+    Control(__UI_NewID).VAlign = __UI_Middle
+    Control(__UI_NewID).BorderSize = 1
 
 END SUB
 
@@ -261,6 +352,9 @@ SUB __UI_AssignIDs
     FileMenu = __UI_GetID("FileMenu")
     ViewMenu = __UI_GetID("ViewMenu")
     frmNewMap = __UI_GetID("frmNewMap")
+    frmReplaceTileset = __UI_GetID("frmReplaceTileset")
+    MenuTileset = __UI_GetID("MenuTileset")
+    frmFile = __UI_GetID("frmFile")
     Map = __UI_GetID("Map")
     FileMenuNew = __UI_GetID("FileMenuNew")
     Tiles = __UI_GetID("Tiles")
@@ -281,22 +375,32 @@ SUB __UI_AssignIDs
     btnCancel = __UI_GetID("btnCancel")
     FileMenuSaveAs = __UI_GetID("FileMenuSaveAs")
     FileMenuExit = __UI_GetID("FileMenuExit")
-    lblNewMap = __UI_GetID("lblNewMap")
     lblTileWidth = __UI_GetID("lblTileWidth")
     lblTileHeight = __UI_GetID("lblTileHeight")
     txtTileWidth = __UI_GetID("txtTileWidth")
     txtTileHeight = __UI_GetID("txtTileHeight")
-    frmReplaceTileset = __UI_GetID("frmReplaceTileset")
     lblTilesetImage2 = __UI_GetID("lblTilesetImage2")
     txtRTTilesetImage = __UI_GetID("txtRTTilesetImage")
     btnRTSelectTilesetImage = __UI_GetID("btnRTSelectTilesetImage")
     btnReplaceTileset = __UI_GetID("btnReplaceTileset")
     btnRTCancel = __UI_GetID("btnRTCancel")
-    lblReplaceTileset = __UI_GetID("lblReplaceTileset")
     lblTileWidth2 = __UI_GetID("lblTileWidth2")
     lblTileHeight2 = __UI_GetID("lblTileHeight2")
     txtRTTileWidth = __UI_GetID("txtRTTileWidth")
     txtRTTileHeight = __UI_GetID("txtRTTileHeight")
-    MenuTileset = __UI_GetID("MenuTileset")
     TilesetMenuReplace = __UI_GetID("TilesetMenuReplace")
+    lblLine = __UI_GetID("lblLine")
+    lblLine2 = __UI_GetID("lblLine2")
+    lblFDFilename = __UI_GetID("lblFDFilename")
+    lblFDPath = __UI_GetID("lblFDPath")
+    txtFDFilename = __UI_GetID("txtFDFilename")
+    lblFDPathValue = __UI_GetID("lblFDPathValue")
+    chkFDFilterExt = __UI_GetID("chkFDFilterExt")
+    btnFDOK = __UI_GetID("btnFDOK")
+    btnFDCancel = __UI_GetID("btnFDCancel")
+    lstFDFiles = __UI_GetID("lstFDFiles")
+    lstFDPaths = __UI_GetID("lstFDPaths")
+    lblFDFiles = __UI_GetID("lblFDFiles")
+    lblFDPaths = __UI_GetID("lblFDPaths")
+    lblStatus = __UI_GetID("lblStatus")
 END SUB

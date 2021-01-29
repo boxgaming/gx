@@ -1,5 +1,5 @@
 'OPTION _EXPLICIT
-''$include: '../../gx/gx.bi'
+''$include: '../gx/gx.bi'
 'SUB GXOnGameEvent (event AS GXEvent)
 'END SUB
 
@@ -838,28 +838,6 @@ SUB GXMapTileClear (col AS INTEGER, row AS INTEGER)
     gx_map(row, col) = mt
 END SUB
 
-SUB GXMapLoadOld (filename AS STRING)
-    gx_map.rows = 12
-    gx_map.columns = 400
-    REDIM gx_map(gx_map.rows, gx_map.columns) AS GXMapTile
-    DIM stuff(gx_map.columns - 1) AS _UNSIGNED _BYTE
-
-    OPEN filename FOR BINARY AS #1
-    DIM row, col AS INTEGER
-    row = 0
-    DO UNTIL EOF(1)
-        GET #1, , stuff()
-
-        IF row < gx_map.rows THEN
-            FOR col = 0 TO gx_map.columns - 1
-                GXMapTileAdd stuff(col), col, row
-            NEXT col
-        END IF
-
-        row = row + 1
-    LOOP
-    CLOSE #1
-END SUB
 
 SUB GXMapSave (filename AS STRING)
     DIM version AS INTEGER
@@ -915,19 +893,35 @@ SUB GXMapSave (filename AS STRING)
     CLOSE #1
 END SUB
 
+' Load the map
 SUB GXMapLoad (filename AS STRING)
+    gx_map_loading = 1
+
+    OPEN filename FOR BINARY AS #1
+
+    ' Read the version
     DIM version AS INTEGER
+    GET #1, 1, version
+
+    ' For backwards compatibility, add new versions of the
+    ' load function to continue to support older maps
+    SELECT CASE version
+        CASE 1: __GX_MapLoadV1 filename
+    END SELECT
+
+    CLOSE #1
+
+    gx_map_loading = 0
+END SUB
+
+' Load a version 1 map
+SUB __GX_MapLoadV1 (filename AS STRING)
     DIM col AS INTEGER
     DIM row AS INTEGER
     DIM layer AS INTEGER
     DIM depth AS INTEGER
     DIM tile AS INTEGER
 
-    gx_map_loading = 1
-
-    OPEN filename FOR BINARY AS #1
-
-    GET #1, 1, version
     GET #1, , gx_map.columns
     GET #1, , gx_map.rows
 
@@ -949,7 +943,7 @@ SUB GXMapLoad (filename AS STRING)
     DIM tilesetFilename AS STRING
     DIM tilewidth AS INTEGER
     DIM tileheight AS INTEGER
-    tilesetFilename = __GX_ReadString
+    tilesetFilename = __GX_ReadString ' original tileset filename
     GET #1, , tilewidth
     GET #1, , tileheight
 
@@ -961,22 +955,20 @@ SUB GXMapLoad (filename AS STRING)
         'DIM i AS LONG
         'DIM b AS _UNSIGNED _BYTE
         DIM bytes(tsize) AS _UNSIGNED _BYTE
-        tmpfile = __GX_RemoveFileExtension(__GX_GetFilename(filename)) + ".ts1"
+        tmpfile = __GXFS_RemoveFileExtension(__GXFS_GetFilename(filename)) + ".ts1"
         IF NOT _DIREXISTS("./tmp") THEN MKDIR ("./tmp")
         tilesetFilename = "./tmp/" + tmpfile
         GET #1, , bytes()
         OPEN tilesetFilename FOR BINARY AS #2
         PUT #2, , bytes()
         CLOSE #2
+        GXTilesetCreate tilesetFilename, tilewidth, tileheight
+        KILL tilesetFilename
+    ELSE
+        GXTilesetCreate tilesetFilename, tilewidth, tileheight
     END IF
 
-    GXTilesetCreate tilesetFilename, tilewidth, tileheight
-
-    CLOSE #1
-
-    gx_map_loading = 0
 END SUB
-
 
 FUNCTION GXMapIsometric
     GXMapIsometric = gx_map.isometric
@@ -986,16 +978,6 @@ SUB GXMapIsometric (iso AS INTEGER)
     gx_map.isometric = iso
     __GX_UpdateSceneSize
 END SUB
-
-'SUB GXMapISOOn
-'    gx_map_iso = 1
-'    GX_UpdateSceneSize
-'END SUB
-
-'SUB GXMapISOOff
-'    gx_map_iso = 0
-'    GX_UpdateSceneSize
-'END SUB
 
 SUB __GX_UpdateSceneSize
     IF gx_tileset.width < 1 OR gx_tileset.height < 1 THEN EXIT SUB
@@ -1095,79 +1077,149 @@ FUNCTION GXTilesetImage
 END FUNCTION
 
 
-
-FUNCTION __GX_GetFilename$ (filepath AS STRING)
+' File System Utility Methods
+' ----------------------------------------------------------------------------
+FUNCTION __GXFS_GetFilename$ (filepath AS STRING)
     DIM s AS STRING, i AS INTEGER
     s = filepath
-    s = __GX_StrReplace(s, "\", "/")
-    i = __GX_StrLastIndexOf(s, "/")
+    s = __GXSTR_Replace(s, "\", "/")
+    i = _INSTRREV(s, "/")
     s = MID$(s, i + 1)
-    __GX_GetFilename = s
+    __GXFS_GetFilename = s
 END FUNCTION
 
-FUNCTION __GX_GetParentPath$ (filepath AS STRING)
+FUNCTION __GXFS_GetParentPath$ (filepath AS STRING)
     DIM s AS STRING, i AS INTEGER
     s = filepath
-    s = __GX_StrReplace(s, "\", "/")
-    i = __GX_StrLastIndexOf(s, "/")
+    s = __GXSTR_Replace(s, "\", "/")
+    i = _INSTRREV(s, "/")
     s = MID$(s, 1, i - 1)
-    __GX_GetParentPath = s
+    s = __GXSTR_Replace(s, "/", __GXFS_PathSeparator)
+    'IF __GXFS_IsDriveLetter(s) THEN s = s + __GXFS_PathSeparator
+    __GXFS_GetParentPath = s
 END FUNCTION
 
-FUNCTION __GX_GetFileExtension$ (filename AS STRING)
+FUNCTION __GXFS_GetFileExtension$ (filename AS STRING)
     DIM i AS INTEGER
-    i = __GX_StrLastIndexOf(filename, ".")
-    __GX_GetFileExtension = MID$(filename, i + 1)
+    'i = __GX_StrLastIndexOf(filename, ".")
+    i = _INSTRREV(filename, ".")
+    __GXFS_GetFileExtension = MID$(filename, i + 1)
 END FUNCTION
 
-FUNCTION __GX_RemoveFileExtension$ (filename AS STRING)
+FUNCTION __GXFS_RemoveFileExtension$ (filename AS STRING)
     DIM i AS INTEGER
-    i = __GX_StrLastIndexOf(filename, ".")
-    __GX_RemoveFileExtension = MID$(filename, 1, i - 1)
+    i = _INSTRREV(filename, ".")
+    __GXFS_RemoveFileExtension = MID$(filename, 1, i - 1)
 END FUNCTION
 
+FUNCTION __GXFS_IsDriveLetter (path AS STRING)
+    IF LEN(path) = 2 AND RIGHT$(path, 1) = ":" THEN
+        __GXFS_IsDriveLetter = GX_TRUE
+    ELSE
+        __GXFS_IsDriveLetter = GX_FALSE
+    END IF
+END FUNCTION
 
-FUNCTION __GX_StrIndexOf (s AS STRING, searchString AS STRING)
-    DIM idx AS INTEGER, i AS INTEGER
+FUNCTION __GXFS_DriveList (drives() AS STRING)
+    DIM text AS STRING
+    DIM tmpfile AS STRING
+    tmpfile = "__drivelist"
 
-    DIM slen AS INTEGER
-    slen = LEN(searchString)
+    ' Remove the temp file, if it exists
+    IF _FILEEXISTS(tmpfile) THEN KILL tmpfile
 
-    FOR i = 1 TO LEN(s) - slen + 1
-        IF MID$(s, i, slen) = searchString THEN
-            idx = i
-            EXIT FOR
+    ' Print the drive list to a file
+    SHELL _HIDE "cmd /c " + CHR$(34) + "fsutil fsinfo drives > " + tmpfile + CHR$(34)
+
+    DIM count AS INTEGER
+    count = 0
+    IF _FILEEXISTS(tmpfile) THEN
+        OPEN tmpfile FOR BINARY AS #1
+        text = SPACE$(LOF(1))
+        GET #1, , text
+        CLOSE #1
+        KILL tmpfile
+        text = __GXSTR_Replace(text, "Drives: ", "")
+        text = __GXSTR_Replace(text, GX_CRLF, "")
+        text = __GXSTR_Replace(text, "\", "")
+        count = __GXSTR_Split(text, " ", drives())
+    END IF
+
+    __GXFS_DriveList = count
+END FUNCTION
+
+FUNCTION __GXFS_PathSeparator$ ()
+    IF INSTR(_OS$, "[WINDOWS]") THEN
+        __GXFS_PathSeparator = "\"
+    ELSE
+        __GXFS_PathSeparator = "/"
+    END IF
+END FUNCTION
+
+FUNCTION __GXFS_DirList (path AS STRING, dirmode AS INTEGER, filenames() AS STRING)
+    DIM cmd AS STRING
+    DIM tmpfile AS STRING
+    tmpfile = "__filelist"
+
+    ' Remove the temp file, if it exists
+    IF _FILEEXISTS(tmpfile) THEN KILL tmpfile
+
+    ' Determine the OS-specific directory command
+    IF INSTR(_OS$, "[WINDOWS]") THEN
+        IF dirmode THEN
+            cmd = "dir /b /ad " + CHR$(34) + path + CHR$(34) + " > " + tmpfile
+        ELSE
+            cmd = "dir /b /a-d " + CHR$(34) + path + CHR$(34) + " > " + tmpfile
         END IF
-    NEXT i
 
-    __GX_StrIndexOf = idx
-END FUNCTION
-
-FUNCTION __GX_StrLastIndexOf (s AS STRING, searchString AS STRING)
-    DIM idx AS INTEGER, i AS INTEGER
-
-    DIM slen AS INTEGER
-    slen = LEN(searchString)
-
-    FOR i = LEN(s) - slen + 1 TO 1 STEP -1
-        IF MID$(s, i, slen) = searchString THEN
-            idx = i
-            EXIT FOR
+    ELSEIF INSTR(_OS$, "[LINUX]") OR INSTR(_OS$, "[MACOSX]") THEN
+        IF dirmode THEN
+            cmd = "ls -1 -d */ " + CHR$(34) + path + CHR$(34) + " | sed '1d' | sed 's/\///g' > " + tmpfile
+        ELSE
+            cmd = "ls -p " + CHR$(34) + path + CHR$(34) + " | grep -v / > " + tmpfile
         END IF
-    NEXT i
+    END IF
 
-    __GX_StrLastIndexOf = idx
+    IF cmd <> "" THEN
+        SHELL _HIDE cmd
+
+        DIM filename AS STRING
+        DIM fcount AS INTEGER
+        fcount = 0
+        IF _FILEEXISTS(tmpfile) THEN
+            ' Read each line of the temp file into the result array
+            OPEN tmpfile FOR INPUT AS #1
+            DO UNTIL EOF(1)
+                LINE INPUT #1, filename
+                IF dirmode OR filename <> tmpfile THEN
+                    fcount = fcount + 1
+                    REDIM _PRESERVE filenames(fcount) AS STRING
+                    filenames(fcount) = filename
+                END IF
+            LOOP
+            CLOSE #1
+            ' Remove the temp file
+            KILL tmpfile
+        END IF
+    END IF
+
+    ' Return the number of items in the result array
+    __GXFS_DirList = fcount
 END FUNCTION
+' ----------------------------------------------------------------------------
 
-FUNCTION __GX_StrReplace$ (s AS STRING, searchString AS STRING, newString AS STRING)
+
+
+' String Utility Methods
+' ----------------------------------------------------------------------------
+FUNCTION __GXSTR_Replace$ (s AS STRING, searchString AS STRING, newString AS STRING)
     DIM ns AS STRING
-    'DIM idx AS INTEGER
     DIM i AS INTEGER
 
     DIM slen AS INTEGER
     slen = LEN(searchString)
 
-    FOR i = 1 TO LEN(s) - slen + 1
+    FOR i = 1 TO LEN(s) '- slen + 1
         IF MID$(s, i, slen) = searchString THEN
             ns = ns + newString
             i = i + slen - 1
@@ -1176,8 +1228,44 @@ FUNCTION __GX_StrReplace$ (s AS STRING, searchString AS STRING, newString AS STR
         END IF
     NEXT i
 
-    __GX_StrReplace = ns
+    __GXSTR_Replace = ns
 END FUNCTION
+
+FUNCTION __GXSTR_Split (sourceString AS STRING, delimiter AS STRING, results() AS STRING)
+    ' Modified version of:
+    ' https://www.qb64.org/forum/index.php?topic=1073.msg102711#msg102711
+    DIM cstr AS STRING, p AS LONG, curpos AS LONG, arrpos AS LONG, dpos AS LONG
+
+    ' Make a copy of the source string
+    cstr = sourceString
+
+    ' Special case if the delimiter is space, remove all excess space
+    IF delimiter = " " THEN
+        cstr = RTRIM$(LTRIM$(cstr))
+        p = INSTR(cstr, "  ")
+        WHILE p > 0
+            cstr = MID$(cstr, 1, p - 1) + MID$(cstr, p + 1)
+            p = INSTR(cstr, "  ")
+        WEND
+    END IF
+    curpos = 1
+    arrpos = 0
+    dpos = INSTR(curpos, cstr, delimiter)
+    DO UNTIL dpos = 0
+        arrpos = arrpos + 1
+        REDIM _PRESERVE results(arrpos) AS STRING
+        results(arrpos) = MID$(cstr, curpos, dpos - curpos)
+        curpos = dpos + LEN(delimiter)
+        dpos = INSTR(curpos, cstr, delimiter)
+    LOOP
+    arrpos = arrpos + 1
+    REDIM _PRESERVE results(arrpos) AS STRING
+    results(arrpos) = MID$(cstr, curpos)
+
+    __GXSTR_Split = arrpos
+END FUNCTION
+' ----------------------------------------------------------------------------
+
 
 FUNCTION __GX_EntityCollide (eid1, eid2)
     __GX_EntityCollide = __GX_RectCollide(GXEntityX(eid1), GXEntityY(eid1), GXEntityWidth(eid1), GXEntityHeight(eid1), GXEntityX(eid2), GXEntityY(eid2), GXEntityWidth(eid2), GXEntityHeight(eid2))
@@ -1277,73 +1365,6 @@ SUB GXBlitString (fid AS INTEGER, sx AS LONG, sy AS LONG, s AS STRING)
     NEXT i
 END SUB
 
-
-'FUNCTION GX_ApplyGravity (eid AS LONG, movex AS INTEGER, movey AS INTEGER)
-'    DIM tpos AS GXPosition
-'    DIM tmove
-'    DIM centity AS INTEGER
-'    'DIM entity AS GXEntity
-'    'entity = gx_entities(eid)
-
-'    ' test to see if the entity is jumping or falling
-'    IF gx_entities(eid).jumping = 1 OR GX_EntityTestMove(eid, 0, 1, tpos, centity) THEN
-
-'        ' if just starting the fall or jump get a timestamp
-'        IF gx_entities(eid).jumpstart = 0 THEN
-'            gx_entities(eid).jumpstart = GXTicks
-
-'        ELSE ' otherwise apply gravity to the y-movement
-
-'            ' calculate the number of seconds since the gravity started being applied
-'            DIM t
-'            t = (GXTicks - gx_entities(eid).jumpstart) / GXFrameRate
-
-'            ' calculate the y movement
-'            DIM dy
-'            dy = 9.8 * t ^ 2 / 2 + 1 - gx_entities(eid).jumpspeed
-'            movey = dy
-
-'            ' test to see if we have hit the block above or below
-'            tmove = GX_EntityTestMove(eid, 0, movey, tpos, centity)
-'            IF movey < 0 THEN
-
-'                ' if we hit a block above, then zero out the jump speed
-'                ' and make sure the entity does not move amove the collision offset
-'                IF tmove = 0 THEN
-'                    gx_entities(eid).jumping = 0
-'                    gx_entities(eid).jumpspeed = 0
-'                    IF (centity) THEN
-'                        movey = (GXEntityY(centity) + GXEntityHeight(centity)) - (GXEntityY(eid) - GXEntityCollisionOffsetTop(eid))
-'                    ELSE
-'                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) - GXEntityHeight(eid) + GXEntityCollisionOffsetTop(eid))
-'                    END IF
-'                END IF
-
-'            ELSEIF movey > 0 THEN
-
-'                ' if we hit a block below, then zero out the jump speed and end the "fall"
-'                ' and make sure the entity does not move below the collision offset
-'                IF tmove = 0 THEN
-'                    gx_entities(eid).jumping = 0
-'                    IF (centity) THEN
-'                        movey = GXEntityY(eid) - (GXEntityY(centity) - GXEntityHeight(eid))
-'                    ELSE
-'                        movey = GXTilesetHeight * (tpos.y) - (GXEntityY(eid) + GXEntityHeight(eid) - GXEntityCollisionOffsetBottom(eid))
-'                    END IF
-'                    gx_entities(eid).jumpstart = 0
-'                    gx_entities(eid).jumpspeed = 0
-'                END IF
-'            END IF
-'            GX_ApplyGravity = 1
-'        END IF
-'    ELSE
-'        ' no longer falling, reset the start time and jump speed
-'        gx_entities(eid).jumpstart = 0
-'        gx_entities(eid).jumpspeed = 0
-'        GX_ApplyGravity = 0
-'    END IF
-'END FUNCTION
-
 FUNCTION __GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS GXPosition, collisionEntity AS INTEGER)
     tpos.x = -1
     tpos.y = -1
@@ -1394,7 +1415,6 @@ FUNCTION __GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS
     __GX_EntityTestMove = move
 END FUNCTION
 
-
 FUNCTION __GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGER, entities() AS INTEGER) ', ecount AS INTEGER)
     DIM ecount AS INTEGER
     ecount = 0
@@ -1420,7 +1440,6 @@ FUNCTION __GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGE
 
     __GX_EntityCollision = ecount
 END FUNCTION
-
 
 SUB __GX_EntityCollisionTiles (entity AS INTEGER, movex AS INTEGER, movey AS INTEGER, tiles() AS GXPosition, tcount AS INTEGER)
     DIM tx AS INTEGER, ty AS INTEGER

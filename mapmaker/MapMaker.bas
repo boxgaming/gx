@@ -1,11 +1,13 @@
 OPTION _EXPLICIT
 $EXEICON:'./map.ico'
 '$include:'../gx/gx.bi'
-'$include:'FileDialog.bi'
-'TODO: replace windows file dialog with custom control for cross-platform support
+
+CONST FD_OPEN = 1
+CONST FD_SAVE = 2
 
 DIM SHARED scale AS INTEGER
 DIM SHARED gxloaded AS INTEGER
+DIM SHARED mapLoaded AS INTEGER
 DIM SHARED mapFilename AS STRING
 DIM SHARED tileSelStart AS GXPosition
 DIM SHARED tileSelEnd AS GXPosition
@@ -15,14 +17,19 @@ DIM SHARED mapSelMode AS INTEGER
 DIM SHARED saving AS INTEGER
 DIM SHARED deleting AS INTEGER
 DIM SHARED dialogMode AS INTEGER
+DIM SHARED fileDialogMode AS INTEGER
+DIM SHARED fileDialogPath AS STRING
+DIM SHARED fileDialogTargetForm AS LONG
+DIM SHARED fileDialogTargetField AS LONG
+DIM SHARED lastControlClicked AS LONG
+DIM SHARED lastClick AS DOUBLE
 
 ': This program uses
 ': InForm - GUI library for QB64 - v1.2
 ': Fellippe Heitor, 2016-2020 - fellippe@qb64.org - @fellippeheitor
 ': https://github.com/FellippeHeitor/InForm
 '-----------------------------------------------------------
-
-': Controls' IDs: ------------------------------------------------------------------
+' Menus and Menu Items
 DIM SHARED MainForm AS LONG
 DIM SHARED FileMenu AS LONG
 DIM SHARED FileMenuNew AS LONG
@@ -36,11 +43,17 @@ DIM SHARED ViewMenuZoomOut AS LONG
 DIM SHARED MenuTileset AS LONG
 DIM SHARED TilesetMenuReplace AS LONG
 
+' Map picture control
 DIM SHARED Map AS LONG
+
+' Tiles picture control
 DIM SHARED Tiles AS LONG
 
+' Status bar
+DIM SHARED lblStatus AS LONG
+
+' New Map Dialog
 DIM SHARED frmNewMap AS LONG
-DIM SHARED lblNewMap AS LONG
 DIM SHARED lblColumns AS LONG
 DIM SHARED txtColumns AS LONG
 DIM SHARED lblRows AS LONG
@@ -54,11 +67,12 @@ DIM SHARED lblTileWidth AS LONG
 DIM SHARED txtTileWidth AS LONG
 DIM SHARED lblIsometric AS LONG
 DIM SHARED toggleIsometric AS LONG
+DIM SHARED lblLine2 AS LONG
 DIM SHARED btnCreateMap AS LONG
 DIM SHARED btnCancel AS LONG
 
+' Replace Tileset Dialog
 DIM SHARED frmReplaceTileset AS LONG
-DIM SHARED lblReplaceTileset AS LONG
 DIM SHARED lblTileWidth2 AS LONG
 DIM SHARED txtRTTileWidth AS LONG
 DIM SHARED lblTileHeight2 AS LONG
@@ -66,8 +80,23 @@ DIM SHARED txtRTTileHeight AS LONG
 DIM SHARED lblTilesetImage2 AS LONG
 DIM SHARED txtRTTilesetImage AS LONG
 DIM SHARED btnRTSelectTilesetImage AS LONG
+DIM SHARED lblLine AS LONG
 DIM SHARED btnReplaceTileset AS LONG
 DIM SHARED btnRTCancel AS LONG
+
+' File Dialog
+DIM SHARED frmFile AS LONG
+DIM SHARED lblFDFilename AS LONG
+DIM SHARED txtFDFilename AS LONG
+DIM SHARED lblFDPath AS LONG
+DIM SHARED lblFDPathValue AS LONG
+DIM SHARED lblFDFiles AS LONG
+DIM SHARED lblFDPaths AS LONG
+DIM SHARED lstFDFiles AS LONG
+DIM SHARED lstFDPaths AS LONG
+DIM SHARED chkFDFilterExt AS LONG
+DIM SHARED btnFDOK AS LONG
+DIM SHARED btnFDCancel AS LONG
 
 ': External modules: ---------------------------------------------------------------
 '$INCLUDE: './inform/InForm.ui'
@@ -82,43 +111,55 @@ SUB __UI_OnLoad
     ' Hide the dialog forms
     Control(frmNewMap).Hidden = True
     Control(frmReplaceTileset).Hidden = True
+    Control(frmFile).Hidden = True
 
     ' Set the initial zoom level (1=100%, actual size)
     scale = 1
 
     ' Disable menu items which are not valid yet
+    Control(ViewMenuZoomIn).Disabled = True
     Control(ViewMenuZoomOut).Disabled = True
     Control(FileMenuSave).Disabled = True
     Control(FileMenuSaveAs).Disabled = True
+    Control(TilesetMenuReplace).Disabled = True
 
     ' Create the GX Scene for rendering the map
     GXSceneEmbedded True
     GXSceneCreate Control(Map).Width / 2, Control(Map).Height / 2
 
+    ' Initialize the file dialog
+    fileDialogPath = _CWD$
+    Control(chkFDFilterExt).Value = True
+
     ' Size the window components for the current window size
+    dialogMode = False
     ResizePanels
 
     ' Ok, we're ready to display screen updates now
     gxloaded = True
+
+    ' Set a higher frame rate for smoother cursor movement
+    SetFrameRate 60
 END SUB
 
 SUB __UI_BeforeUpdateDisplay
     IF gxloaded = False THEN EXIT SUB ' We're not ready yet, abort!
+    IF dialogMode = True THEN EXIT SUB ' Nothing to do here
 
-    ' Use WASD to navigate around the map
-    IF GXKeyDown(GXKEY_S) THEN ' move down
+    ' Use WASD or arrow keys to navigate around the map
+    IF GXKeyDown(GXKEY_S) OR GXKeyDown(GXKEY_DOWN) THEN ' move down
         GXSceneMove 0, GXTilesetHeight
         IF mapSelMode THEN tileSelStart.y = tileSelStart.y - 1: tileSelEnd.y = tileSelEnd.y - 1
 
-    ELSEIF GXKeyDown(GXKEY_W) THEN ' move up
+    ELSEIF GXKeyDown(GXKEY_W) OR GXKeyDown(GXKEY_UP) THEN ' move up
         GXSceneMove 0, -GXTilesetHeight
         IF mapSelMode THEN tileSelStart.y = tileSelStart.y + 1: tileSelEnd.y = tileSelEnd.y + 1
 
-    ELSEIF GXKeyDown(GXKEY_D) THEN ' move right
+    ELSEIF GXKeyDown(GXKEY_D) OR GXKeyDown(GXKEY_RIGHT) THEN ' move right
         GXSceneMove GXTilesetWidth, 0
         IF mapSelMode THEN tileSelStart.x = tileSelStart.x - 1: tileSelEnd.x = tileSelEnd.x - 1
 
-    ELSEIF GXKeyDown(GXKEY_A) THEN ' move left
+    ELSEIF GXKeyDown(GXKEY_A) OR GXKeyDown(GXKEY_LEFT) THEN ' move left
         GXSceneMove -GXTilesetWidth, 0
         IF mapSelMode THEN tileSelStart.x = tileSelStart.x + 1: tileSelEnd.x = tileSelEnd.x + 1
     END IF
@@ -157,9 +198,6 @@ SUB __UI_Click (id AS LONG)
     DIM filename AS STRING, msgResult
 
     SELECT CASE id
-        CASE MainForm
-
-        CASE FileMenu
 
         CASE Map
             IF NOT mapSelSizing THEN
@@ -169,110 +207,104 @@ SUB __UI_Click (id AS LONG)
             END IF
 
         CASE FileMenuNew
+            SetDialogMode True
             Control(frmNewMap).Hidden = False
-            dialogMode = True
             _MOUSESHOW
 
         CASE FileMenuOpen
-            filename = GetOpenFileName("Open Game Map", ".\", "Map Files (*.map)|*.map", 1, OFN_FILEMUSTEXIST + OFN_NOCHANGEDIR + OFN_READONLY)
-            IF filename <> "" THEN
-                GXMapLoad filename
-                mapFilename = filename
-                ResizePanels
-                Control(FileMenuSave).Disabled = False
-            END IF
+            ShowFileDialog FD_OPEN, MainForm
 
         CASE FileMenuSave
-            saving = 1
-            GXMapSave mapFilename
-            saving = 0
-            msgResult = MessageBox("Map saved.", "Save Complete", MsgBox_OkOnly)
+            SaveMap mapFilename
 
         CASE FileMenuSaveAs
-            filename = GetSaveFileName("Save Game Map", ".\", "Map Files (*.map)|*.map", 1, OFN_OVERWRITEPROMPT + OFN_NOCHANGEDIR)
-            IF filename <> "" THEN
-                IF NOT RIGHT$(filename, 3) = ".map" THEN
-                    filename = filename + ".map"
-                END IF
-                ' move tileset
-                GXMapSave filename
-                mapFilename = filename
-                Control(FileMenuSave).Disabled = False
-                msgResult = MessageBox("Map saved.", "Save Complete", MsgBox_OkOnly)
-            END IF
+            ShowFileDialog FD_SAVE, MainForm
 
         CASE FileMenuExit
             SYSTEM 0
 
         CASE ViewMenuZoomIn
-            scale = scale + 1
-            Control(ViewMenuZoomOut).Disabled = False
-            IF scale = 4 THEN Control(ViewMenuZoomIn).Disabled = True
-            ResizePanels
+            Zoom 1
 
         CASE ViewMenuZoomOut
-            scale = scale - 1
-            Control(ViewMenuZoomIn).Disabled = False
-            IF scale = 1 THEN Control(ViewMenuZoomOut).Disabled = True
-            ResizePanels
-
+            Zoom -1
 
         CASE TilesetMenuReplace
             dialogMode = True
             Control(frmReplaceTileset).Hidden = False
             Control(txtRTTileWidth).Value = GXTilesetWidth
             Control(txtRTTileHeight).Value = GXTilesetHeight
+            SetDialogMode True
             _MOUSESHOW
 
         CASE btnRTCancel
             Control(frmReplaceTileset).Hidden = True
+            SetDialogMode False
 
         CASE btnCancel
             Control(frmNewMap).Hidden = True
+            SetDialogMode False
+
+        CASE btnFDCancel
+            Control(frmFile).Hidden = True
+            SetDialogMode False
 
         CASE btnCreateMap
             CreateMap
 
         CASE btnReplaceTileset
             ReplaceTileset
+            SetDialogMode False
 
         CASE btnSelectTilesetImage
-            filename = GetOpenFileName("Select Tileset Image", ".\", "PNG Files (*.png)|*.png", 1, OFN_FILEMUSTEXIST + OFN_NOCHANGEDIR + OFN_READONLY)
-            IF filename <> "" THEN
-                Text(txtTilesetImage) = filename
-            END IF
+            ShowFileDialog FD_OPEN, frmNewMap
 
         CASE btnRTSelectTilesetImage
-            filename = GetOpenFileName("Select Tileset Image", ".\", "PNG Files (*.png)|*.png", 1, OFN_FILEMUSTEXIST + OFN_NOCHANGEDIR + OFN_READONLY)
-            IF filename <> "" THEN
-                Text(txtRTTilesetImage) = filename
+            ShowFileDialog FD_OPEN, frmReplaceTileset
+
+        CASE lstFDFiles
+            Text(txtFDFilename) = GetItem(lstFDFiles, Control(lstFDFiles).Value)
+            IF lastControlClicked = id AND TIMER - lastClick < .3 THEN ' Double-click
+                OnSelectFile
+            END IF
+
+        CASE btnFDOK
+            OnSelectFile
+
+        CASE lstFDPaths
+            IF lastControlClicked = id AND TIMER - lastClick < .3 THEN ' Double-click
+                ' Change current path
+                DIM dir AS STRING
+                dir = GetItem(lstFDPaths, Control(lstFDPaths).Value)
+                IF dir = ".." THEN
+                    fileDialogPath = __GXFS_GetParentPath(fileDialogPath)
+                ELSEIF __GXFS_IsDriveLetter(dir) THEN
+                    fileDialogPath = dir
+                ELSE
+                    fileDialogPath = fileDialogPath + __GXFS_PathSeparator + dir
+                END IF
+                RefreshFileDialog
             END IF
 
     END SELECT
+    lastControlClicked = id
+    lastClick = TIMER
 END SUB
 
 SUB __UI_MouseEnter (id AS LONG)
     SELECT CASE id
-        CASE MainForm
-
-        CASE FileMenu
 
         CASE Map
-            IF dialogMode = False THEN _MOUSEHIDE
+            IF NOT dialogMode AND mapLoaded THEN _MOUSEHIDE
 
         CASE Tiles
-            IF dialogMode = False THEN _MOUSEHIDE
-
-        CASE FileMenuNew
+            IF NOT dialogMode AND mapLoaded THEN _MOUSEHIDE
 
     END SELECT
 END SUB
 
 SUB __UI_MouseLeave (id AS LONG)
     SELECT CASE id
-        CASE MainForm
-
-        CASE FileMenu
 
         CASE Map
             _MOUSESHOW
@@ -280,14 +312,11 @@ SUB __UI_MouseLeave (id AS LONG)
         CASE Tiles
             _MOUSESHOW
 
-        CASE FileMenuNew
-
     END SELECT
 END SUB
 
 SUB __UI_FocusIn (id AS LONG)
     SELECT CASE id
-
     END SELECT
 END SUB
 
@@ -295,7 +324,6 @@ SUB __UI_FocusOut (id AS LONG)
     'This event occurs right before a control loses focus.
     'To prevent a control from losing focus, set __UI_KeepFocus = True below.
     SELECT CASE id
-
     END SELECT
 END SUB
 
@@ -346,6 +374,8 @@ END SUB
 
 SUB __UI_ValueChanged (id AS LONG)
     SELECT CASE id
+        CASE chkFDFilterExt
+            RefreshFileList
     END SELECT
 END SUB
 
@@ -355,10 +385,24 @@ SUB __UI_FormResized
 END SUB
 
 
+' GX Events
+' ----------------------------------------------------------------------------
+SUB GXOnGameEvent (e AS GXEvent)
+    IF e.event = GXEVENT_PAINTBEFORE THEN BeginDraw Map
+    IF e.event = GXEVENT_PAINTAFTER THEN EndDraw Map
+    IF e.event = GXEVENT_DRAWSCREEN THEN
+        IF mapSelMode THEN DrawSelected
+        DrawCursor Map, scale
+        ' draw a bounding rectangle around the border of the map
+        LINE (-GXSceneX - 1, -GXSceneY - 1)-(GXMapColumns * GXTilesetWidth - GXSceneX, GXMapRows * GXTilesetHeight - GXSceneY), _RGB(100, 100, 100), B
+    END IF
+END SUB
 
-' Create a new map from the parameters specified by the user on the new map
-' dialog.
+
+' Create a new map from the parameters specified by the user
+' on the new map dialog.
 SUB CreateMap
+    SetStatus "Creating new map..."
     DIM columns AS INTEGER, rows AS INTEGER
     DIM tilesetImage AS STRING
     DIM tileWidth AS INTEGER, tileHeight AS INTEGER
@@ -386,12 +430,63 @@ SUB CreateMap
     ELSE
         GXMapIsometric False
     END IF
-    ResizePanels
 
     mapFilename = ""
+    scale = 1
     Control(FileMenuSave).Disabled = True
+    Control(FileMenuSaveAs).Disabled = False
+    Control(ViewMenuZoomIn).Disabled = False
+    Control(ViewMenuZoomOut).Disabled = True
+    Control(TilesetMenuReplace).Disabled = False
     Control(frmNewMap).Hidden = True
-    dialogMode = 0
+
+    SetDialogMode False
+    mapLoaded = True
+
+    ResizePanels
+    SetStatus "Map created."
+END SUB
+
+SUB LoadMap (filename AS STRING)
+    SetStatus "Loading map..."
+    DIM msgRes AS INTEGER
+
+    EnableFileDialog False
+    GXMapLoad filename
+    mapFilename = filename
+    GXScenePos 0, 0
+
+    Control(FileMenuSave).Disabled = False
+    Control(FileMenuSaveAs).Disabled = False
+    Control(ViewMenuZoomIn).Disabled = False
+    Control(ViewMenuZoomOut).Disabled = True
+    Control(TilesetMenuReplace).Disabled = False
+    mapLoaded = True
+    scale = 1
+
+    Control(frmFile).Hidden = True
+    SetDialogMode False
+    EnableFileDialog True
+
+    ResizePanels
+    SetStatus "Map loaded."
+END SUB
+
+SUB SaveMap (filename AS STRING)
+    SetStatus "Saving map..."
+    EnableFileDialog False
+    DIM msgResult AS INTEGER
+    saving = 1
+    GXMapSave filename
+    saving = 0
+    mapFilename = filename
+    Control(FileMenuSave).Disabled = False
+
+    Control(frmFile).Hidden = True
+    SetDialogMode False
+    EnableFileDialog True
+
+    SetStatus "Map saved."
 END SUB
 
 ' Replace the current tileset with one specified by the user on the replace
@@ -411,7 +506,7 @@ SUB ReplaceTileset
 
     GXTilesetCreate tilesetImage, tileWidth, tileHeight
     Control(frmReplaceTileset).Hidden = True
-    dialogMode = 0
+    dialogMode = False
 END SUB
 
 ' Place selected tiles in the location indicated by the cursor.  The tile
@@ -526,45 +621,217 @@ SUB DrawTileset
     EndDraw Tiles
 END SUB
 
+SUB SetStatus (msg AS STRING)
+    SetCaption lblStatus, msg
+END SUB
+
+SUB Zoom (amount AS INTEGER)
+    scale = scale + amount
+    Control(ViewMenuZoomOut).Disabled = False
+    IF scale = 1 THEN Control(ViewMenuZoomOut).Disabled = True
+    IF scale = 4 THEN Control(ViewMenuZoomIn).Disabled = True
+    ResizePanels
+END SUB
+
 SUB ResizePanels
+    ' Position tileset control
     DIM twidth AS INTEGER
     twidth = GXTilesetColumns * GXTilesetWidth
     IF twidth = 0 THEN twidth = 200
     Control(Tiles).Top = 23
     Control(Tiles).Width = twidth
     Control(Tiles).Left = Control(MainForm).Width - twidth
-    Control(Tiles).Height = Control(MainForm).Height - 23
+    Control(Tiles).Height = Control(MainForm).Height - 50
     LoadImage Control(Tiles), ""
 
+    ' Position map control
     Control(Map).Left = 0
     Control(Map).Top = 23
     Control(Map).Width = Control(MainForm).Width - twidth - 1
-    Control(Map).Height = Control(MainForm).Height - 23
+    Control(Map).Height = Control(MainForm).Height - 50
     GXSceneResize Control(Map).Width / scale, Control(Map).Height / scale
     LoadImage Control(Map), ""
 
+    ' Position status bar
+    Control(lblStatus).Left = -1
+    Control(lblStatus).Top = Control(MainForm).Height - 26
+    Control(lblStatus).Width = Control(MainForm).Width + 2
+
     ResizeDialog frmNewMap
     ResizeDialog frmReplaceTileset
+    ResizeDialog frmFile
+END SUB
+
+' General Dialog Methods
+' ----------------------------------------------------------------------------
+SUB SetDialogMode (newDialogMode AS INTEGER)
+    dialogMode = newDialogMode
+    Control(FileMenu).Hidden = dialogMode
+    Control(ViewMenu).Hidden = dialogMode
+    Control(MenuTileset).Hidden = dialogMode
+    Control(Map).Hidden = dialogMode
+    Control(Tiles).Hidden = dialogMode
 END SUB
 
 SUB ResizeDialog (dialogId AS LONG)
-    Control(dialogId).Left = 0
-    Control(dialogId).Top = 0
-    Control(dialogId).Width = Control(MainForm).Width
-    Control(dialogId).Height = Control(MainForm).Height
-END SUB
+    Control(dialogId).Left = 5
+    Control(dialogId).Top = 15
+    Control(dialogId).Width = Control(MainForm).Width - 10
+    Control(dialogId).Height = Control(MainForm).Height - 45
 
-
-SUB GXOnGameEvent (e AS GXEvent)
-    IF e.event = GXEVENT_PAINTBEFORE THEN BeginDraw Map
-    IF e.event = GXEVENT_PAINTAFTER THEN EndDraw Map
-    IF e.event = GXEVENT_DRAWSCREEN THEN
-        IF mapSelMode THEN DrawSelected
-        DrawCursor Map, scale
-        LINE (-GXSceneX - 1, -GXSceneY - 1)-(GXMapColumns * GXTilesetWidth - GXSceneX, GXMapRows * GXTilesetHeight - GXSceneY), _RGB(100, 100, 100), B
+    IF dialogId = frmFile THEN
+        Control(btnFDOK).Top = Control(MainForm).Height - 85
+        Control(btnFDCancel).Top = Control(MainForm).Height - 85
+        Control(lstFDFiles).Height = Control(MainForm).Height - 200
+        Control(lstFDPaths).Height = Control(MainForm).Height - 230
+        Control(chkFDFilterExt).Top = Control(MainForm).Height - 125
     END IF
+    __UI_ForceRedraw = True
 END SUB
 
-'$include: 'FileDialog.bm'
-'$include:'../gx/gx.bm'
 
+' File Dialog Methods
+' ----------------------------------------------------------------------------
+SUB ShowFileDialog (mode AS INTEGER, targetForm AS LONG)
+    SetDialogMode (True)
+
+    fileDialogMode = mode
+    fileDialogTargetForm = targetForm
+    IF fileDialogTargetForm <> MainForm THEN
+        Control(fileDialogTargetForm).Hidden = True
+    END IF
+
+    IF fileDialogMode = FD_OPEN THEN
+        SetCaption frmFile, "Open"
+    ELSE
+        SetCaption frmFile, "Save"
+    END IF
+
+    Text(txtFDFilename) = ""
+    Control(frmFile).Hidden = False
+
+    RefreshFileDialog
+END SUB
+
+SUB EnableFileDialog (enabled AS INTEGER)
+    DIM disabled AS INTEGER
+    disabled = NOT enabled
+    Control(txtFDFilename).Disabled = disabled
+    Control(lstFDFiles).Disabled = disabled
+    Control(lstFDPaths).Disabled = disabled
+    Control(chkFDFilterExt).Disabled = disabled
+    Control(btnFDOK).Disabled = disabled
+    Control(btnFDCancel).Disabled = disabled
+END SUB
+
+SUB RefreshFileDialog
+    DIM i AS INTEGER
+    DIM path AS STRING
+    DIM fitems(0) AS STRING
+
+    ' Set the last selected path
+    SetCaption lblFDPathValue, fileDialogPath
+
+    path = fileDialogPath
+
+    ' Refresh the folder list
+    ResetList lstFDPaths
+    IF __GXFS_IsDriveLetter(path) THEN
+        path = path + __GXFS_PathSeparator
+    ELSE
+        AddItem lstFDPaths, ".."
+    END IF
+    FOR i = 1 TO __GXFS_DirList(path, True, fitems())
+        AddItem lstFDPaths, fitems(i)
+    NEXT i
+    FOR i = 1 TO __GXFS_DriveList(fitems())
+        AddItem lstFDPaths, fitems(i)
+    NEXT i
+
+    ' Refresh the file list
+    RefreshFileList
+END SUB
+
+SUB RefreshFileList
+    DIM i AS INTEGER
+    DIM path AS STRING
+    DIM fitems(0) AS STRING
+
+    path = fileDialogPath
+
+    IF __GXFS_IsDriveLetter(path) THEN path = path + __GXFS_PathSeparator
+
+    ' Refresh the folder list
+    ResetList lstFDFiles
+    FOR i = 1 TO __GXFS_DirList(path, False, fitems())
+        IF NOT Control(chkFDFilterExt).Value OR ExtFilterMatch(fitems(i)) THEN
+            AddItem lstFDFiles, fitems(i)
+        END IF
+    NEXT i
+END SUB
+
+FUNCTION ExtFilterMatch (filename AS STRING)
+    DIM match AS INTEGER
+    DIM ext AS STRING
+    ext = UCASE$(__GXFS_GetFileExtension(filename))
+
+    IF fileDialogTargetForm = MainForm THEN
+        IF ext = "MAP" THEN match = True
+    ELSE
+        IF ext = "PNG" OR ext = "BMP" OR ext = "GIF" OR ext = "BMP" OR ext = "JPG" OR ext = "JPEG" THEN match = True
+    END IF
+
+    ExtFilterMatch = match
+END FUNCTION
+
+SUB OnSelectFile
+    DIM msgRes AS INTEGER
+    DIM filename AS STRING
+    filename = Text(txtFDFilename)
+
+    IF filename = "" THEN
+        msgRes = MessageBox("Please select a file.", "Invalid Option", MsgBox_OkOnly + MsgBox_Exclamation)
+        EXIT SUB
+    END IF
+
+    filename = fileDialogPath + __GXFS_PathSeparator + filename
+
+    IF fileDialogMode = FD_OPEN THEN
+        IF NOT _FILEEXISTS(filename) THEN
+            msgRes = MessageBox("File exists, overwrite existing file?", "Invalid Option", MsgBox_YesNo + MsgBox_Question)
+            IF msgRes = MsgBox_Cancel THEN EXIT SUB
+        END IF
+
+        SELECT CASE fileDialogTargetForm
+
+            CASE MainForm
+                LoadMap filename
+
+            CASE frmNewMap
+                Text(txtTilesetImage) = filename
+                Control(frmNewMap).Hidden = False
+                Control(frmFile).Hidden = True
+
+            CASE frmReplaceTileset
+                Text(txtRTTilesetImage) = filename
+                Control(frmReplaceTileset).Hidden = False
+                Control(frmFile).Hidden = True
+
+        END SELECT
+
+    ELSE 'FD_SAVE
+        SELECT CASE fileDialogTargetForm
+            CASE MainForm:
+                IF _FILEEXISTS(filename) THEN
+                    msgRes = MessageBox("File not found.", "Invalid Option", MsgBox_OkCancel + MsgBox_Exclamation)
+                    EXIT SUB
+                END IF
+
+                SaveMap filename
+        END SELECT
+    END IF
+
+END SUB
+
+
+'$include:'../gx/gx.bm'

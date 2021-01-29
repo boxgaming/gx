@@ -11,7 +11,7 @@ DECLARE CUSTOMTYPE LIBRARY
     SUB __UI_MemCopy ALIAS memcpy (BYVAL dest AS _OFFSET, BYVAL source AS _OFFSET, BYVAL bytes AS LONG)
 END DECLARE
 
-DECLARE LIBRARY "falcon"
+DECLARE LIBRARY "gx_falcon"
     SUB uprint_extra (BYVAL x&, BYVAL y&, BYVAL chars%&, BYVAL length%&, BYVAL kern&, BYVAL do_render&, txt_width&, BYVAL charpos%&, charcount&, BYVAL colour~&, BYVAL max_width&)
     FUNCTION uprint (BYVAL x&, BYVAL y&, chars$, BYVAL txt_len&, BYVAL colour~&, BYVAL max_width&)
     FUNCTION uprintwidth (chars$, BYVAL txt_len&, BYVAL max_width&)
