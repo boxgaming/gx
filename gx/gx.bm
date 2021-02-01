@@ -8,27 +8,51 @@ SUB GXSleep (stime)
 END SUB
 
 FUNCTION GXSoundLoad (filename AS STRING)
-    GXSoundLoad = _SNDOPEN(filename)
+    $IF MACOSX THEN
+        ' Sound not currently supported for macosx
+    $ELSE
+        GXSoundLoad = _SNDOPEN(filename)
+    $END IF
 END FUNCTION
 
 SUB GXSoundPlay (sid AS LONG)
-    _SNDPLAY sid
+    $IF MACOSX THEN
+        ' Sound not currently supported for macosx
+    $ELSE
+        _SNDPLAY sid
+    $END IF
 END SUB
 
 SUB GXSoundRepeat (sid AS LONG)
-    _SNDLOOP sid
+    $IF MACOSX THEN
+        ' Sound not currently supported for macosx
+    $ELSE
+        _SNDLOOP sid
+    $END IF
 END SUB
 
 SUB GXSoundVolume (sid AS LONG, v)
-    _SNDVOL sid, v / 100
+    $IF MACOSX THEN
+        ' Sound not currently supported for macosx
+    $ELSE
+        _SNDVOL sid, v / 100
+    $END IF
 END SUB
 
 SUB GXSoundPause (sid AS LONG)
-    _SNDPAUSE sid
+    $IF MACOSX THEN
+        ' Sound not currently supported for macosx
+    $ELSE
+        _SNDPAUSE sid
+    $END IF
 END SUB
 
 SUB GXSoundStop (sid AS LONG)
-    _SNDSTOP sid
+    $IF MACOSX THEN
+        ' Sound not currently supported for macosx
+    $ELSE
+        _SNDSTOP sid
+    $END IF
 END SUB
 
 
@@ -578,13 +602,13 @@ SUB GXSceneStart
 
         ' Perform any auto-scene moves
         DIM sx AS LONG, sy AS LONG
-        IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
-           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X THEN
+IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X THEN
             sx = (GXEntityX(gx_scene.followEntity) + GXEntityWidth(gx_scene.followEntity) / 2) - GXSceneWidth / 2
             GXScenePos sx, GXSceneY
         END IF
-        IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
-           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
+IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
             sy = (GXEntityY(gx_scene.followEntity) + GXEntityHeight(gx_scene.followEntity) / 2) - GXSceneHeight / 2
             GXScenePos GXSceneX, sy
         END IF
@@ -1121,39 +1145,43 @@ FUNCTION __GXFS_IsDriveLetter (path AS STRING)
 END FUNCTION
 
 FUNCTION __GXFS_DriveList (drives() AS STRING)
-    DIM text AS STRING
-    DIM tmpfile AS STRING
-    tmpfile = "__drivelist"
+    $IF WINDOWS THEN
+        DIM text AS STRING
+        DIM tmpfile AS STRING
+        tmpfile = "__drivelist"
 
-    ' Remove the temp file, if it exists
-    IF _FILEEXISTS(tmpfile) THEN KILL tmpfile
+        ' Remove the temp file, if it exists
+        IF _FILEEXISTS(tmpfile) THEN KILL tmpfile
 
-    ' Print the drive list to a file
-    SHELL _HIDE "cmd /c " + CHR$(34) + "fsutil fsinfo drives > " + tmpfile + CHR$(34)
+        ' Print the drive list to a file
+        SHELL _HIDE "cmd /c " + CHR$(34) + "fsutil fsinfo drives > " + tmpfile + CHR$(34)
 
-    DIM count AS INTEGER
-    count = 0
-    IF _FILEEXISTS(tmpfile) THEN
-        OPEN tmpfile FOR BINARY AS #1
-        text = SPACE$(LOF(1))
-        GET #1, , text
-        CLOSE #1
-        KILL tmpfile
-        text = __GXSTR_Replace(text, "Drives: ", "")
-        text = __GXSTR_Replace(text, GX_CRLF, "")
-        text = __GXSTR_Replace(text, "\", "")
-        count = __GXSTR_Split(text, " ", drives())
-    END IF
+        DIM count AS INTEGER
+        count = 0
+        IF _FILEEXISTS(tmpfile) THEN
+            OPEN tmpfile FOR BINARY AS #1
+            text = SPACE$(LOF(1))
+            GET #1, , text
+            CLOSE #1
+            KILL tmpfile
+            text = __GXSTR_Replace(text, "Drives: ", "")
+            text = __GXSTR_Replace(text, GX_CRLF, "")
+            text = __GXSTR_Replace(text, "\", "")
+            count = __GXSTR_Split(text, " ", drives())
+        END IF
 
-    __GXFS_DriveList = count
+        __GXFS_DriveList = count
+    $ELSE
+        __GXFS_DriveList = 0
+    $END IF
 END FUNCTION
 
 FUNCTION __GXFS_PathSeparator$ ()
-    IF INSTR(_OS$, "[WINDOWS]") THEN
+    $IF WINDOWS THEN
         __GXFS_PathSeparator = "\"
-    ELSE
+    $ELSE
         __GXFS_PathSeparator = "/"
-    END IF
+    $END IF
 END FUNCTION
 
 FUNCTION __GXFS_DirList (path AS STRING, dirmode AS INTEGER, filenames() AS STRING)
@@ -1165,20 +1193,19 @@ FUNCTION __GXFS_DirList (path AS STRING, dirmode AS INTEGER, filenames() AS STRI
     IF _FILEEXISTS(tmpfile) THEN KILL tmpfile
 
     ' Determine the OS-specific directory command
-    IF INSTR(_OS$, "[WINDOWS]") THEN
+    $IF WINDOWS THEN
         IF dirmode THEN
             cmd = "dir /b /ad " + CHR$(34) + path + CHR$(34) + " > " + tmpfile
         ELSE
             cmd = "dir /b /a-d " + CHR$(34) + path + CHR$(34) + " > " + tmpfile
         END IF
-
-    ELSEIF INSTR(_OS$, "[LINUX]") OR INSTR(_OS$, "[MACOSX]") THEN
+    $ELSE
         IF dirmode THEN
-            cmd = "ls -1 -d */ " + CHR$(34) + path + CHR$(34) + " | sed '1d' | sed 's/\///g' > " + tmpfile
+        cmd = "find " + CHR$(34) + path + CHR$(34) + " -maxdepth 1 -type d | sed '1d' | sed 's/.*\///g' > " + tmpfile
         ELSE
-            cmd = "ls -p " + CHR$(34) + path + CHR$(34) + " | grep -v / > " + tmpfile
+        cmd = "ls -p " + CHR$(34) + path + CHR$(34) + " | grep -v / > " + tmpfile
         END IF
-    END IF
+    $END IF
 
     IF cmd <> "" THEN
         SHELL _HIDE cmd
@@ -1423,14 +1450,14 @@ FUNCTION __GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGE
     FOR i = 1 TO gx_entity_count
         IF i <> eid THEN
             ' TODO: only include entities that should be considered (e.g. visible, non-screen-level)
-            IF __GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
-                                GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
-                                GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
-                                GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid), _
-                                GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
-                                GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
-                                GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i), _
-                                GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)) THEN
+    IF __GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
+    GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
+    GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
+    GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid), _
+    GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
+    GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
+    GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i), _
+    GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)) THEN
                 ecount = ecount + 1
                 REDIM _PRESERVE entities(ecount) AS INTEGER
                 entities(ecount) = i
