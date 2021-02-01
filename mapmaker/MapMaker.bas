@@ -273,17 +273,7 @@ SUB __UI_Click (id AS LONG)
 
         CASE lstFDPaths
             IF lastControlClicked = id AND TIMER - lastClick < .3 THEN ' Double-click
-                ' Change current path
-                DIM dir AS STRING
-                dir = GetItem(lstFDPaths, Control(lstFDPaths).Value)
-                IF dir = ".." THEN
-                    fileDialogPath = __GXFS_GetParentPath(fileDialogPath)
-                ELSEIF __GXFS_IsDriveLetter(dir) THEN
-                    fileDialogPath = dir
-                ELSE
-                    fileDialogPath = fileDialogPath + __GXFS_PathSeparator + dir
-                END IF
-                RefreshFileDialog
+                OnChangeDirectory
             END IF
 
     END SELECT
@@ -783,6 +773,22 @@ FUNCTION ExtFilterMatch (filename AS STRING)
 
     ExtFilterMatch = match
 END FUNCTION
+
+SUB OnChangeDirectory
+    ' Change current path
+    DIM dir AS STRING
+    dir = GetItem(lstFDPaths, Control(lstFDPaths).Value)
+    IF dir = ".." THEN
+        fileDialogPath = __GXFS_GetParentPath(fileDialogPath)
+    ELSEIF __GXFS_IsDriveLetter(dir) THEN
+        fileDialogPath = dir
+    ELSEIF fileDialogPath = __GXFS_PathSeparator THEN
+        fileDialogPath = __GXFS_PathSeparator + dir
+    ELSE
+        fileDialogPath = fileDialogPath + __GXFS_PathSeparator + dir
+    END IF
+    RefreshFileDialog
+END SUB
 
 SUB OnSelectFile
     DIM msgRes AS INTEGER

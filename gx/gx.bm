@@ -602,13 +602,13 @@ SUB GXSceneStart
 
         ' Perform any auto-scene moves
         DIM sx AS LONG, sy AS LONG
-IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
-gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X THEN
+        IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X THEN
             sx = (GXEntityX(gx_scene.followEntity) + GXEntityWidth(gx_scene.followEntity) / 2) - GXSceneWidth / 2
             GXScenePos sx, GXSceneY
         END IF
-IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
-gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
+        IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
             sy = (GXEntityY(gx_scene.followEntity) + GXEntityHeight(gx_scene.followEntity) / 2) - GXSceneHeight / 2
             GXScenePos GXSceneX, sy
         END IF
@@ -1120,6 +1120,7 @@ FUNCTION __GXFS_GetParentPath$ (filepath AS STRING)
     s = MID$(s, 1, i - 1)
     s = __GXSTR_Replace(s, "/", __GXFS_PathSeparator)
     'IF __GXFS_IsDriveLetter(s) THEN s = s + __GXFS_PathSeparator
+    IF s = "" THEN s = __GXFS_PathSeparator
     __GXFS_GetParentPath = s
 END FUNCTION
 
@@ -1450,14 +1451,14 @@ FUNCTION __GX_EntityCollision (eid AS INTEGER, movex AS INTEGER, movey AS INTEGE
     FOR i = 1 TO gx_entity_count
         IF i <> eid THEN
             ' TODO: only include entities that should be considered (e.g. visible, non-screen-level)
-    IF __GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
-    GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
-    GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
-    GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid), _
-    GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
-    GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
-    GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i), _
-    GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)) THEN
+            IF __GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
+               GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
+               GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid), _
+               GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid), _
+               GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
+               GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
+               GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i), _
+               GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)) THEN
                 ecount = ecount + 1
                 REDIM _PRESERVE entities(ecount) AS INTEGER
                 entities(ecount) = i
@@ -1620,13 +1621,9 @@ SUB __GX_PlayerAction (pid AS INTEGER)
 
     IF gx_entities(player.eid).applyGravity = 1 THEN
         IF GXKeyDown(actionJump.key) OR GXKeyDown(actionJumpLeft.key) OR GXKeyDown(actionJumpRight.key) THEN
-            'IF gx_entities(player.eid).jumpstart = 0 AND GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
-            'IF gx_entities(player.eid).vy = 0 AND GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
             IF __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
                 gx_entities(player.eid).vy = -player.jumpSpeed
-                'gx_entities(player.eid).jumpstart = GXTicks - 45
                 gx_entities(player.eid).jumping = 1
-                'GXEntityMove player.eid, 0, -1
             END IF
         END IF
 
