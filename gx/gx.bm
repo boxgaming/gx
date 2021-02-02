@@ -873,6 +873,8 @@ SUB GXMapSave (filename AS STRING)
 
     version = 1
 
+    ' TODO: check to see if the tileset image has been removed before deleting
+    '       the original file
     IF _FILEEXISTS(filename) THEN
         KILL filename
     END IF
@@ -987,7 +989,7 @@ SUB __GX_MapLoadV1 (filename AS STRING)
         PUT #2, , bytes()
         CLOSE #2
         GXTilesetCreate tilesetFilename, tilewidth, tileheight
-        KILL tilesetFilename
+        'KILL tilesetFilename
     ELSE
         GXTilesetCreate tilesetFilename, tilewidth, tileheight
     END IF
