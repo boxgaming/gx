@@ -870,7 +870,7 @@ SUB OnSelectFile
     filename = Text(txtFDFilename)
 
     IF filename = "" THEN
-        msgRes = MessageBox("Please select a file.", "Invalid Option", MsgBox_OkOnly + MsgBox_Exclamation)
+        msgRes = MessageBox("Please select a file.", "No File Selection", MsgBox_OkOnly + MsgBox_Exclamation)
         EXIT SUB
     END IF
 
@@ -878,8 +878,8 @@ SUB OnSelectFile
 
     IF fileDialogMode = FD_OPEN THEN
         IF NOT _FILEEXISTS(filename) THEN
-            msgRes = MessageBox("File exists, overwrite existing file?", "Invalid Option", MsgBox_YesNo + MsgBox_Question)
-            IF msgRes = MsgBox_Cancel THEN EXIT SUB
+            msgRes = MessageBox("The specified file was not found.", "File Not Found", MsgBox_OkOnly + MsgBox_Exclamation)
+            EXIT SUB
         END IF
 
         SELECT CASE fileDialogTargetForm
@@ -903,8 +903,8 @@ SUB OnSelectFile
         SELECT CASE fileDialogTargetForm
             CASE MainForm:
                 IF _FILEEXISTS(filename) THEN
-                    msgRes = MessageBox("File not found.", "Invalid Option", MsgBox_OkCancel + MsgBox_Exclamation)
-                    EXIT SUB
+                    msgRes = MessageBox("File exists, overwrite existing file?", "File Exists", MsgBox_YesNo + MsgBox_Question)
+                    IF msgRes = MsgBox_No THEN EXIT SUB
                 END IF
 
                 SaveMap filename
