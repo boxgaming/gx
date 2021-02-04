@@ -37,7 +37,7 @@ SUB __UI_LoadForm
     Control(__UI_NewID).Value = 10
     Control(__UI_NewID).BorderSize = 1
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "MenuTileset", 72, 24, 104, 0, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "TilesetMenu", 72, 24, 104, 0, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Tileset"
 
@@ -259,9 +259,9 @@ SUB __UI_LoadForm
     Control(__UI_NewID).BorderSize = 1
     Control(__UI_NewID).NumericOnly = __UI_NumericWithBounds
 
-    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "TilesetMenuReplace", 164, 22, 0, 4, __UI_GetID("MenuTileset"))
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "TilesetMenuReplace", 180, 22, 0, 4, __UI_GetID("TilesetMenu"))
     __UI_RegisterResult = 0
-    SetCaption __UI_NewID, "Replace Tileset"
+    SetCaption __UI_NewID, "Replace Tileset -"
 
     __UI_NewID = __UI_NewControl(__UI_Type_Label, "lblLine", 500, 1, 17, 111, __UI_GetID("frmReplaceTileset"))
     __UI_RegisterResult = 0
@@ -345,6 +345,14 @@ SUB __UI_LoadForm
     Control(__UI_NewID).VAlign = __UI_Middle
     Control(__UI_NewID).BorderSize = 1
 
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "TilesetMenuZoomIn", 100, 22, 0, 33, __UI_GetID("TilesetMenu"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Zoom In"
+
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "TilesetMenuZoomOut", 108, 22, 0, 55, __UI_GetID("TilesetMenu"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "Zoom Out"
+
 END SUB
 
 SUB __UI_AssignIDs
@@ -353,7 +361,7 @@ SUB __UI_AssignIDs
     ViewMenu = __UI_GetID("ViewMenu")
     frmNewMap = __UI_GetID("frmNewMap")
     frmReplaceTileset = __UI_GetID("frmReplaceTileset")
-    MenuTileset = __UI_GetID("MenuTileset")
+    TilesetMenu = __UI_GetID("TilesetMenu")
     frmFile = __UI_GetID("frmFile")
     Map = __UI_GetID("Map")
     FileMenuNew = __UI_GetID("FileMenuNew")
@@ -403,4 +411,6 @@ SUB __UI_AssignIDs
     lblFDFiles = __UI_GetID("lblFDFiles")
     lblFDPaths = __UI_GetID("lblFDPaths")
     lblStatus = __UI_GetID("lblStatus")
+    TilesetMenuZoomIn = __UI_GetID("TilesetMenuZoomIn")
+    TilesetMenuZoomOut = __UI_GetID("TilesetMenuZoomOut")
 END SUB
