@@ -1,6 +1,8 @@
 'OPTION _EXPLICIT
 ''$include: '../gx/gx.bi'
-'SUB GXOnGameEvent (event AS GXEvent)
+'SUB GXOnGameEvent (e AS GXEvent)
+'    SELECT CASE e.event
+'    END SELECT
 'END SUB
 
 SUB GXSleep (stime)
@@ -814,10 +816,11 @@ END SUB
 
 FUNCTION GXMapTile (col AS INTEGER, row AS INTEGER, layer AS INTEGER)
     IF col < 0 OR col >= gx_map.columns OR row < 0 OR row >= gx_map.rows THEN
-        GXMapTile = 0
+        GXMapTile = -1
     ELSE
         DIM mtile AS GXMapTile
         mtile = gx_map(row, col)
+        IF layer < 1 THEN GXMapTile = -1
         IF layer = 1 THEN GXMapTile = mtile.layer1
         IF layer = 2 THEN GXMapTile = mtile.layer2
         IF layer = 3 THEN GXMapTile = mtile.layer3
@@ -833,6 +836,9 @@ FUNCTION GXMapTileDepth (col AS INTEGER, row AS INTEGER)
 END FUNCTION
 
 SUB GXMapTileAdd (tile AS INTEGER, col AS INTEGER, row AS INTEGER)
+    IF tile < 0 THEN EXIT SUB
+    'TODO: check for tile greater than max and exit early
+
     DIM layer AS INTEGER
     IF (col >= 0 AND col <= gx_map.columns AND row >= 0 AND row < gx_map.rows) THEN
         layer = gx_map(row, col).depth + 1
@@ -1038,16 +1044,27 @@ END FUNCTION
 
 
 SUB GXSpriteDraw (i AS LONG, x AS LONG, y AS LONG, seq AS INTEGER, frame AS INTEGER, swidth AS INTEGER, sheight AS INTEGER, imgdest AS LONG)
+    'DIM xoffset, yoffset
+    'xoffset = (frame - 1) * swidth
+    'yoffset = (seq - 1) * sheight
+    'IF imgdest THEN
+    '    _PUTIMAGE (x, y), i, imgdest, (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
+    'ELSE
+    '    _PUTIMAGE (x, y), i, , (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
+    'END IF
+    GXSpriteDrawScaled i, x, y, swidth, sheight, seq, frame, swidth, sheight, imgdest
+END SUB
+
+SUB GXSpriteDrawScaled (i AS LONG, x AS LONG, y AS LONG, dwidth AS INTEGER, dheight AS INTEGER, seq AS INTEGER, frame AS INTEGER, swidth AS INTEGER, sheight AS INTEGER, imgdest AS LONG)
     DIM xoffset, yoffset
     xoffset = (frame - 1) * swidth
     yoffset = (seq - 1) * sheight
     IF imgdest THEN
-        _PUTIMAGE (x, y), i, imgdest, (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
+        _PUTIMAGE (x, y)-(x + (dwidth - 1), y + (dheight - 1)), i, imgdest, (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
     ELSE
-        _PUTIMAGE (x, y), i, , (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
+        _PUTIMAGE (x, y)-(x + (dwidth - 1), y + (dheight - 1)), i, , (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
     END IF
 END SUB
-
 
 SUB GXTilesetCreate (tilesetFilename AS STRING, tileWidth AS INTEGER, tileHeight AS INTEGER)
     gx_tileset.filename = tilesetFilename
