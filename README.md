@@ -14,3 +14,4 @@ The current alpha build has support for:
 - Bitmap font support
 - Collision detection
 - Basic gravity
+- Interactive Debugging
