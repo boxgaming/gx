@@ -1,0 +1,129 @@
+SUB __gx_font_default
+    IF _FILEEXISTS("tmp/__gx_font_default.png") = 0 THEN
+        DIM A$
+        A$ = ""
+        A$ = A$ + "haIkHM6FCUe]>HSR0R5\P063F0Q#:429Aj1D22BEYGBiT#0BQD8P82cHIH05"
+        A$ = A$ + "415A#\08MDA5YX2RD\RH1UR3BC#Y:8:28`m4`a1_cLmknS__kcm7NNBi\g[g"
+        A$ = A$ + "ekJ_fkeJ]gWc_Kk>g^LbXT<#P0A>BFHVm#P<?<Pg;UD;2lg1b5h;#P\89fSS"
+        A$ = A$ + ">;`NbRPbU77j<m70ZPPi20588VdQ09XVbk4nE#UI:g1W>45MIN;CZKc;XM38"
+        A$ = A$ + "Y;kc`G=`]R9ad^`V^<7Z9]HC9d]5Lc;\9iked]N<g7ab^fh;CNn>UMFnfAj7"
+        A$ = A$ + "hUe?h^=]TVW8B=NkcV8eY7g:k;Yme<fhi>n886?h4j^D3kh=6<5eg6L\EWDX"
+        A$ = A$ + "CVjebX\YkK`H<1NIbIPZV5LN:gU>]QJ5OL8e_i]ZY3kb_Z`>0fJ^2_mDbmO9"
+        A$ = A$ + "2cOYo^XoCfTL3Dl`NRI3BnhPEn?8f;[kjIhkS#;_N`c5Y=ULn:=>7klbcZo#"
+        A$ = A$ + "L=<#g<O#EU[`YSIeJVGUkIn[k\;KE_oZ6^H3>WZ8;Sj7>hC2[XY\diUdaeUe"
+        A$ = A$ + "`L3eoYOJ=9MhG?lkodQShRCQPhHOh;VdKYNeWCQm5]^XAj_U1GohSG33C;KG"
+        A$ = A$ + "S8<DZ27dU?iiX]ZieRogaKT9gTh=NmZKH9^>jEOHoOi`R:K`kkQY;Nn_kQJ:"
+        A$ = A$ + "k;jK_>J7^F>6=;S3N_kCneDd95Te7LDU;]_aUaM7E1YfX>m47;?i7BWE^2De"
+        A$ = A$ + "IIJ^Id]^k=IOc4F[me=i:fFfNKEdigbXOLb>2[hYmfW1SC7HjMfQZ>bM7ci3"
+        A$ = A$ + "X3TRLMKV4AOBj`Z_9k8Ncl7IdNEH]T[Sm9G\45FWGKZTkU#Q]gfHd:;P<Nom"
+        A$ = A$ + "I?dH[62\GP=iHUJn[O7H^gbL_Nc;obUKcMhO4BUj>a:]JcNjKTX8:_;Ugd33"
+        A$ = A$ + "XhJbnMiTD?B_dEZCa^\CjV^K;?dNeoh;F>MSj4?D[TLkbn2_VmRF;6?>3Ie;"
+        A$ = A$ + "VDNUnU6b#mTGU7;bSkn=RgnMTS[MHNR5JYQ_`NoHM4cGk9FkEF[J^fKCD]i?"
+        A$ = A$ + "fc0]\S;NCijDWWNYHo]H#gS?>`h6Kjgeo3Sh2mCcjNVJYV`M;hafB>iGH\=5"
+        A$ = A$ + "mFIeL`CXMY3l9bmCnSKf_bBLR1cmNgiD]HFEAE]AinTnW2kjc8i6JCfZa8mQ"
+        A$ = A$ + "WP<4Cj]=]F19B;QoYc]h64MGILh6GUH]aOWE;k5fX_^Ih[25eXIL3?bj;`KI"
+        A$ = A$ + "4mhobc=`dgnE2cLRZNej2NRUoR^JDfZSk8dJChnE2fkd[m;0GJ5lmh:G]kh?"
+        A$ = A$ + "T;Y?o4k[]X#kHXWlJJP:Q3e8#C9?lcFV65Tc6f\<aIVM;Dm8K6fY>J95F\_U"
+        A$ = A$ + "gR_dRoQ]Gi:MmAg2Em1jILkRP7mkJ>7>0[FfS\dn>hJLCJbT9S`FW`gUL^UD"
+        A$ = A$ + "JDODAoLI_[Tam97mYT:kd^[5UnTG^];YBFM#`dD`6M]:Co#=;32_LHANaA>0"
+        A$ = A$ + ";Kc7S;D]UnF4GN\R8hC:bM^4OTWeI=K0FW?aiO6=OKW^[ec;:ECK_FS7:L8T"
+        A$ = A$ + ">i07]TN:jT5Kk2g3Pe];mU>?C5CPPjMO=C^`]Mc#T8\9ZFUhn?5_a2OWdafI"
+        A$ = A$ + "1MDEP:Lb[bEA[JEPPTDUTBd3lYoBmI=R;iBbnk^5UmWRR97n9lXPT>K^1oT]"
+        A$ = A$ + "^MWF0k7hj`XJe[VoeHPIlFkBUOKk1X\K8a6J__793WHQeHo:_fdEYTk6#GBM"
+        A$ = A$ + "<oRC5_9lPnJ8`gg4`1Ei16N?gZ7J0iOThD>S;Tg0iUj[lm0K[lAkbi`Y61fM"
+        A$ = A$ + "5e^\KNKhhGSG<S9U`66cXX?GmmC^c3kHMZUAl>?jajEfiYUgjWc1j9S[JmV3"
+        A$ = A$ + "K[=VTXf>`eEbhC4IVhTRc>g]Z<#V#AHHUeQ_\#FA6RodlX^K\nTEbH3KC1H;"
+        A$ = A$ + "KHkJ_lAPGK3gLTHYgKFF5NSA?<PMN1]7:De`g>UH=eUSE;ddU1m=Z^5I8gm0"
+        A$ = A$ + "U7?QWQGPi8URV:T^4`k7eR\?^V8>V=EdCXWiiM[_D9GB5:Y[O#[JPE\m3]c3"
+        A$ = A$ + "jV6ij;0F_Gi5YDW?5O=Um6n_i9_]TLGSSCh3gY5e_X6REe9GOVi_WcOfmHlV"
+        A$ = A$ + "i7mBE9?7^MT7M1kc^dkaIYko>U9g:Ten4i]BidXAigf;\_nSf5ZE;UO[dde`"
+        A$ = A$ + "CP\NHcmi^j[M#:lRZh[cc<VQJkFYcXV5MgSA5U<U5Gh<lJe3\F?^6ZkG8ZU?"
+        A$ = A$ + ">ddBDK^:ol0S_XcKGNIf3ohCCi3Y^:Am6T8Omh_`B;_N?oFafU:[2X4]IeO["
+        A$ = A$ + "BLn?DnlKYNA_aTWYn=6jhRd[oGWBB;k15?ahj]T:AeaYND5m31R47P9ARfBR"
+        A$ = A$ + "8aoLc0`]0B>dH=`RkH\bEiU3YK^[:g7df?ji4F0d]d^jkB[OmP?MgnDo]klY"
+        A$ = A$ + "8liY7=]R`9Cn;DBSFI>b[M]U#X8IneFU<RTB:^c7ElO^\dZ3Fek_SmMSB7]X"
+        A$ = A$ + "#TDZlDbQ7M;Y=^N]D;>[RH\:bNe1M``QFA4[O3XL`6PEaom:keX_OX?ZM]Gi"
+        A$ = A$ + "6?NBlEHiCX5^=K85ZU#NYLDhank:Q^3]MYba2I62o#5IbZf`nj\Tn6N]MG`M"
+        A$ = A$ + "VgS?lZ;nQj7`1LF[A_d[^C^Db\bWEYMVG_jNMgBcUK;]Wk;D:Gnf<E5fJWKg"
+        A$ = A$ + "SgYkBmSi\Yb`<RSn4SEDGWShII7;5H4W#jU<M4MHCLkHC>YhQENaIBlPMniK"
+        A$ = A$ + "?M[R^>MVnnD[UISQ?eZJNZ8ThGlh\oaEkO#Z=cn<#VRA[Ffkhm2gk?5g8dM:"
+        A$ = A$ + ":EUHo=GNE2M:^A3o1ZhmW9UP\g;f_PiPf;M#6U:W]0Qhe;_lCe\K<FG6;ahX"
+        A$ = A$ + ";aeK9Qlbo;G6=`53i6K]QVK^<64VLB86OJNa]hP2>58#FZ[<1gLfI[]R0E>\"
+        A$ = A$ + "dV<=>D0d>8FLQ8nBOS2R;IZn180:506<IK0\1;]<H#IBc0H>Y[e8]V;A0OHJ"
+        A$ = A$ + "aNh1h`NfYSDgSODaC3VA6:Sn1A0T0F0283=8FncV?QP<0f<lB0lNaMS06dIP"
+        A$ = A$ + "8`?3Pi\ef2U87N0#aX=6]A2glPH68JH6:3DmiAS>1k=KKOU2`F60c712hB01"
+        A$ = A$ + "2AR4Y]8MdV3?68#Q7?N48AS0=JhP8Pc?Hf2874LflEC<5cbQI0lYbS9G1<i`"
+        A$ = A$ + "6ZhfTY`AX03P13D>d_B>XDZV7TP_I0a]WQNn2XQP4H3<P3F#08#S49>h8A37"
+        A$ = A$ + "=N4cEO#YFKmgdV=o_>;2>OR88bLAPBKT8HajkdP_0c3D`?F3n>2N694f3`WS"
+        A$ = A$ + "#ND1<?#0f2DK^D`eOQlW;32i38^[I6gnCS>2`1e<l<GMf>9[]mkV6I`T5gId"
+        A$ = A$ + "#<jiRT6e_QS[#Nn?36JDA0h?0;`12O#VAmMh5`T>moIoA\Tof01dLoH_O6`c"
+        A$ = A$ + "<_B`<>D5:fXT<c0HR7_4XaQ:CJ4ViFMaA5?F0<hQ[3>M1PSQ>M0hhaAF?hDe"
+        A$ = A$ + "5=NDhaR47BbXW3ETHcG0IfD14C5H?Jc4T7j8aQ37BlhPSA7jj273JbhQS3_N"
+        A$ = A$ + "HPC75JLjRA7dd9S6oLX`6N<1c48koL7ERYR68ED`#S2EZTY0G7<HY37SNPDA"
+        A$ = A$ + "Q\^H1_3#?m`AQ2NZj1<3ERG78HR]T<06J]AnGmH[oT5#W3?FPYG<ICSS8noU"
+        A$ = A$ + "87Ib2`11T5?]Q2;:djQ7U^HAR4Y>h`Si_0]K0Nl13c5c::TJSNF?W6E2K3TC"
+        A$ = A$ + "bPQK<IAV102^\I<S0a;<RM7#WP\PID3eOjW48b3P\0>lLT37o=0VH^Q:VbIB"
+        A$ = A$ + "ZPZoGCG8H57ZcXh<P1X=S`Ici<U<34cR5a?2lOS97lQS8fo_SWo2jgHa4N24"
+        A$ = A$ + "aQWOf`c6:n2#E`?VWo9`OS9k1[faG0_P9m_`Yn_QCoI3A\0\?>l2N>Zj0#0c"
+        A$ = A$ + "fJfVncLf6#WY<01bDWMjW?i01X1kk4Ae7b\I00F_5agg?coQ0IDHeA70d0hP"
+        A$ = A$ + "[7=bP1bDd13L:jRR:L00TdYC19IMYS5igc2O>d58R<?0CH0630^>3VA=cj<D"
+        A$ = A$ + "eoJlW6O?NAn08>h29JD`A2nAG7AQV0Bm8P4?<4oWgmXX;6DHYCU6Lm`Y;EhH"
+        A$ = A$ + "XBS6L:0T1PCQ6JJh#CQ65`Jcokcm#379>71m=dh9X3Zo_`mXS407=The1>P>"
+        A$ = A$ + "X1[H0X;6hTA[S^`9SUZ>DAS6=:M`RmOo^W>h9P6iOjNjSH^aZjSh_7=[_hMH"
+        A$ = A$ + "8#BLI474bU[o<1hmmAioI2bo3hVSnO]2co:eW;\IeV87^13F3f71f8Rm?dlo"
+        A$ = A$ + "30WU1[HB5P=oOX]W;TIWFVca84Oj44Omh9PWf1ag>^cGSBn?le?=b?=b?=b?"
+        A$ = A$ + "=b?=b?=b?=bo_b8blG_`40fPWkC4<S<dg7K\4#P0IADfaf=KVGZ2Ta8FJHPo"
+        A$ = A$ + "9=G;LQ?48J[Vh_B4Dj658HWB:PTeV;iKVWDb]iUC=b]n9`^FS0cMF0A>\4od"
+        A$ = A$ + "V#njS?1E4C1n<c3mid_8oZP0InkWTIVhH#=e_kN`_CTBi7QAWNjQKi10EO7X"
+        A$ = A$ + "[WL19mYfC`JUC`K]<N:;RiRQmV?^WK6M7hNa4G<mcbPQ1n^^NO<S<CiNa#hB"
+        A$ = A$ + "ObR<^Rfg70M1QhdId8T\koUCAHLKNAZ3m8;ENEIP;\L:<_VZJOYb`ZJgiI6d"
+        A$ = A$ + "nCZb0YYF5NSMAFZOFM:XmTNf]NJ=E94KdN<VlZf#8NPo^6NVbc8EKF57]\aS"
+        A$ = A$ + "nO]jC=HkoFSfEhkLI=WfgK:ZY;ig8G?cM6<R#Z9j7N5f\>S73f0S\3mSmNOk"
+        A$ = A$ + "4JKWdHe#3YnYX[=g#3lAS#_1N9Ko]31PhcALX]COjnLjh[;ZU?o;<DFm\oaK"
+        A$ = A$ + "]m:R]3_mj8hSd`\74OPf>InA6G?QT3^<nLgi?M9XM?D2SW3:QGoab__EXOY9"
+        A$ = A$ + "7>I=bcQEHg]k0beG[DaC[NEfk6;FPdE:oi2XlLFVA9\jRUfiZBhDnTH:nf^0"
+        A$ = A$ + ";R>>SM\k1DhcJ:M0B6BYMDJ>kGcUO4SFlafikc7Ik:l8i9OZgVPVU1;jlG2Z"
+        A$ = A$ + "T:Ii7GdBEj4adR9nXL1jK2mEdhFJlMJcCm2:K=fFKj:Oe3fJl>4][WiM2d28"
+        A$ = A$ + "Q=Jc8IYFgm]Lg2<gNbXjd:m;ADh`a3hOEYD;O9gjYCgV3hRCC;:VjG#n_lbg"
+        A$ = A$ + "TbRb\Eg[BQV>efN`C[oCM[QT]U7\MSJgEeY]gc4g>A0B[jkZYmdDRXV^[>>G"
+        A$ = A$ + "XZhc>>[d5HQajm;GAa;laa]8BUn`VXLmB<7oel0kBgAlh^GCdol_;leJKG3b"
+        A$ = A$ + "mLOW#U<B2ZJm9KD9MPjgW6M^a55Uf1UZE_a:BbjY_Q\IXFo#f5H\3=fV_E<T"
+        A$ = A$ + "6;S#FCToDbK2i5hj]C^SbTiL6C`\TkO3:ZG\I^P7]A=b=<oGhBKSV:KoiedW"
+        A$ = A$ + "QEW<k7:4UZeXCYKK1I^leNaC6Q0W4f`W?[cII5T0g]?9?L6lb_1C44n:_VC5"
+        A$ = A$ + ":oiY68YUII9JMiBfAOJCjnmMfABHQeeS2[A]eeHYfMjN2:C>eWK82G0V?Hfh"
+        A$ = A$ + "ZQ?o9]C1K;4iagO`ZPOi1ADR\[8Y?4PajjY<7BQF#WhQMLmCKn_S9Z]gST;l"
+        A$ = A$ + "QeZXliDYW;M0AZ`MGC^caD_bCoNP?KBIFVKIE#GTQBMVaRPjR16>o^Rh<_o9"
+        A$ = A$ + "Uk#:3kGTGIdnEXdBoHoAfHMflf>L8UQnLlZTl7f#?[iIT2MOZ5XZM=BlKncb"
+        A$ = A$ + "FKW3PF]\<<aToLJ3;_93VhT?Za?6fUBOR1g#:3=Y;_11jeYJ^<fKhGEL>>9c"
+        A$ = A$ + "gYIiKZgojo5:%%L2"
+        DIM btemp$
+        DIM i&
+        DIM B$
+        DIM C%
+        DIM F$
+        DIM C$
+        DIM j
+        DIM t%
+        DIM B&
+        DIM X$
+        DIM BASFILE$
+        btemp$ = ""
+        FOR i& = 1 TO LEN(A$) STEP 4: B$ = MID$(A$, i&, 4)
+            IF INSTR(1, B$, "%") THEN
+                FOR C% = 1 TO LEN(B$): F$ = MID$(B$, C%, 1)
+                    IF F$ <> "%" THEN C$ = C$ + F$
+                NEXT: B$ = C$: END IF: FOR j = 1 TO LEN(B$)
+                IF MID$(B$, j, 1) = "#" THEN
+            MID$(B$, j) = "@": END IF: NEXT
+            FOR t% = LEN(B$) TO 1 STEP -1
+                B& = B& * 64 + ASC(MID$(B$, t%)) - 48
+                NEXT: X$ = "": FOR t% = 1 TO LEN(B$) - 1
+                X$ = X$ + CHR$(B& AND 255): B& = B& \ 256
+        NEXT: btemp$ = btemp$ + X$: NEXT
+        BASFILE$ = _INFLATE$(btemp$): btemp$ = ""
+        IF NOT _DIREXISTS("./tmp") THEN MKDIR "./tmp"
+        OPEN "./tmp/__gx_font_default.png" FOR OUTPUT AS #1
+        PRINT #1, BASFILE$;
+        CLOSE #1
+    END IF
+END SUB

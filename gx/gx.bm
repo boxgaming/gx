@@ -1,14 +1,37 @@
-'OPTION _EXPLICIT
-''$include: '../gx/gx.bi'
-'SUB GXOnGameEvent (e AS GXEvent)
-'    SELECT CASE e.event
-'    END SELECT
-'END SUB
+$IF GXBI = UNDEFINED THEN
+    OPTION _EXPLICIT
+    '$include: './gx.bi'
 
+    SUB GXOnGameEvent (e AS GXEvent)
+        SELECT CASE e.event
+        END SELECT
+    END SUB
+$END IF
+
+' Pseudo-Constants
+' ----------------------------------------------------------------------------
+FUNCTION GX_LF$: GX_LF = CHR$(10): END FUNCTION
+FUNCTION GX_CR$: GX_CR = CHR$(13): END FUNCTION
+FUNCTION GX_CRLF$: GX_CRLF = GX_CR + GX_LF: END FUNCTION
+
+
+' System Methods
+' ----------------------------------------------------------------------------
 SUB GXSleep (stime)
     _DELAY stime
 END SUB
 
+FUNCTION GXMouseX%
+    GXMouseX = _MOUSEX
+END FUNCTION
+
+FUNCTION GXMouseY%
+    GXMouseY = _MOUSEY
+END FUNCTION
+
+
+' Sound Methods
+' ----------------------------------------------------------------------------
 FUNCTION GXSoundLoad (filename AS STRING)
     $IF MACOSX THEN
         ' Sound not currently supported for macosx
@@ -58,25 +81,6 @@ SUB GXSoundStop (sid AS LONG)
 END SUB
 
 
-FUNCTION GXImageLoad (filename AS STRING)
-    DIM id AS LONG
-    DIM i AS INTEGER
-    FOR i = 0 TO gx_image_count - 1
-        IF filename = gx_images(i).filename THEN id = gx_images(i).id
-    NEXT i
-    IF id = 0 THEN
-        id = _LOADIMAGE(filename)
-        gx_image_count = gx_image_count + 1
-        REDIM _PRESERVE gx_images(gx_image_count) AS GXImage
-        gx_images(gx_image_count - 1).id = id
-        gx_images(gx_image_count - 1).filename = filename
-    END IF
-    GXImageLoad = id
-END FUNCTION
-
-SUB GXImageDraw (id AS INTEGER, x AS LONG, y AS LONG)
-    _PUTIMAGE (x, y), id
-END SUB
 
 SUB GXEntityAnimate (eid AS INTEGER, seq AS INTEGER, a AS INTEGER)
     gx_entities(eid).animate = a
@@ -108,7 +112,7 @@ FUNCTION GXEntityCreate (imageFilename AS STRING, ewidth AS INTEGER, height AS I
     newent.y = 0
     newent.height = height
     newent.width = ewidth
-    newent.image = GXImageLoad(imageFilename)
+    newent.image = __GX_ImageLoad(imageFilename)
     newent.spriteFrame = 1
     newent.spriteSeq = 1
     newent.seqFrames = seqFrames
@@ -137,6 +141,7 @@ SUB GXEntityDraw (ent AS GXEntity)
         y = ent.y - gx_scene.y
     END IF
     GXSpriteDraw ent.image, x, y, ent.spriteSeq, ent.spriteFrame, ent.width, ent.height, gx_scene.image
+    IF GXDebug THEN __GX_DebugEntity ent, x, y
 END SUB
 
 SUB GXEntityMove (eid AS INTEGER, x AS LONG, y AS LONG)
@@ -202,7 +207,7 @@ SUB GXEntityFrameSet (eid AS INTEGER, seq AS INTEGER, frame AS INTEGER)
 END SUB
 
 SUB GXEntityImageSet (eid AS INTEGER, filename AS STRING)
-    gx_entities(eid).image = GXImageLoad(filename)
+    gx_entities(eid).image = __GX_ImageLoad(filename)
 END SUB
 
 SUB GXEntityType (eid AS INTEGER, etype AS INTEGER)
@@ -339,18 +344,24 @@ END FUNCTION
 
 
 
-SUB GXFullScreenOn
-    _FULLSCREEN _SQUAREPIXELS
+SUB GXFullScreen (fullscreen AS INTEGER)
+    IF fullscreen THEN
+        _FULLSCREEN _SQUAREPIXELS
+    ELSE
+        _FULLSCREEN _OFF
+    END IF
+    gx_scene.fullscreen = fullscreen
 END SUB
 
-SUB GXFullScreenOff
-    _FULLSCREEN _OFF
-END SUB
+FUNCTION GXFullScreen
+    GXFullScreen = gx_scene.fullscreen
+END FUNCTION
+
 
 FUNCTION GXBackgroundAdd (imageFilename AS STRING)
     gx_bg_count = gx_bg_count + 1
     REDIM _PRESERVE gx_bg(gx_bg_count) AS GXBackground
-    gx_bg(gx_bg_count).image = GXImageLoad(imageFilename)
+    gx_bg(gx_bg_count).image = __GX_ImageLoad(imageFilename)
     gx_bg(gx_bg_count).mode = GXBG_STRETCH
     GXBackgroundAdd = gx_bg_count
 END FUNCTION
@@ -403,17 +414,6 @@ SUB GXBackgroundDraw (bi AS INTEGER)
     END IF
 END SUB
 
-SUB GXSceneBGSet (imageFilename AS STRING)
-    gx_bg_count = 1
-    REDIM _PRESERVE gx_bg(gx_bg_count) AS GXBackground
-    gx_bg(gx_bg_count).image = GXImageLoad(imageFilename)
-    gx_bg(gx_bg_count).mode = GXBG_STRETCH
-END SUB
-
-SUB GXSceneBGClear
-    GXBackgroundClear
-END SUB
-
 SUB GXSceneEmbedded (embedded AS INTEGER)
     gx_scene.embedded = embedded
 END SUB
@@ -422,6 +422,7 @@ FUNCTION GXSceneEmbedded
     GXSceneEmbedded = gx_scene.embedded
 END FUNCTION
 
+' Creates a new scene with the specified pixel width and height.
 SUB GXSceneCreate (swidth AS INTEGER, sheight AS INTEGER)
     gx_scene.width = swidth
     gx_scene.height = sheight
@@ -436,6 +437,7 @@ SUB GXSceneCreate (swidth AS INTEGER, sheight AS INTEGER)
     IF NOT gx_img_blank THEN gx_img_blank = _NEWIMAGE(1, 1, 32)
 END SUB
 
+' Resize the scene with the specified pixel width and height.
 SUB GXSceneResize (swidth AS INTEGER, sheight AS INTEGER)
     gx_scene.width = swidth
     gx_scene.height = sheight
@@ -450,6 +452,7 @@ SUB GXSceneResize (swidth AS INTEGER, sheight AS INTEGER)
 END SUB
 
 SUB GXSceneDestroy
+    _DELAY .1
     GXSceneStop
     _FREEIMAGE gx_scene.image
     _FREEIMAGE gx_img_blank
@@ -475,21 +478,40 @@ SUB __GX_CustomDrawEvent (eventType AS INTEGER)
     _DEST 0
 END SUB
 
+' Returns the current frame rate (expressed in frames-per-second or FPS).
 SUB GXFrameRate (frameRate AS INTEGER)
     gx_framerate = frameRate
 END SUB
 
+' Sets current frame rate (expressed in frames-per-second or FPS).
+' The default value for the frame rate is 60
 FUNCTION GXFrameRate
     GXFrameRate = gx_framerate
 END FUNCTION
 
+' Returns the current frame.
+' This is a frame counter that starts when GXSceneStart is called.
+' It is initially set to zero and is incremented on each frame.
+FUNCTION GXFrame
+    GXFrame = gx_scene.frame
+END FUNCTION
+
+' Draw the scene.
+' This method is called automatically when GX is managing the event/game loop.
+' Call this method for each page draw event when the event/game loop is being
+' handled externally.
 SUB GXSceneDraw
     IF gx_map_loading THEN EXIT SUB
     DIM ei AS INTEGER
     DIM ei2 AS INTEGER
     DIM frame AS INTEGER
-    'DIM aframe AS INTEGER
-    frame = gx_ticks MOD gx_framerate + 1
+    frame = gx_scene.frame MOD gx_framerate + 1
+
+    ' If the screen has been resized, resize the destination screen image
+    IF _RESIZE AND NOT gx_scene.embedded THEN
+        '_FREEIMAGE _SOURCE
+        SCREEN _NEWIMAGE(_RESIZEWIDTH, _RESIZEHEIGHT, 32)
+    END IF
 
     ' Clear the background
     _DONTBLEND gx_scene.image
@@ -507,6 +529,7 @@ SUB GXSceneDraw
 
     ' Draw the map tiles
     GXMapDraw
+    IF GXDebug THEN __GX_DebugMapTile
 
     'Call out to any custom screen drawing
     __GX_CustomDrawEvent GXEVENT_DRAWMAP
@@ -537,6 +560,7 @@ SUB GXSceneDraw
 
     'Call out to any custom screen drawing
     __GX_CustomDrawEvent GXEVENT_DRAWSCREEN
+    IF GXDebug THEN __GX_DebugFrameRate
 
     ' Copy the background image to the screen
     __GX_CustomEvent GXEVENT_PAINTBEFORE
@@ -544,50 +568,74 @@ SUB GXSceneDraw
     _PUTIMAGE , gx_scene.image
     _BLEND
     __GX_CustomEvent GXEVENT_PAINTAFTER
-
 END SUB
 
+' Moves the scene position by the number of pixels specified by the dx and dy values.
+' The default position for a scene is (0,0). Negative x and y values are valid.
+' A non-zero value for dx will move the scene by the number of pixels specified to the right or left.
+' A non-zero value for dy will move the scene by the number of pixels specified up or down.
 SUB GXSceneMove (dx AS LONG, dy AS LONG)
     gx_scene.x = gx_scene.x + dx
     gx_scene.y = gx_scene.y + dy
 END SUB
 
+' Positions the scene at the specified x and y coordinates.
+' The default position for a scene is (0,0). Negative x and y values are valid.
 SUB GXScenePos (x AS LONG, y AS LONG)
     gx_scene.x = x
     gx_scene.y = y
 END SUB
 
+' Returns the scene's current y position.
 FUNCTION GXSceneX
     GXSceneX = gx_scene.x
 END FUNCTION
 
+' Returns the scene's current y position.
 FUNCTION GXSceneY
     GXSceneY = gx_scene.y
 END FUNCTION
 
+' Returns the scene width.
 FUNCTION GXSceneWidth
     GXSceneWidth = gx_scene.width
 END FUNCTION
 
+' Returns the scene height.
 FUNCTION GXSceneHeight
     GXSceneHeight = gx_scene.height
 END FUNCTION
 
+' Returns the number of tile columns that can be displayed within the scene.
+' This value will be zero unless a tiled map has been created or loaded.
 FUNCTION GXSceneColumns
     GXSceneColumns = gx_scene.columns
 END FUNCTION
 
+' Returns the number of tile rows that can be displayed within the scene.
+' This value will be zero unless a tiled map has been created or loaded.
 FUNCTION GXSceneRows
     GXSceneRows = gx_scene.rows
 END FUNCTION
 
+' Start the game loop.
+' This method will not return control to the calling program until the
+' game loop is interrupted with the GXSceneStop method.
+' Game events will be sent to the GXOnGameEvent method during the game
+' loop execution.
 SUB GXSceneStart
-    gx_ticks = 0
+    gx_scene.frame = 0
     gx_scene.active = 1
 
     DO
         _LIMIT gx_framerate
-        gx_ticks = gx_ticks + 1
+        gx_scene.frame = gx_scene.frame + 1
+
+        ' Capture mouse events when not embedded
+        IF NOT GXSceneEmbedded THEN
+            DIM mi AS LONG
+            mi = _MOUSEINPUT
+        END IF
 
         ' Call custom game update logic
         __GX_CustomEvent GXEVENT_UPDATE
@@ -614,16 +662,7 @@ SUB GXSceneStart
             sy = (GXEntityY(gx_scene.followEntity) + GXEntityHeight(gx_scene.followEntity) / 2) - GXSceneHeight / 2
             GXScenePos GXSceneX, sy
         END IF
-        'IF gx_player_count > 0 THEN
-        '    DIM player AS GXPlayer
-        '    player = gx_players(1)
-        '    IF gx_entities(player.eid).applyGravity THEN ' this is temporary until the above TODO is implemented
-        '        IF GXEntityX(player.eid) > GXSceneX + GXSceneWidth / 2 AND GXSceneX < GXMapColumns * GXTilesetWidth - GXSceneWidth THEN
-        ''GXSceneMove 1, 0
-        '            GXScenePos GXEntityX(player.eid) - GXSceneWidth / 2, 0
-        '        END IF
-        '    END IF
-        'END IF
+
         ' Check the scene move constraints
         IF gx_scene.constrainMode = GXSCENE_CONSTRAIN_TO_MAP THEN
             DIM mwidth AS INTEGER
@@ -639,23 +678,25 @@ SUB GXSceneStart
             END IF
 
             sy = GXSceneY
-            'PRINT "GXSceneHeight:"; GXSceneHeight
-            'PRINT "sy-before:"; sy
             IF sy < 0 THEN
                 sy = 0
             ELSEIF sy + GXSceneHeight > mheight THEN
                 sy = mheight - GXSceneHeight
                 IF sy < 0 THEN sy = 0
             END IF
-            'PRINT "sy-after:"; sy
-            '_DISPLAY
-            '_DELAY 2
             GXScenePos sx, sy
+        END IF
+
+        IF NOT GXSceneEmbedded THEN
+            WHILE _MOUSEINPUT
+                ' Flush mouse event buffer
+            WEND
         END IF
 
         'Redraw the scene
         GXSceneDraw
         _DISPLAY
+
     LOOP WHILE gx_scene.active
 END SUB
 
@@ -678,7 +719,7 @@ SUB __GX_SceneMoveEntities
     REDIM centities(0) AS INTEGER
     DIM ecount AS INTEGER
     FOR eid = 1 TO gx_entity_count
-        'e = gx_entities(eid)
+
         IF gx_entities(eid).screen = 0 THEN
             ' Check for entity collisions
             ecount = __GX_EntityCollision(eid, 0, 0, centities())
@@ -699,11 +740,11 @@ SUB __GX_SceneMoveEntities
                 centity = 0
                 IF (gx_entities(eid).jumping = 1 AND gx_entities(eid).vy < 0) OR tmove THEN
                     IF gx_entities(eid).jumpstart = 0 THEN
-                        gx_entities(eid).jumpstart = GXTicks - 45
+                        gx_entities(eid).jumpstart = GXFrame - 45
                     ELSE
                         ' calculate the number of seconds since the gravity started being applied
                         DIM t
-                        t = (GXTicks - gx_entities(eid).jumpstart) / GXFrameRate
+                        t = (GXFrame - gx_entities(eid).jumpstart) / GXFrameRate
                         gx_entities(eid).vy = gx_entities(eid).vy + 9.8 * t ^ 2 / 2
                     END IF
                     'ELSE
@@ -755,10 +796,8 @@ SUB __GX_SceneMoveEntities
     NEXT eid
 END SUB
 
-FUNCTION GXTicks
-    GXTicks = gx_ticks
-END FUNCTION
-
+' Stop the game loop.
+' This method will cause the game loop to end and return control to the calling program.
 SUB GXSceneStop
     gx_scene.active = 0
 END SUB
@@ -786,7 +825,7 @@ SUB GXMapDraw
     DIM tpos AS GXPosition
     DIM srow, scol, row, col, layer AS LONG
     DIM xoffset, yoffset, pcol, prow AS LONG
-    DIM t AS INTEGER
+    DIM t AS INTEGER, tx AS LONG, ty AS LONG
     DIM rowOffset AS LONG
     DIM colOffset AS LONG
 
@@ -805,7 +844,9 @@ SUB GXMapDraw
             FOR layer = 1 TO GXMapTileDepth(col, row)
                 t = GXMapTile(col, row, layer)
                 GX_TilesetGetPos t, tpos
-                GXSpriteDraw gx_tileset.image, scol * gx_tileset.width - xoffset + colOffset, srow * gx_tileset.height - yoffset - rowOffset, tpos.y, tpos.x, gx_tileset.width, gx_tileset.height, gx_scene.image
+                tx = scol * gx_tileset.width - xoffset + colOffset
+                ty = srow * gx_tileset.height - yoffset - rowOffset
+                GXSpriteDraw gx_tileset.image, tx, ty, tpos.y, tpos.x, gx_tileset.width, gx_tileset.height, gx_scene.image
             NEXT layer
             scol = scol + 1
         NEXT col
@@ -1011,47 +1052,10 @@ SUB GXMapIsometric (iso AS INTEGER)
     __GX_UpdateSceneSize
 END SUB
 
-SUB __GX_UpdateSceneSize
-    IF gx_tileset.width < 1 OR gx_tileset.height < 1 THEN EXIT SUB
-    IF GXMapIsometric THEN
-        gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
-        gx_scene.rows = FIX(gx_scene.height / (gx_tileset.height * .25))
-    ELSE
-        gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
-        gx_scene.rows = FIX(gx_scene.height / gx_tileset.height)
-    END IF
-END SUB
-
-SUB __GX_WriteString (s AS STRING)
-    DIM l AS INTEGER
-    l = LEN(s)
-    PUT #1, , l
-    PUT #1, , s
-END SUB
-
-FUNCTION __GX_ReadString$
-    DIM s AS STRING
-    DIM l AS INTEGER
-    DIM i AS INTEGER
-    DIM b AS _UNSIGNED _BYTE
-    GET #1, , l
-    FOR i = 1 TO l
-        GET #1, , b
-        s = s + CHR$(b)
-    NEXT i
-    __GX_ReadString = s
-END FUNCTION
 
 
+' TODO: make "private"?
 SUB GXSpriteDraw (i AS LONG, x AS LONG, y AS LONG, seq AS INTEGER, frame AS INTEGER, swidth AS INTEGER, sheight AS INTEGER, imgdest AS LONG)
-    'DIM xoffset, yoffset
-    'xoffset = (frame - 1) * swidth
-    'yoffset = (seq - 1) * sheight
-    'IF imgdest THEN
-    '    _PUTIMAGE (x, y), i, imgdest, (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
-    'ELSE
-    '    _PUTIMAGE (x, y), i, , (xoffset, yoffset)-(xoffset + (swidth - 1), yoffset + (sheight - 1))
-    'END IF
     GXSpriteDrawScaled i, x, y, swidth, sheight, seq, frame, swidth, sheight, imgdest
 END SUB
 
@@ -1066,13 +1070,15 @@ SUB GXSpriteDrawScaled (i AS LONG, x AS LONG, y AS LONG, dwidth AS INTEGER, dhei
     END IF
 END SUB
 
+' Tileset Methods
+' ----------------------------------------------------------------------------
 SUB GXTilesetCreate (tilesetFilename AS STRING, tileWidth AS INTEGER, tileHeight AS INTEGER)
     gx_tileset.filename = tilesetFilename
     gx_tileset.width = tileWidth
     gx_tileset.height = tileHeight
 
     DIM tswidth, tsheight
-    gx_tileset.image = GXImageLoad(tilesetFilename)
+    gx_tileset.image = __GX_ImageLoad(tilesetFilename)
     tswidth = _WIDTH(gx_tileset.image)
     tsheight = _HEIGHT(gx_tileset.image)
 
@@ -1118,6 +1124,197 @@ END FUNCTION
 FUNCTION GXTilesetImage
     GXTilesetImage = gx_tileset.image
 END FUNCTION
+
+
+' Bitmap Font Methods
+' ----------------------------------------------------------------------------
+FUNCTION GXFontCreate (filename AS STRING, charWidth AS INTEGER, charHeight AS INTEGER, charref AS STRING)
+    gx_font_count = gx_font_count + 1
+    REDIM _PRESERVE gx_fonts(gx_font_count) AS GXFont
+    REDIM _PRESERVE gx_font_charmap(256, gx_font_count) AS GXPosition
+
+    ' Create a new game entity
+    gx_fonts(gx_font_count).eid = GXEntityCreate(filename, charWidth, charHeight, 1)
+    ' Hide the entity as we will not be displaying it as a normal sprite
+    GXEntityHide gx_fonts(gx_font_count).eid
+
+    ' map the character codes to the image location
+    __GX_FontMapChars gx_font_count, charref
+
+    GXFontCreate = gx_font_count
+END FUNCTION
+
+FUNCTION GXFontCharSpacing% (fid AS LONG)
+    GXFontCharSpacing = gx_fonts(fid).charSpacing
+END FUNCTION
+
+SUB GXFontCharSpacing (fid AS LONG, charSpacing AS INTEGER)
+    gx_fonts(fid).charSpacing = charSpacing
+END SUB
+
+FUNCTION GXFontLineSpacing% (fid AS LONG)
+    GXFontLineSpacing = gx_fonts(fid).lineSpacing
+END FUNCTION
+
+SUB GXFontLineSpacing (fid AS LONG, lineSpacing AS INTEGER)
+    gx_fonts(fid).lineSpacing = lineSpacing
+END SUB
+
+SUB GXDrawText (fid AS INTEGER, sx AS LONG, sy AS LONG, s AS STRING)
+    IF fid = GXFONT_DEFAULT OR fid = GXFONT_DEFAULT_BLACK THEN
+        IF gx_fonts(fid).eid = 0 THEN __GX_FontCreateDefault fid
+    END IF
+
+    DIM i AS INTEGER
+    DIM a AS INTEGER
+    DIM c AS STRING
+    DIM cpos AS GXPosition
+    DIM x AS LONG: x = sx
+    DIM y AS LONG: y = sy
+    DIM font AS GXFont: font = gx_fonts(fid)
+    DIM e AS GXEntity: e = gx_entities(font.eid)
+
+    FOR i = 1 TO LEN(s)
+        c = MID$(s, i, 1)
+        a = ASC(c)
+        IF a = 10 THEN ' Line feed, move down to the next line
+            x = sx
+            y = y + e.height + font.lineSpacing
+        ELSEIF NOT a = 13 THEN ' Ignore Carriage Return
+            IF NOT a = 32 THEN ' Space character, nothing to draw
+                cpos = gx_font_charmap(a, fid)
+                GXSpriteDraw e.image, x, y, cpos.y, cpos.x, e.width, e.height, 0
+            END IF
+            x = x + e.width + font.charSpacing
+        END IF
+    NEXT i
+END SUB
+
+
+
+' Debugging methods
+' ----------------------------------------------------------------------------
+FUNCTION GXDebug
+    GXDebug = gx_debug.enabled
+END FUNCTION
+
+SUB GXDebug (enabled AS INTEGER)
+    gx_debug.enabled = enabled
+END SUB
+
+FUNCTION GXDebugScreenEntities
+    GXDebugScreenEntities = gx_debug.screenEntities
+END FUNCTION
+
+SUB GXDebugScreenEntities (enabled AS INTEGER)
+    gx_debug.screenEntities = enabled
+END SUB
+
+FUNCTION GXDebugFont%
+    GXDebugFont = gx_debug.font
+END FUNCTION
+
+SUB GXDebugFont (font AS INTEGER)
+    gx_debug.font = font
+END SUB
+
+FUNCTION GXDebugTileBorderColor~&
+    GXDebugTileBorderColor = gx_debug.tileBorderColor
+END FUNCTION
+
+SUB GXDebugTileBorderColor (c AS _UNSIGNED LONG)
+    gx_debug.tileBorderColor = c
+END SUB
+
+FUNCTION GXDebugEntityBorderColor~&
+    GXDebugEntityBorderColor = gx_debug.entityBorderColor
+END FUNCTION
+
+SUB GXDebugEntityBorderColor (c AS _UNSIGNED LONG)
+    gx_debug.entityBorderColor = c
+END SUB
+
+FUNCTION GXDebugEntityCollisionColor~&
+    GXDebugEntityCollisionColor = gx_debug.entityBorderColor
+END FUNCTION
+
+SUB GXDebugEntityCollisionColor (c AS _UNSIGNED LONG)
+    gx_debug.entityCollisionColor = c
+END SUB
+
+SUB __GX_DebugMapTile
+    DIM t AS INTEGER, tx AS LONG, ty AS LONG, depth AS INTEGER, i AS INTEGER
+    DIM tpos AS GXPosition
+    __GX_MapTilePosAt _MOUSEX, _MOUSEY, tpos
+    depth = GXMapTileDepth(tpos.x, tpos.y)
+    tx = tpos.x * GXTilesetWidth - GXSceneX
+    ty = tpos.y * GXTilesetHeight - GXSceneY
+
+    DIM cdest AS LONG
+    cdest = _DEST
+    _DEST gx_scene.image
+    LINE (tx, ty)-(tx + GXTilesetWidth - 1, ty + GXTilesetHeight - 1), gx_debug.tileBorderColor, B , &B1010101010101010
+    GXDrawText gx_debug.font, tx, ty - 8, "(" + _TRIM$(STR$(tpos.x)) + "," + _TRIM$(STR$(tpos.y)) + ")"
+    FOR i = 1 TO depth
+        t = GXMapTile(tpos.x, tpos.y, i)
+        GXDrawText gx_debug.font, tx, ty + GXTilesetHeight + 1 + (i - 1) * 8, _TRIM$(STR$(i)) + ":" + _TRIM$(STR$(t))
+    NEXT i
+
+    _DEST cdest
+END SUB
+
+SUB __GX_MapTilePosAt (x AS INTEGER, y AS INTEGER, tpos AS GXPosition)
+    tpos.x = FIX((x + GXSceneX) / GXTilesetWidth)
+    tpos.y = FIX((y + GXSceneY) / GXTilesetHeight)
+END SUB
+
+SUB __GX_DebugEntity (ent AS GXEntity, x, y)
+    IF ent.screen AND NOT GXDebugScreenEntities THEN EXIT SUB
+
+    DIM odest AS LONG
+    odest = _DEST
+    _DEST gx_scene.image
+
+    ' Display the entity's position
+    GXDrawText gx_debug.font, x, y - 8, "(" + __GX_DebugRound(ent.x, 2) + "," + __GX_DebugRound(ent.y, 2) + ")"
+
+    ' Draw the entity's bounding rect
+    LINE (x, y)-(x + ent.width - 1, y + ent.height - 1), gx_debug.entityBorderColor, B , &B1010101010101010
+
+    ' Draw the entity's collision rect
+    LINE (x + ent.coLeft, y + ent.coTop)-(x + ent.width - 1 - ent.coRight, y + ent.height - 1 - ent.coBottom), gx_debug.entityCollisionColor, B ', &B1010101010101010
+
+    _DEST odest
+END SUB
+
+FUNCTION __GX_DebugRound$ (n AS DOUBLE, decimalPlaces AS INTEGER)
+    DIM n2 AS LONG
+    n2 = _ROUND(n * 10 ^ decimalPlaces)
+    IF n2 = 0 THEN
+        __GX_DebugRound = "0." + STRING$(decimalPlaces, "0")
+    ELSE
+        DIM ns AS STRING, decimal AS STRING
+        ns = _TRIM$(STR$(n2))
+        decimal = RIGHT$(ns, decimalPlaces)
+        ns = LEFT$(ns, LEN(ns) - decimalPlaces)
+        __GX_DebugRound = ns + "." + decimal
+    END IF
+END FUNCTION
+
+SUB __GX_DebugFrameRate
+    DIM frame AS STRING
+    DIM frameRate AS STRING
+    frame = _TRIM$(STR$(GXFrame))
+    frameRate = _TRIM$(STR$(GXFrameRate))
+    frameRate = STRING$(LEN(frame) - LEN(frameRate), " ") + frameRate
+
+    DIM odest AS LONG
+    odest = _DEST
+    _DEST gx_scene.image
+    GXDrawText gx_debug.font, GXSceneWidth - (LEN(frame) + 6) * 6 - 1, 1, "FRAME:" + frame
+    GXDrawText gx_debug.font, GXSceneWidth - (LEN(frameRate) + 4) * 6 - 1, 9, "FPS:" + frameRate
+    _DEST odest
+END SUB
 
 
 ' File System Utility Methods
@@ -1314,6 +1511,56 @@ END FUNCTION
 ' ----------------------------------------------------------------------------
 
 
+' GX Engine Miscellaneous Private Methods
+' ----------------------------------------------------------------------------
+FUNCTION __GX_ImageLoad (filename AS STRING)
+    DIM id AS LONG
+    DIM i AS INTEGER
+    FOR i = 0 TO gx_image_count - 1
+        IF filename = gx_images(i).filename THEN id = gx_images(i).id
+    NEXT i
+    IF id = 0 THEN
+        id = _LOADIMAGE(filename)
+        gx_image_count = gx_image_count + 1
+        REDIM _PRESERVE gx_images(gx_image_count) AS GXImage
+        gx_images(gx_image_count - 1).id = id
+        gx_images(gx_image_count - 1).filename = filename
+    END IF
+    __GX_ImageLoad = id
+END FUNCTION
+
+
+SUB __GX_UpdateSceneSize
+    IF gx_tileset.width < 1 OR gx_tileset.height < 1 THEN EXIT SUB
+    IF GXMapIsometric THEN
+        gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
+        gx_scene.rows = FIX(gx_scene.height / (gx_tileset.height * .25))
+    ELSE
+        gx_scene.columns = FIX(gx_scene.width / gx_tileset.width)
+        gx_scene.rows = FIX(gx_scene.height / gx_tileset.height)
+    END IF
+END SUB
+
+SUB __GX_WriteString (s AS STRING)
+    DIM l AS INTEGER
+    l = LEN(s)
+    PUT #1, , l
+    PUT #1, , s
+END SUB
+
+FUNCTION __GX_ReadString$
+    DIM s AS STRING
+    DIM l AS INTEGER
+    DIM i AS INTEGER
+    DIM b AS _UNSIGNED _BYTE
+    GET #1, , l
+    FOR i = 1 TO l
+        GET #1, , b
+        s = s + CHR$(b)
+    NEXT i
+    __GX_ReadString = s
+END FUNCTION
+
 FUNCTION __GX_EntityCollide (eid1, eid2)
     __GX_EntityCollide = __GX_RectCollide(GXEntityX(eid1), GXEntityY(eid1), GXEntityWidth(eid1), GXEntityHeight(eid1), GXEntityX(eid2), GXEntityY(eid2), GXEntityWidth(eid2), GXEntityHeight(eid2))
 END FUNCTION
@@ -1339,17 +1586,7 @@ FUNCTION __GX_RectCollide (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
 
 END FUNCTION
 
-FUNCTION GXFontCreate (filename AS STRING, charWidth AS INTEGER, charHeight AS INTEGER, charref AS STRING)
-    gx_font_count = gx_font_count + 1
-    REDIM _PRESERVE gx_fonts(gx_font_count) AS GXFont
-    REDIM _PRESERVE gx_font_charmap(256, gx_font_count) AS GXPosition
-
-    ' Create a new game entity
-    gx_fonts(gx_font_count).eid = GXEntityCreate(filename, charWidth, charHeight, 1)
-    ' Hide the entity as we will not be displaying it as a normal sprite
-    GXEntityHide gx_fonts(gx_font_count).eid
-
-    ' map the character codes to the image location
+SUB __GX_FontMapChars (fid AS LONG, charref AS STRING)
     DIM cx AS INTEGER, cy AS INTEGER, i AS INTEGER, a AS INTEGER
     cx = 1
     cy = 1
@@ -1360,57 +1597,30 @@ FUNCTION GXFontCreate (filename AS STRING, charWidth AS INTEGER, charHeight AS I
             cy = cy + 1
         ELSE
             IF a >= 33 AND a <= 256 THEN
-                gx_font_charmap(a, gx_font_count).x = cx
-                gx_font_charmap(a, gx_font_count).y = cy
+                gx_font_charmap(a, fid).x = cx
+                gx_font_charmap(a, fid).y = cy
             END IF
             cx = cx + 1
         END IF
     NEXT i
-
-    GXFontCreate = gx_font_count
-END FUNCTION
-
-FUNCTION GXFontCharSpacing (fid AS LONG)
-    GXFontCharSpacing = gx_fonts(fid).charSpacing
-END FUNCTION
-
-SUB GXFontCharSpacing (fid AS LONG, charSpacing AS INTEGER)
-    gx_fonts(fid).charSpacing = charSpacing
 END SUB
 
-FUNCTION GXFontLineSpacing (fid AS LONG)
-    GXFontLineSpacing = gx_fonts(fid).lineSpacing
-END FUNCTION
+SUB __GX_FontCreateDefault (fid AS LONG)
+    DIM filename AS STRING
+    IF fid = GXFONT_DEFAULT_BLACK THEN
+        __gx_font_default_black
+        filename = "tmp/__gx_font_default_black.png"
+    ELSE
+        __gx_font_default
+        filename = "tmp/__gx_font_default.png"
+    END IF
 
-SUB GXFontLineSpacing (fid AS LONG, lineSpacing AS INTEGER)
-    gx_fonts(fid).lineSpacing = lineSpacing
+    gx_fonts(fid).eid = GXEntityCreate(filename, 6, 8, 1)
+    GXEntityHide gx_fonts(fid).eid
+    __GX_FontMapChars fid, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789~`!@#$%^&*()_-+={}[]|\,./<>?:;" + CHR$(34) + "'"
+    GXFontLineSpacing fid, 1
 END SUB
 
-SUB GXBlitString (fid AS INTEGER, sx AS LONG, sy AS LONG, s AS STRING)
-    DIM i AS INTEGER
-    DIM a AS INTEGER
-    DIM c AS STRING
-    DIM cpos AS GXPosition
-    DIM x AS LONG: x = sx
-    DIM y AS LONG: y = sy
-    DIM font AS GXFont: font = gx_fonts(fid)
-    DIM e AS GXEntity: e = gx_entities(font.eid)
-
-    FOR i = 1 TO LEN(s)
-        c = MID$(s, i, 1)
-        a = ASC(c)
-        IF a = 10 THEN ' Line feed, move down to the next line
-            x = sx
-            y = y + e.height + font.lineSpacing
-        ELSEIF NOT a = 13 THEN ' Ignore Carriage Return
-            IF NOT a = 32 THEN ' Space character, nothing to draw
-                cpos = gx_font_charmap(a, fid)
-                GXSpriteDraw e.image, x, y, cpos.y, cpos.x, e.width, e.height, 0
-            END IF
-            x = x + e.width + font.charSpacing
-        END IF
-    NEXT i
-END SUB
 
 FUNCTION __GX_EntityTestMove (entity AS INTEGER, mx AS LONG, my AS LONG, tpos AS GXPosition, collisionEntity AS INTEGER)
     tpos.x = -1
@@ -1560,7 +1770,7 @@ END SUB
 
 FUNCTION GXKeyDown (k AS LONG)
     IF k < 8 THEN
-        GXKeyDown = 0
+        GXKeyDown = GX_FALSE
     ELSE
         GXKeyDown = _KEYDOWN(k)
 
@@ -1570,13 +1780,14 @@ FUNCTION GXKeyDown (k AS LONG)
             k = k - 32
             GXKeyDown = _KEYDOWN(k)
         END IF
+        EXIT SUB
     END IF
+    GXKeyDown = GX_FALSE
 END FUNCTION
 
 
 SUB __GX_PlayerAction (pid AS INTEGER)
     DIM tpos AS GXPosition
-    'DIM movex AS INTEGER, movey AS INTEGER
     DIM centity AS INTEGER
 
     DIM player AS GXPlayer
@@ -1599,7 +1810,6 @@ SUB __GX_PlayerAction (pid AS INTEGER)
         ELSE
             IF NOT gx_entities(player.eid).applyGravity THEN gx_entities(player.eid).vy = 0
         END IF
-        'IF NOT gx_entities(player.eid).applyGravity THEN
         gx_entities(player.eid).vx = 0
 
     ELSEIF GXKeyDown(actionUp.key) THEN
@@ -1609,7 +1819,6 @@ SUB __GX_PlayerAction (pid AS INTEGER)
         ELSE
             IF NOT gx_entities(player.eid).applyGravity THEN gx_entities(player.eid).vy = 0
         END IF
-        'IF gx_entities(player.eid).applyGravity = 0 THEN
         gx_entities(player.eid).vx = 0
 
     ELSEIF GXKeyDown(actionRight.key) THEN
@@ -1654,3 +1863,5 @@ SUB __GX_PlayerAction (pid AS INTEGER)
 
 END SUB
 
+'$include: 'resource/font-default.png.bm'
+'$include: 'resource/font-default-black.png.bm'

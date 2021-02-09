@@ -33,32 +33,45 @@ GXSceneFollowEntity horse, GXSCENE_FOLLOW_ENTITY_CENTER_X
 GXSceneConstrain GXSCENE_CONSTRAIN_TO_MAP
 GXEntityVX horse, 700
 
+GXDebugFont GXFONT_DEFAULT_BLACK
+GXDebugTileBorderColor _RGB32(0, 0, 0)
+GXDebugEntityBorderColor _RGB32(0, 0, 0)
+
 GXSceneStart
 SYSTEM 0
 
+DIM SHARED toggleDebug AS INTEGER
 
 SUB GXOnGameEvent (e AS GXEvent)
     IF e.event = GXEVENT_UPDATE THEN
 
         IF GXEntityX(horse) > 5700 AND done = 0 THEN
-            done = GXTicks + 30
+            done = GXFrame + 30
             GXEntityFrameSet horse, 4, 1
             GXEntityAnimateOff horse
             GXEntityVX horse, 0
 
-        ELSEIF GXTicks = done THEN
+        ELSEIF GXFrame = done THEN
             GXEntityAnimateMode horse, GXANIMATE_SINGLE
             GXEntityFrameSet horse, 4, 1
             GXEntityAnimate horse, 4, 9
-            finish = GXTicks + 50
+            finish = GXFrame + 50
 
-        ELSEIF GXTicks = finish THEN
+        ELSEIF GXFrame = finish THEN
             GXEntityAnimate girl, 1, 8
         END IF
 
         IF _KEYDOWN(GXKEY_ESC) THEN
             GXSceneStop
         END IF
+
+        ' Toggle debug mode when F1 key is pressed
+        IF GXKeyDown(GXKEY_F1) THEN toggleDebug = GX_TRUE
+        IF NOT GXKeyDown(GXKEY_F1) AND toggleDebug THEN
+            GXDebug NOT GXDebug
+            toggleDebug = GX_FALSE
+        END IF
+
     END IF
 
 END SUB
