@@ -10,7 +10,7 @@ The current alpha build has support for:
 - Player management
 - Tiled map creation and management
   - Including a world/map editor
-  - (Isometric support is a work in progress)
 - Bitmap font support
 - Collision detection
 - Basic gravity
+- Interactive Debugging
