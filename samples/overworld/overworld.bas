@@ -1,5 +1,6 @@
-'$RESIZE:ON
 OPTION _EXPLICIT
+'$RESIZE:ON
+$EXEICON:'./../../gx/resource/gx.ico'
 '$include: '../../gx/gx.bi'
 
 'GXSceneCreate 355, 200
@@ -7,7 +8,6 @@ GXSceneCreate 500, 282
 'GXSceneCreate 710, 400
 GXMapLoad "map/overworld.map"
 GXFullScreen GX_TRUE
-'GXDebug GX_TRUE
 
 DIM flag AS INTEGER
 flag = GXEntityCreate("img/flag.png", 32, 64, 5)
@@ -96,7 +96,7 @@ FUNCTION IsMoveTile (tile AS INTEGER)
 END FUNCTION
 
 SUB SetMoveTiles
-    movetilecount = 18
+    movetilecount = 24
     REDIM movetiles(movetilecount) AS INTEGER
     movetiles(1) = 0
     movetiles(2) = 444
@@ -115,6 +115,12 @@ SUB SetMoveTiles
     movetiles(16) = 690
     movetiles(17) = 361
     movetiles(18) = 288
+    movetiles(19) = 401
+    movetiles(20) = 440
+    movetiles(21) = 441
+    movetiles(22) = 406
+    movetiles(23) = 405
+    movetiles(24) = 365
 END SUB
 
 

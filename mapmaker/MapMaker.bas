@@ -101,6 +101,7 @@ DIM SHARED chkFDFilterExt AS LONG
 DIM SHARED btnFDOK AS LONG
 DIM SHARED btnFDCancel AS LONG
 
+
 ': External modules: ---------------------------------------------------------------
 '$INCLUDE: './inform/InForm.ui'
 '$INCLUDE: './inform/xp.uitheme'
@@ -648,6 +649,7 @@ SUB OnMapClick
         PutTile
     ELSE
         mapSelSizing = False
+        _MOUSEMOVE tileSelStart.x * GXTilesetWidth, (tileSelStart.y + 2) * GXTilesetHeight
     END IF
 END SUB
 
@@ -954,5 +956,6 @@ SUB OnPathListClick (id AS LONG)
         OnChangeDirectory
     END IF
 END SUB
+
 
 '$include:'../gx/gx.bm'

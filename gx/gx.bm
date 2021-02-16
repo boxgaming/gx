@@ -122,6 +122,12 @@ FUNCTION GXEntityCreate (imageFilename AS STRING, ewidth AS INTEGER, height AS I
     GXEntityCreate = gx_entity_count
 END FUNCTION
 
+SUB GXEntityCreate (imageFilename AS STRING, ewidth AS INTEGER, height AS INTEGER, seqFrames AS INTEGER, uid AS STRING)
+    DIM eid AS INTEGER
+    eid = GXEntityCreate(imageFilename, ewidth, height, seqFrames)
+    GXEntityUID eid, uid
+END SUB
+
 SUB GXEntityHide (eid AS INTEGER)
     gx_entities(eid).hidden = 1
 END SUB
@@ -227,15 +233,17 @@ SUB GXEntityUID (eid AS INTEGER, uid AS STRING * 10)
 END SUB
 
 FUNCTION GXEntityUID$ (eid AS INTEGER)
-    GXEntityUID = gx_entities(eid).uid
+    GXEntityUID = RTRIM$(gx_entities(eid).uid)
 END FUNCTION
 
-FUNCTION GXEntityFind (uid AS STRING * 10)
-    GXEntityFind = 0
+' TODO: Expand this concept to lookup any GX object id by its user assigned id
+'       Maybe not "any" GX object... need to decide which ones would be applicable
+FUNCTION GX (uid AS STRING * 10)
+    GX = 0
     DIM i AS INTEGER
     FOR i = 1 TO gx_entity_count
         IF RTRIM$(gx_entities(i).uid) = uid THEN
-            GXEntityFind = i
+            GX = i
             EXIT FUNCTION
         END IF
     NEXT i
@@ -295,28 +303,96 @@ SUB GXPlayerJumpSpeed (pid AS INTEGER, jumpSpeed AS INTEGER)
 END SUB
 
 SUB GXPlayerActionKey (pid AS INTEGER, actionType AS INTEGER, k AS LONG)
-    gx_player_keymap(actionType, pid).key = k
+    'gx_player_keymap(actionType, pid).key = k
+    gx_player_keymap(actionType, pid).diDeviceType = GX_DEVICE_KEYBOARD
+    gx_player_keymap(actionType, pid).diDeviceId = 1
+    gx_player_keymap(actionType, pid).diInputType = GX_DEVICE_BUTTON
+    gx_player_keymap(actionType, pid).diInputId = k
+    gx_player_keymap(actionType, pid).diInputValue = -1
 END SUB
 
 FUNCTION GXPlayerActionKey (pid AS INTEGER, actionType AS INTEGER)
-    GXPlayerActionKey = gx_player_keymap(actionType, pid).key
+    'GXPlayerActionKey = gx_player_keymap(actionType, pid).key
+    IF gx_player_keymap(actionType, pid).diDeviceType = GX_DEVICE_KEYBOARD THEN
+        GXPlayerActionKey = gx_player_keymap(actionType, pid).diInputId
+    ELSE
+        GXPlayerActionKey = 0
+    END IF
 END FUNCTION
 
-SUB GXPlayerActionMoveX (pid AS INTEGER, actionType AS INTEGER, movex AS INTEGER)
-    gx_player_keymap(actionType, pid).movex = movex
+SUB GXPlayerActionDisabled (pid AS INTEGER, actionType AS INTEGER, disabled AS INTEGER)
+    gx_player_keymap(actionType, pid).disabled = disabled
 END SUB
 
-FUNCTION GXPlayerActionMoveX (pid AS INTEGER, actionType AS INTEGER)
-    GXPlayerActionMoveX = gx_player_keymap(actionType, pid).movex
+FUNCTION GXPlayerActionDisabled (pid AS INTEGER, actionType AS INTEGER)
+    GXPlayerActionDisabled = gx_player_keymap(actionType, pid).disabled
 END FUNCTION
 
-SUB GXPlayerActionMoveY (pid AS INTEGER, actionType AS INTEGER, movey AS INTEGER)
-    gx_player_keymap(actionType, pid).movey = movey
+SUB GXPlayerActionInput (pid AS INTEGER, actionType AS INTEGER, di AS GXDeviceInput)
+    gx_player_keymap(actionType, pid).diDeviceId = di.deviceId
+    gx_player_keymap(actionType, pid).diDeviceType = di.deviceType
+    gx_player_keymap(actionType, pid).diInputId = di.inputId
+    gx_player_keymap(actionType, pid).diInputType = di.inputType
+    gx_player_keymap(actionType, pid).diInputValue = di.inputValue
 END SUB
 
-FUNCTION GXPlayerActionMoveY (pid AS INTEGER, actionType AS INTEGER)
-    GXPlayerActionMoveY = gx_player_keymap(actionType, pid).movey
+SUB GXPlayerMoveInput (pid AS INTEGER, action AS INTEGER, di AS GXDeviceInput, animationSeq AS INTEGER, animationspeed AS INTEGER)
+    GXPlayerActionInput pid, action, di
+    GXPlayerActionAnimationSeq pid, action, animationSeq
+    GXPlayerActionAnimationSpeed pid, action, animationspeed
+END SUB
+
+SUB __GX_ActionInput (a AS GXAction, di AS GXDeviceInput)
+    di.deviceId = a.diDeviceId
+    di.deviceType = a.diDeviceType
+    di.inputId = a.diInputId
+    di.inputType = a.diInputType
+    di.inputValue = a.diInputValue
+END SUB
+
+FUNCTION GXDeviceInputTest (di AS GXDeviceInput)
+    DIM dcount AS INTEGER
+    dcount = _DEVICES
+
+    IF di.deviceId < 1 OR di.deviceId > dcount THEN
+        GXDeviceInputTest = GX_FALSE
+        EXIT SUB
+    END IF
+
+    DIM result AS INTEGER
+    DIM dactive AS INTEGER
+    dactive = _DEVICEINPUT(di.deviceId)
+
+    IF di.inputType = GX_DEVICE_BUTTON THEN
+        IF _BUTTON(di.inputId) = di.inputValue THEN
+            result = GX_TRUE
+        END IF
+
+    ELSEIF di.inputType = GX_DEVICE_AXIS THEN
+        IF _AXIS(di.inputId) = di.inputValue THEN
+            result = GX_TRUE
+        END IF
+    END IF
+
+    GXDeviceInputTest = result
 END FUNCTION
+
+
+'SUB GXPlayerActionMoveX (pid AS INTEGER, actionType AS INTEGER, movex AS INTEGER)
+'    gx_player_keymap(actionType, pid).movex = movex
+'END SUB
+
+'FUNCTION GXPlayerActionMoveX (pid AS INTEGER, actionType AS INTEGER)
+'    GXPlayerActionMoveX = gx_player_keymap(actionType, pid).movex
+'END FUNCTION
+
+'SUB GXPlayerActionMoveY (pid AS INTEGER, actionType AS INTEGER, movey AS INTEGER)
+'    gx_player_keymap(actionType, pid).movey = movey
+'END SUB
+
+'FUNCTION GXPlayerActionMoveY (pid AS INTEGER, actionType AS INTEGER)
+'    GXPlayerActionMoveY = gx_player_keymap(actionType, pid).movey
+'END FUNCTION
 
 SUB GXPlayerActionAnimationSeq (pid AS INTEGER, actionType AS INTEGER, animationSeq AS INTEGER)
     gx_player_keymap(actionType, pid).animationSeq = animationSeq
@@ -437,6 +513,13 @@ SUB GXSceneCreate (swidth AS INTEGER, sheight AS INTEGER)
     IF NOT gx_img_blank THEN gx_img_blank = _NEWIMAGE(1, 1, 32)
 END SUB
 
+SUB GXSceneWindowSize (swidth AS INTEGER, sheight AS INTEGER)
+    DIM oldimg AS LONG
+    oldimg = _SCREENIMAGE
+    SCREEN _NEWIMAGE(swidth, sheight, 32)
+    _FREEIMAGE oldimg
+END SUB
+
 ' Resize the scene with the specified pixel width and height.
 SUB GXSceneResize (swidth AS INTEGER, sheight AS INTEGER)
     gx_scene.width = swidth
@@ -510,7 +593,8 @@ SUB GXSceneDraw
     ' If the screen has been resized, resize the destination screen image
     IF _RESIZE AND NOT gx_scene.embedded THEN
         '_FREEIMAGE _SOURCE
-        SCREEN _NEWIMAGE(_RESIZEWIDTH, _RESIZEHEIGHT, 32)
+        'SCREEN _NEWIMAGE(_RESIZEWIDTH, _RESIZEHEIGHT, 32)
+        GXSceneWindowSize _RESIZEWIDTH, _RESIZEHEIGHT
     END IF
 
     ' Clear the background
@@ -627,6 +711,8 @@ SUB GXSceneStart
     gx_scene.frame = 0
     gx_scene.active = 1
 
+    'DIM dcount AS INTEGER
+    'dcount = _DEVICES
     DO
         _LIMIT gx_framerate
         gx_scene.frame = gx_scene.frame + 1
@@ -653,9 +739,16 @@ SUB GXSceneStart
         ' Perform any auto-scene moves
         DIM sx AS LONG, sy AS LONG
         IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
-           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X THEN
+           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X OR _
+           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_POS OR _
+           gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_NEG THEN
             sx = (GXEntityX(gx_scene.followEntity) + GXEntityWidth(gx_scene.followEntity) / 2) - GXSceneWidth / 2
-            GXScenePos sx, GXSceneY
+            IF (sx < GXSceneX AND gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_POS) OR _
+               (sx > GXSceneX AND gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_NEG) THEN
+                ' don't move the scene
+            ELSE
+                GXScenePos sx, GXSceneY
+            END IF
         END IF
         IF gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
            gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
@@ -1769,22 +1862,41 @@ END SUB
 
 
 FUNCTION GXKeyDown (k AS LONG)
-    IF k < 8 THEN
-        GXKeyDown = GX_FALSE
-    ELSE
-        GXKeyDown = _KEYDOWN(k)
+    DIM ki AS GXDeviceInput
+    ki.deviceId = 1
+    ki.deviceType = GX_DEVICE_KEYBOARD
+    ki.inputType = GX_DEVICE_BUTTON
+    ki.inputId = k
+    ki.inputValue = -1
+    GXKeyDown = GXDeviceInputTest(ki)
+    'IF k < 8 THEN
+    '    GXKeyDown = GX_FALSE
+    'ELSE
+    '    GXKeyDown = _KEYDOWN(k)
 
-        ' test for letter keys regardless of case
-        ' TODO: do the same thing for number keys other dual/mode keys
-        IF NOT GXKeyDown AND k >= 97 AND k <= 122 THEN
-            k = k - 32
-            GXKeyDown = _KEYDOWN(k)
-        END IF
-        EXIT SUB
-    END IF
-    GXKeyDown = GX_FALSE
+    '    ' test for letter keys regardless of case
+    '    ' TODO: do the same thing for number keys other dual/mode keys
+    '    IF NOT GXKeyDown AND k >= 97 AND k <= 122 THEN
+    '        k = k - 32
+    '        GXKeyDown = _KEYDOWN(k)
+    '    END IF
+    '    EXIT SUB
+    'END IF
+    'GXKeyDown = GX_FALSE
 END FUNCTION
 
+FUNCTION __GX_ActionTest (a AS GXAction)
+    'IF a.key THEN
+    '    __GX_ActionTest = GXKeyDown(a.key)
+    'ELSEIF a.diDeviceId THEN
+    IF a.disabled THEN
+        __GX_ActionTest = GX_FALSE
+    ELSE
+        DIM di AS GXDeviceInput
+        __GX_ActionInput a, di
+        __GX_ActionTest = GXDeviceInputTest(di)
+    END IF
+END FUNCTION
 
 SUB __GX_PlayerAction (pid AS INTEGER)
     DIM tpos AS GXPosition
@@ -1803,7 +1915,8 @@ SUB __GX_PlayerAction (pid AS INTEGER)
     actionJumpRight = gx_player_keymap(GXACTION_JUMP_RIGHT, pid)
     actionJumpLeft = gx_player_keymap(GXACTION_JUMP_LEFT, pid)
 
-    IF GXKeyDown(actionDown.key) THEN
+    'IF GXKeyDown(actionDown.key) THEN
+    IF __GX_ActionTest(actionDown) THEN
         GXEntityAnimate player.eid, actionDown.animationSeq, actionDown.animationSpeed
         IF __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) THEN
             gx_entities(player.eid).vy = player.walkSpeed
@@ -1812,7 +1925,8 @@ SUB __GX_PlayerAction (pid AS INTEGER)
         END IF
         gx_entities(player.eid).vx = 0
 
-    ELSEIF GXKeyDown(actionUp.key) THEN
+        'ELSEIF GXKeyDown(actionUp.key) THEN
+    ELSEIF __GX_ActionTest(actionUp) THEN
         GXEntityAnimate player.eid, actionUp.animationSeq, actionUp.animationSpeed
         IF __GX_EntityTestMove(player.eid, 0, -1, tpos, centity) THEN
             gx_entities(player.eid).vy = -player.walkSpeed
@@ -1821,7 +1935,8 @@ SUB __GX_PlayerAction (pid AS INTEGER)
         END IF
         gx_entities(player.eid).vx = 0
 
-    ELSEIF GXKeyDown(actionRight.key) THEN
+        'ELSEIF GXKeyDown(actionRight.key) THEN
+    ELSEIF __GX_ActionTest(actionRight) THEN
         GXEntityAnimate player.eid, actionRight.animationSeq, actionRight.animationSpeed
         IF __GX_EntityTestMove(player.eid, 1, 0, tpos, centity) THEN
             gx_entities(player.eid).vx = player.walkSpeed
@@ -1830,7 +1945,8 @@ SUB __GX_PlayerAction (pid AS INTEGER)
         END IF
         IF gx_entities(player.eid).applyGravity = 0 THEN gx_entities(player.eid).vy = 0
 
-    ELSEIF GXKeyDown(actionLeft.key) THEN
+        'ELSEIF GXKeyDown(actionLeft.key) THEN
+    ELSEIF __GX_ActionTest(actionLeft) THEN
         GXEntityAnimate player.eid, actionLeft.animationSeq, actionLeft.animationSpeed
         IF __GX_EntityTestMove(player.eid, -1, 0, tpos, centity) THEN
             gx_entities(player.eid).vx = -player.walkSpeed
@@ -1848,7 +1964,8 @@ SUB __GX_PlayerAction (pid AS INTEGER)
     END IF
 
     IF gx_entities(player.eid).applyGravity = 1 THEN
-        IF GXKeyDown(actionJump.key) OR GXKeyDown(actionJumpLeft.key) OR GXKeyDown(actionJumpRight.key) THEN
+        'IF GXKeyDown(actionJump.key) OR GXKeyDown(actionJumpLeft.key) OR GXKeyDown(actionJumpRight.key) THEN
+        IF __GX_ActionTest(actionJump) OR __GX_ActionTest(actionJumpLeft) OR __GX_ActionTest(actionJumpRight) THEN
             IF __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 THEN
                 gx_entities(player.eid).vy = -player.jumpSpeed
                 gx_entities(player.eid).jumping = 1
@@ -1862,6 +1979,230 @@ SUB __GX_PlayerAction (pid AS INTEGER)
     END IF
 
 END SUB
+
+
+
+SUB GXDeviceDetectInput (di AS GXDeviceInput)
+    DIM found AS INTEGER
+    DIM dcount AS INTEGER
+    dcount = _DEVICES
+
+    WHILE _DEVICEINPUT
+        ' Flush the input buffer
+    WEND
+
+    DO
+        _LIMIT 90
+        DIM x AS INTEGER
+        x = _DEVICEINPUT
+        IF x THEN
+            DIM i AS INTEGER
+            FOR i = 1 TO _LASTBUTTON(x)
+                IF _BUTTON(i) THEN
+                    di.deviceId = x
+                    di.deviceType = __GX_DeviceTypeName(x)
+                    di.inputType = GX_DEVICE_BUTTON
+                    di.inputId = i
+                    di.inputValue = _BUTTON(i)
+                    found = 1
+                    EXIT DO
+                END IF
+            NEXT i
+
+            FOR i = 1 TO _LASTAXIS(x)
+                IF _AXIS(i) AND ABS(_AXIS(i)) = 1 THEN
+                    di.deviceId = x
+                    di.deviceType = __GX_DeviceTypeName(x)
+                    di.inputType = GX_DEVICE_AXIS
+                    di.inputId = i
+                    di.inputValue = _AXIS(i)
+                    found = 1
+                    EXIT DO
+                END IF
+            NEXT i
+
+            FOR i = 1 TO _LASTWHEEL(x)
+                IF _WHEEL(i) THEN
+                    di.deviceId = x
+                    di.deviceType = __GX_DeviceTypeName(x)
+                    di.inputType = GX_DEVICE_WHEEL
+                    di.inputId = i
+                    di.inputValue = _WHEEL(i)
+                    found = 1
+                    EXIT DO
+                END IF
+            NEXT i
+        END IF
+    LOOP UNTIL found
+
+    WHILE _DEVICEINPUT
+        '    Flush the device input buffer
+    WEND
+    _KEYCLEAR
+
+END SUB
+
+FUNCTION __GX_DeviceTypeName (deviceId)
+    DIM dname AS STRING
+    dname = _DEVICE$(deviceId)
+
+    IF INSTR(dname, "[KEYBOARD]") THEN
+        __GX_DeviceTypeName = GX_DEVICE_KEYBOARD
+    ELSEIF INSTR(dname, "[MOUSE]") THEN
+        __GX_DeviceTypeName = GX_DEVICE_MOUSE
+    ELSEIF INSTR(dname, "[CONTROLLER]") THEN
+        __GX_DeviceTypeName = GX_DEVICE_CONTROLLER
+    END IF
+END FUNCTION
+
+FUNCTION GXDeviceName$ (deviceId AS INTEGER)
+    DIM nstart AS INTEGER, nend AS INTEGER
+    DIM dname AS STRING
+    dname = _DEVICE$(deviceId)
+    IF INSTR(dname, "[CONTROLLER]") THEN
+        nstart = INSTR(dname, "[NAME]")
+        IF nstart = 0 THEN
+            dname = "Controller"
+        ELSE
+            nstart = nstart + 7
+            nend = INSTR(nstart, dname, "]]")
+            dname = _TRIM$(MID$(dname, nstart, nend - nstart))
+        END IF
+    ELSEIF INSTR(dname, "[MOUSE]") THEN
+        dname = "Mouse"
+    ELSEIF INSTR(dname, "[KEYBOARD]") THEN
+        dname = "Keyboard"
+    END IF
+    GXDeviceName = dname
+END FUNCTION
+
+FUNCTION GXDeviceTypeName$ (dtype AS INTEGER)
+    DIM dtypename AS STRING
+    SELECT CASE dtype
+        CASE GX_DEVICE_KEYBOARD: dtypename = "KEYBOARD"
+        CASE GX_DEVICE_MOUSE: dtypename = "MOUSE"
+        CASE GX_DEVICE_CONTROLLER: dtypename = "CONTROLLER"
+    END SELECT
+    GXDeviceTypeName = dtypename
+END FUNCTION
+
+FUNCTION GXInputTypeName$ (itype AS INTEGER)
+    DIM itypename AS STRING
+    SELECT CASE itype
+        CASE GX_DEVICE_BUTTON: itypename = "BUTTON"
+        CASE GX_DEVICE_AXIS: itypename = "AXIS"
+        CASE GX_DEVICE_WHEEL: itypename = "WHEEL"
+    END SELECT
+    GXInputTypeName = itypename
+END FUNCTION
+
+FUNCTION GXKeyButtonName$ (inputId AS INTEGER)
+    DIM k AS STRING
+    SELECT CASE inputId
+        CASE GXKEY_ESC: k = "Esc"
+        CASE GXKEY_1: k = "1"
+        CASE GXKEY_2: k = "2"
+        CASE GXKEY_3: k = "3"
+        CASE GXKEY_4: k = "4"
+        CASE GXKEY_5: k = "5"
+        CASE GXKEY_6: k = "6"
+        CASE GXKEY_7: k = "7"
+        CASE GXKEY_8: k = "8"
+        CASE GXKEY_9: k = "9"
+        CASE GXKEY_0: k = "0"
+        CASE GXKEY_DASH: k = "-"
+        CASE GXKEY_EQUALS: k = "="
+        CASE GXKEY_BACKSPACE: k = "Backspace"
+        CASE GXKEY_TAB: k = "Tab"
+        CASE GXKEY_Q: k = "Q"
+        CASE GXKEY_W: k = "W"
+        CASE GXKEY_E: k = "E"
+        CASE GXKEY_R: k = "R"
+        CASE GXKEY_T: k = "T"
+        CASE GXKEY_Y: k = "Y"
+        CASE GXKEY_U: k = "U"
+        CASE GXKEY_I: k = "I"
+        CASE GXKEY_O: k = "O"
+        CASE GXKEY_P: k = "P"
+        CASE GXKEY_LBRACKET: k = "["
+        CASE GXKEY_RBRACKET: k = "]"
+        CASE GXKEY_ENTER: k = "Enter"
+        CASE GXKEY_LCTRL: k = "LCtrl"
+        CASE GXKEY_A: k = "A"
+        CASE GXKEY_S: k = "S"
+        CASE GXKEY_D: k = "D"
+        CASE GXKEY_F: k = "F"
+        CASE GXKEY_G: k = "G"
+        CASE GXKEY_H: k = "H"
+        CASE GXKEY_J: k = "J"
+        CASE GXKEY_K: k = "K"
+        CASE GXKEY_L: k = "L"
+        CASE GXKEY_SEMICOLON: k = ";"
+        CASE GXKEY_QUOTE: k = "'"
+        CASE GXKEY_BACKQUOTE: k = "`"
+        CASE GXKEY_LSHIFT: k = "LShift"
+        CASE GXKEY_BACKSLASH: k = "\"
+        CASE GXKEY_Z: k = "Z"
+        CASE GXKEY_X: k = "X"
+        CASE GXKEY_C: k = "C"
+        CASE GXKEY_V: k = "V"
+        CASE GXKEY_B: k = "B"
+        CASE GXKEY_N: k = "N"
+        CASE GXKEY_M: k = "M"
+        CASE GXKEY_COMMA: k = ","
+        CASE GXKEY_PERIOD: k = "."
+        CASE GXKEY_SLASH: k = "/"
+        CASE GXKEY_RSHIFT: k = "RShift"
+        CASE GXKEY_NUMPAD_ASTERISK: k = "NumPad *"
+        CASE GXKEY_SPACEBAR: k = "Spacebar"
+        CASE GXKEY_CAPSLOCK: k = "CapsLock"
+        CASE GXKEY_F1: k = "F1"
+        CASE GXKEY_F2: k = "F2"
+        CASE GXKEY_F3: k = "F3"
+        CASE GXKEY_F4: k = "F4"
+        CASE GXKEY_F5: k = "F5"
+        CASE GXKEY_F6: k = "F6"
+        CASE GXKEY_F7: k = "F7"
+        CASE GXKEY_F8: k = "F8"
+        CASE GXKEY_F9: k = "F9"
+        CASE GXKEY_PAUSE: k = "Pause"
+        CASE GXKEY_SCRLK: k = "ScrLk"
+        CASE GXKEY_NUMPAD_7: k = "NumPad 7"
+        CASE GXKEY_NUMPAD_8: k = "NumPad 8"
+        CASE GXKEY_NUMPAD_9: k = "NumPad 9"
+        CASE GXKEY_NUMPAD_MINUS: k = "-"
+        CASE GXKEY_NUMPAD_4: k = "NumPad 4"
+        CASE GXKEY_NUMPAD_5: k = "NumPad 5"
+        CASE GXKEY_NUMPAD_6: k = "NumPad 6"
+        CASE GXKEY_NUMPAD_PLUS: k = "+"
+        CASE GXKEY_NUMPAD_1: k = "NumPad 1"
+        CASE GXKEY_NUMPAD_2: k = "NumPad 2"
+        CASE GXKEY_NUMPAD_3: k = "NumPad 3"
+        CASE GXKEY_NUMPAD_0: k = "NumPad 0"
+        CASE GXKEY_NUMPAD_PERIOD: k = "NumPad ."
+        CASE GXKEY_F11: k = "F11"
+        CASE GXKEY_F12: k = "F12"
+        CASE GXKEY_NUMPAD_ENTER: k = "NumPad Enter"
+        CASE GXKEY_RCTRL: k = "RCtrl"
+        CASE GXKEY_NUMPAD_SLASH: k = "NumPad /"
+        CASE GXKEY_NUMLOCK: k = "NumLock"
+        CASE GXKEY_HOME: k = "Home"
+        CASE GXKEY_UP: k = "Up"
+        CASE GXKEY_PAGEUP: k = "PgUp"
+        CASE GXKEY_LEFT: k = "Left"
+        CASE GXKEY_RIGHT: k = "Right"
+        CASE GXKEY_END: k = "End"
+        CASE GXKEY_DOWN: k = "Down"
+        CASE GXKEY_PAGEDOWN: k = "PgDn"
+        CASE GXKEY_INSERT: k = "Insert"
+        CASE GXKEY_DELETE: k = "Delete"
+        CASE GXKEY_LWIN: k = "LWin"
+        CASE GXKEY_RWIN: k = "RWin"
+        CASE GXKEY_MENU: k = "Menu"
+    END SELECT
+    GXKeyButtonName = k
+END FUNCTION
+
 
 '$include: 'resource/font-default.png.bm'
 '$include: 'resource/font-default-black.png.bm'
