@@ -206,7 +206,7 @@ SUB __UI_BeforeUpdateDisplay
     END IF
 
     ' If X or DEL key is pressed, delete the tiles in the current selection
-    IF GXKeyDown(GXKEY_DEL) OR GXKeyDown(GXKEY_X) THEN deleting = 1
+    IF GXKeyDown(GXKEY_DELETE) OR GXKeyDown(GXKEY_X) THEN deleting = 1
     IF NOT (GXKeyDown(GXKEY_X) OR GXKeyDown(GXKEY_X)) AND deleting THEN DeleteTile: deleting = 0
 
     ' Draw the map
