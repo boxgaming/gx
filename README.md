@@ -12,5 +12,7 @@ The current alpha build has support for:
   - Including a world/map editor
 - Bitmap font support
 - Collision detection
-- Basic gravity
+- Basic physics/gravity
+- Device Input
+  - Keyboard, Mouse, Game Controller
 - Interactive Debugging
