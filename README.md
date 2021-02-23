@@ -13,6 +13,6 @@ The current alpha build has support for:
 - Bitmap font support
 - Collision detection
 - Basic physics/gravity
-- Device Input
-  - Keyboard, Mouse, Game Controller
-- Interactive Debugging
+- Device input management
+  - Keyboard, mouse, and game controller
+- Interactive debugging
