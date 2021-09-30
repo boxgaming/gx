@@ -1,0 +1,1 @@
+%QB64_HOME%\qb64.exe -x c:\basic\projects\gx\mapmaker\MapMaker.bas -o c:\basic\projects\gx\mapmaker\MapMaker.exe

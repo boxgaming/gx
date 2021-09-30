@@ -27,13 +27,13 @@ coin = GXEntityCreate("img/coin.png", 16, 16, 4)
 GXEntityPos coin, 265, 70
 GXEntityAnimate coin, 1, 8
 GXEntityType coin, ETYPE_COIN
-GXEntityCollisionOffsetSet coin, 4, 5, 4, 3
+GXEntityCollisionOffset coin, 4, 5, 4, 3
 
 
 DIM bob AS INTEGER
 bob = GXEntityCreate("img/character.png", 16, 20, 4)
 GXEntityPos bob, GXSceneWidth / 2 - 8, GXSceneHeight / 2 - 10
-GXEntityCollisionOffsetSet bob, 3, 10, 3, 0
+GXEntityCollisionOffset bob, 3, 10, 3, 0
 
 DIM player AS INTEGER
 player = GXPlayerCreate(bob)
@@ -70,7 +70,7 @@ SUB GXOnGameEvent (e AS GXEvent)
             END IF
 
         CASE GXEVENT_COLLISION_TILE
-            IF IsMoveTile(e.collisionTile) <> 1 THEN e.collisionResult = 1
+            IF IsMoveTile(e) <> 1 THEN e.collisionResult = 1
 
         CASE GXEVENT_COLLISION_ENTITY
             IF GXEntityType(e.collisionEntity) = ETYPE_COIN THEN e.collisionResult = 1
@@ -84,7 +84,9 @@ SUB MapPlayerMoveAction (pid AS INTEGER, action AS INTEGER, akey AS INTEGER, ani
     GXPlayerActionAnimationSpeed pid, action, animationSpeed
 END SUB
 
-FUNCTION IsMoveTile (tile AS INTEGER)
+FUNCTION IsMoveTile (e AS GXEvent)
+    DIM tile AS INTEGER
+    tile = GXMapTile(e.collisionTileX, e.collisionTileY, 1)
     IsMoveTile = 0
     DIM i AS INTEGER
     FOR i = 1 TO movetilecount
@@ -98,29 +100,29 @@ END FUNCTION
 SUB SetMoveTiles
     movetilecount = 24
     REDIM movetiles(movetilecount) AS INTEGER
-    movetiles(1) = 0
-    movetiles(2) = 444
-    movetiles(3) = 445
-    movetiles(4) = 446
-    movetiles(5) = 360
-    movetiles(6) = 689
-    movetiles(7) = 682
-    movetiles(8) = 282
-    movetiles(9) = 290
-    movetiles(10) = 289
-    movetiles(11) = 284
-    movetiles(12) = 690
-    movetiles(13) = 404
-    movetiles(14) = 328
-    movetiles(16) = 690
-    movetiles(17) = 361
-    movetiles(18) = 288
-    movetiles(19) = 401
-    movetiles(20) = 440
-    movetiles(21) = 441
-    movetiles(22) = 406
-    movetiles(23) = 405
-    movetiles(24) = 365
+    movetiles(1) = 1
+    movetiles(2) = 445
+    movetiles(3) = 446
+    movetiles(4) = 447
+    movetiles(5) = 361
+    movetiles(6) = 690
+    movetiles(7) = 683
+    movetiles(8) = 283
+    movetiles(9) = 291
+    movetiles(10) = 290
+    movetiles(11) = 285
+    movetiles(12) = 691
+    movetiles(13) = 405
+    movetiles(14) = 329
+    movetiles(16) = 691
+    movetiles(17) = 362
+    movetiles(18) = 289
+    movetiles(19) = 402
+    movetiles(20) = 441
+    movetiles(21) = 442
+    movetiles(22) = 407
+    movetiles(23) = 406
+    movetiles(24) = 366
 END SUB
 
 

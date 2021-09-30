@@ -1,30 +1,27 @@
 $EXEICON:'./../../gx/resource/gx.ico'
 '$include: '../../gx/gx.bi'
+_TITLE "Horse Runner!"
 
 GXSceneCreate 1280, 720
 GXMapLoad "map/horse.map"
 
-DIM bg
-bg = GXBackgroundAdd("img/scroll_bg_far.png")
-GXBackgroundMode bg, GXBG_SCROLL
-
-'DIM bg2
-'bg2 = GXBackgroundAdd("img/hills-scroll.png")
-'GXBackgroundMode bg2, GXBG_WRAP
-'GXBackgroundY bg2, GXSceneHeight / 2
-'GXBackgroundHeight bg2, GXSceneHeight / 2
+DIM bg, bg2
+bg = GXBackgroundAdd("img/scroll_bg_far.png", GXBG_SCROLL)
+bg2 = GXBackgroundAdd("img/hills-scroll.png", GXBG_WRAP)
+GXBackgroundY bg2, GXSceneHeight - 256
+GXBackgroundHeight bg2, 256
 
 GXEntityCreate "img/girl.png", 55, 87, 5, "girl"
-GXEntityPos GX("girl"), 5865, 595
+GXEntityPos GX("girl"), 11565, 595
 GXEntityAnimateMode GX("girl"), GXANIMATE_SINGLE
 
 GXEntityCreate "img/horse.png", 192, 144, 7, "horse"
 GXEntityPos GX("horse"), -300, 548
 GXEntityAnimate GX("horse"), 2, 20
 
-FOR i% = 1 TO 3
+FOR i% = 1 TO 4
     tree = GXEntityCreate("img/foreground_tree.png", 207, 382, 1)
-    GXEntityPos tree, i * 3100, 350
+    GXEntityPos tree, i% * 3000, 350
 NEXT i%
 
 GXSceneFollowEntity GX("horse"), GXSCENE_FOLLOW_ENTITY_CENTER_X
@@ -44,10 +41,10 @@ SUB GXOnGameEvent (e AS GXEvent)
 
     IF e.event = GXEVENT_UPDATE THEN
 
-        IF GXEntityX(GX("horse")) > 5700 AND done = 0 THEN
+        IF GXEntityX(GX("horse")) > 11400 AND done = 0 THEN
             done = GXFrame + 30
             GXEntityFrameSet GX("horse"), 4, 1
-            GXEntityAnimateOff GX("horse")
+            GXEntityAnimateStop GX("horse")
             GXEntityVX GX("horse"), 0
 
         ELSEIF GXFrame = done THEN
@@ -60,7 +57,7 @@ SUB GXOnGameEvent (e AS GXEvent)
             GXEntityAnimate GX("girl"), 1, 8
         END IF
 
-        IF _KEYDOWN(GXKEY_ESC) THEN
+        IF GXKeyDown(GXKEY_ESC) THEN
             GXSceneStop
         END IF
 

@@ -1,0 +1,76 @@
+$IF GXSTR = UNDEFINED THEN
+    ' Pseudo-Constants
+    ' ------------------------------------------------------------------------
+    FUNCTION GX_LF$: GX_LF = CHR$(10): END FUNCTION
+    FUNCTION GX_CR$: GX_CR = CHR$(13): END FUNCTION
+    FUNCTION GX_CRLF$: GX_CRLF = GX_CR + GX_LF: END FUNCTION
+
+    ' String Utility Methods
+    ' ------------------------------------------------------------------------
+    FUNCTION GXSTR_Replace$ (s AS STRING, searchString AS STRING, newString AS STRING)
+        DIM ns AS STRING
+        DIM i AS INTEGER
+
+        DIM slen AS INTEGER
+        slen = LEN(searchString)
+
+        FOR i = 1 TO LEN(s) '- slen + 1
+            IF MID$(s, i, slen) = searchString THEN
+                ns = ns + newString
+                i = i + slen - 1
+            ELSE
+                ns = ns + MID$(s, i, 1)
+            END IF
+        NEXT i
+
+        GXSTR_Replace = ns
+    END FUNCTION
+
+    FUNCTION GXSTR_Split (sourceString AS STRING, delimiter AS STRING, results() AS STRING)
+        ' Modified version of:
+        ' https://www.qb64.org/forum/index.php?topic=1073.msg102711#msg102711
+        DIM cstr AS STRING, p AS LONG, curpos AS LONG, arrpos AS LONG, dpos AS LONG
+
+        ' Make a copy of the source string
+        cstr = sourceString
+
+        ' Special case if the delimiter is space, remove all excess space
+        IF delimiter = " " THEN
+            cstr = RTRIM$(LTRIM$(cstr))
+            p = INSTR(cstr, "  ")
+            WHILE p > 0
+                cstr = MID$(cstr, 1, p - 1) + MID$(cstr, p + 1)
+                p = INSTR(cstr, "  ")
+            WEND
+        END IF
+        curpos = 1
+        arrpos = 0
+        dpos = INSTR(curpos, cstr, delimiter)
+        DO UNTIL dpos = 0
+            arrpos = arrpos + 1
+            REDIM _PRESERVE results(arrpos) AS STRING
+            results(arrpos) = MID$(cstr, curpos, dpos - curpos)
+            curpos = dpos + LEN(delimiter)
+            dpos = INSTR(curpos, cstr, delimiter)
+        LOOP
+        arrpos = arrpos + 1
+        REDIM _PRESERVE results(arrpos) AS STRING
+        results(arrpos) = MID$(cstr, curpos)
+
+        GXSTR_Split = arrpos
+    END FUNCTION
+
+    FUNCTION GXSTR_LPad$ (s AS STRING, padChar AS STRING, swidth AS INTEGER)
+        DIM padding AS STRING
+        padding = STRING$(swidth - LEN(s), padChar)
+        GXSTR_LPad = padding + s
+    END FUNCTION
+
+    FUNCTION GXSTR_RPad$ (s AS STRING, padChar AS STRING, swidth AS INTEGER)
+        DIM padding AS STRING
+        padding = STRING$(swidth - LEN(s), padChar)
+        GXSTR_RPad = s + padding
+    END FUNCTION
+
+    $LET GXSTR = 1
+$END IF

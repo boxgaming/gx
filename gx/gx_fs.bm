@@ -1,0 +1,111 @@
+$IF GXFS = UNDEFINED THEN
+    '$INCLUDE: 'gx_str.bm'
+    '$INCLUDE: 'include/pipecom.bm'
+
+
+    ' File System Utility Methods
+    ' -------------------------------------------------------------------------
+    FUNCTION GXFS_GetFilename$ (filepath AS STRING)
+        DIM s AS STRING, i AS INTEGER
+        s = filepath
+        s = GXSTR_Replace(s, "\", "/")
+        i = _INSTRREV(s, "/")
+        s = MID$(s, i + 1)
+        GXFS_GetFilename = s
+    END FUNCTION
+
+    FUNCTION GXFS_GetParentPath$ (filepath AS STRING)
+        DIM s AS STRING, i AS INTEGER
+        s = filepath
+        s = GXSTR_Replace(s, "\", "/")
+        i = _INSTRREV(s, "/")
+        s = MID$(s, 1, i - 1)
+        s = GXSTR_Replace(s, "/", GXFS_PathSeparator)
+        'IF GXFS_IsDriveLetter(s) THEN s = s + __GXFS_PathSeparator
+        IF s = "" THEN s = GXFS_PathSeparator
+        GXFS_GetParentPath = s
+    END FUNCTION
+
+    FUNCTION GXFS_GetFileExtension$ (filename AS STRING)
+        DIM i AS INTEGER
+        'i = __GX_StrLastIndexOf(filename, ".")
+        i = _INSTRREV(filename, ".")
+        GXFS_GetFileExtension = MID$(filename, i + 1)
+    END FUNCTION
+
+    FUNCTION GXFS_RemoveFileExtension$ (filename AS STRING)
+        DIM i AS INTEGER
+        i = _INSTRREV(filename, ".")
+        GXFS_RemoveFileExtension = MID$(filename, 1, i - 1)
+    END FUNCTION
+
+    FUNCTION GXFS_IsDriveLetter (path AS STRING)
+        IF LEN(path) = 2 AND RIGHT$(path, 1) = ":" THEN
+            GXFS_IsDriveLetter = GX_TRUE
+        ELSE
+            GXFS_IsDriveLetter = GX_FALSE
+        END IF
+    END FUNCTION
+
+    FUNCTION GXFS_PathSeparator$ ()
+        $IF WINDOWS THEN
+            GXFS_PathSeparator = "\"
+        $ELSE
+            GXFS_PathSeparator = "/"
+        $END IF
+    END FUNCTION
+
+    FUNCTION GXFS_DirList (path AS STRING, dirmode AS INTEGER, filenames() AS STRING)
+        DIM cmd AS STRING
+
+        ' Determine the OS-specific directory command
+        $IF WINDOWS THEN
+            IF dirmode THEN
+                cmd = "dir /b /ad " + CHR$(34) + path + CHR$(34)
+            ELSE
+                cmd = "dir /b /a-d " + CHR$(34) + path + CHR$(34)
+            END IF
+        $ELSE
+            IF dirmode THEN
+            cmd = "find " + CHR$(34) + path + CHR$(34) + " -maxdepth 1 -type d | sed '1d' | sed 's/.*\///g'"
+            ELSE
+            cmd = "ls -p " + CHR$(34) + path + CHR$(34) + " | grep -v / "
+            END IF
+        $END IF
+
+        DIM fcount AS INTEGER
+        IF cmd <> "" THEN
+            DIM cmdResult AS INTEGER, stdout AS STRING, stderr AS STRING
+            cmdResult = pipecom(cmd, stdout, stderr)
+
+            fcount = GXSTR_Split(stdout, GX_LF, filenames())
+            fcount = fcount - 1 'Last line is blank
+        END IF
+
+        ' Return the number of items in the result array
+        GXFS_DirList = fcount
+    END FUNCTION
+
+    FUNCTION GXFS_DriveList (drives() AS STRING)
+        $IF WINDOWS THEN
+            DIM cmdResult AS INTEGER
+            DIM stderr AS STRING
+            DIM text AS STRING
+            DIM count AS INTEGER
+            count = 0
+
+            ' Get the drive list
+            cmdResult = pipecom("cmd /c " + CHR$(34) + "fsutil fsinfo drives" + CHR$(34), text, stderr)
+            text = GXSTR_Replace(text, "Drives: ", "")
+            text = GXSTR_Replace(text, GX_LF, "")
+            text = GXSTR_Replace(text, "\", "")
+            count = GXSTR_Split(text, " ", drives())
+
+            GXFS_DriveList = count
+        $ELSE
+            GXFS_DriveList = 0
+        $END IF
+    END FUNCTION
+
+$LET GXFS = 1
+$END IF

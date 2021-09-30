@@ -15,6 +15,7 @@ $IF GXBI = UNDEFINED THEN
     CONST GXEVENT_PAINTAFTER = 7
     CONST GXEVENT_COLLISION_TILE = 8
     CONST GXEVENT_COLLISION_ENTITY = 9
+    CONST GXEVENT_PLAYER_ACTION = 10
 
     CONST GXANIMATE_LOOP = 0
     CONST GXANIMATE_SINGLE = 1
@@ -145,49 +146,60 @@ $IF GXBI = UNDEFINED THEN
     CONST GXFONT_DEFAULT = 1 '       default bitmap font (white)
     CONST GXFONT_DEFAULT_BLACK = 2 ' default bitmap font (black
 
-    CONST GX_DEVICE_KEYBOARD = 1
-    CONST GX_DEVICE_MOUSE = 2
-    CONST GX_DEVICE_CONTROLLER = 3
-    CONST GX_DEVICE_BUTTON = 4
-    CONST GX_DEVICE_AXIS = 5
-    CONST GX_DEVICE_WHEEL = 6
+    CONST GXDEVICE_KEYBOARD = 1
+    CONST GXDEVICE_MOUSE = 2
+    CONST GXDEVICE_CONTROLLER = 3
+    CONST GXDEVICE_BUTTON = 4
+    CONST GXDEVICE_AXIS = 5
+    CONST GXDEVICE_WHEEL = 6
 
-    'CONST GX_BLACK = _RGB32(255, 255, 255)
-
+    CONST GXTYPE_ENTITY = 1
+    CONST GXTYPE_FONT = 2
 
     ' GX System Types
     ' ------------------------------------------------------------------------
     TYPE GXPosition
-        x AS LONG
-        y AS LONG
+        x AS LONG '              x position - unit may vary based on context
+        y AS LONG '              y position - unit may vary based on context
     END TYPE
 
-    TYPE GXEntity
-        x AS DOUBLE
-        y AS DOUBLE
-        height AS INTEGER
-        width AS INTEGER
-        image AS INTEGER
-        spriteSeq AS INTEGER
-        spriteFrame AS INTEGER
-        seqFrames AS INTEGER
-        animate AS INTEGER
-        animateMode AS INTEGER
-        screen AS INTEGER
-        hidden AS INTEGER
-        type AS INTEGER
-        coLeft AS INTEGER ' left collision offset
-        coTop AS INTEGER ' top collision offset
-        coRight AS INTEGER ' right collision offset
-        coBottom AS INTEGER ' bottom collision offset
-        applyGravity AS INTEGER ' used for applying gravity
-        ' TODO: some clarification may be needed here as these variables are used
-        '       both falling and jumping
-        jumping AS INTEGER ' used for applying gravity
-        jumpstart AS INTEGER ' used for applying gravity
-        uid AS STRING * 10
-        vx AS INTEGER ' move vector x
-        vy AS INTEGER ' move vector y
+    TYPE GXImage
+        id AS LONG '             the image handle
+        filename AS STRING '     the name of the file from which the image was loaded
+    END TYPE
+
+    TYPE GXFont
+        eid AS INTEGER '         id of the entity defining the font sprite
+        charSpacing AS INTEGER ' defines amount of (in pixels) between characters
+        lineSpacing AS INTEGER ' defines amount of space (in pixels) between lines
+    END TYPE
+
+    TYPE GXDeviceInput
+        deviceId AS INTEGER '    id of the input device
+        deviceType AS INTEGER '  type of input device (keyboard, mouse, or game controller)
+        inputType AS INTEGER '   type of input (button, axis, or wheel)
+        inputId AS INTEGER '     id of the input
+        inputValue AS INTEGER '  the value of the input - varies based on input type: (-1 or 0 for buttons, -1, 0 or 1 for wheel)
+    END TYPE '                       - button: 0 or -1
+    '                                - wheel:  -1, 0, or 1
+    '                                - axis:   decimal value between -1 and 1
+    TYPE GXScene
+        x AS INTEGER '           x position in pixels
+        y AS INTEGER '           y position in pixels
+        width AS INTEGER '       scene width in pixels
+        height AS INTEGER '      scene height in pixels
+        columns AS INTEGER '     number of tiled map columns viewable in the scene (0 if no map loaded)
+        rows AS INTEGER '        number of tiled map rows viewable in the scene (0 if no map loaded)
+        image AS LONG
+        active AS INTEGER
+        embedded AS INTEGER
+        followMode AS INTEGER
+        followEntity AS INTEGER
+        constrainMode AS INTEGER
+        frame AS _UNSIGNED LONG
+        fullscreen AS INTEGER
+        scaleX AS SINGLE
+        scaleY AS SINGLE
     END TYPE
 
     TYPE GXEvent
@@ -196,29 +208,42 @@ $IF GXBI = UNDEFINED THEN
         player AS INTEGER
         entity AS INTEGER
         collisionEntity AS INTEGER
-        collisionTile AS INTEGER
+        collisionTileX AS INTEGER
+        collisionTileY AS INTEGER
         collisionResult AS INTEGER
     END TYPE
 
-    TYPE GXImage
-        id AS LONG
-        filename AS STRING
+    TYPE GXObject
+        uid AS STRING * 10 ' the object's unique identifier
+        id AS INTEGER '      the object's index in the type-specific array
+        type AS INTEGER '    the object type
     END TYPE
 
-    TYPE GXMapTile
-        depth AS INTEGER
-        layer1 AS INTEGER
-        layer2 AS INTEGER
-        layer3 AS INTEGER
-    END TYPE
-
-    TYPE GXTileset
-        width AS INTEGER
-        height AS INTEGER
-        columns AS INTEGER
-        rows AS INTEGER
-        image AS LONG
-        filename AS STRING
+    TYPE GXEntity
+        x AS DOUBLE '             the entity's x position in the world (or scene if screen==true)
+        y AS DOUBLE '             the entity's y position in the world (or scene if screen==true)
+        height AS INTEGER '       the entity's sprite height
+        width AS INTEGER '        the entity's sprite width
+        image AS INTEGER '        the entity's spritesheet image handle
+        spriteSeq AS INTEGER '    the entity's current sprite sequence
+        spriteFrame AS INTEGER '  the entity's current sprite animation frame
+        seqFrames AS INTEGER '    the number of frames in the current sequence
+        animate AS INTEGER '      the animation speed in FPS, 0 = no animation
+        animateMode AS INTEGER '  animation mode (loop vs single play)
+        screen AS INTEGER '       if true entity is rendered with screen coordinates on topmost layer
+        hidden AS INTEGER '       if true, disables rendering (TODO: and collision detection?)
+        type AS INTEGER '         user-defined type id
+        coLeft AS INTEGER '       left collision offset
+        coTop AS INTEGER '        top collision offset
+        coRight AS INTEGER '      right collision offset
+        coBottom AS INTEGER '     bottom collision offset
+        applyGravity AS INTEGER ' used for applying gravity
+        ' TODO: some clarification may be needed here as the following
+        '       two variables are used both falling and jumping
+        jumping AS INTEGER '      used for applying gravity
+        jumpstart AS INTEGER '    used for applying gravity
+        vx AS DOUBLE '            move vector x
+        vy AS DOUBLE '            move vector y
     END TYPE
 
     TYPE GXBackground
@@ -230,33 +255,43 @@ $IF GXBI = UNDEFINED THEN
         height AS INTEGER
     END TYPE
 
-    TYPE GXMap
-        rows AS INTEGER
-        columns AS INTEGER
-        isometric AS INTEGER
-    END TYPE
-
-    TYPE GXScene
-        x AS INTEGER
-        y AS INTEGER
+    TYPE GXTileset
         width AS INTEGER
         height AS INTEGER
         columns AS INTEGER
         rows AS INTEGER
         image AS LONG
-        active AS INTEGER
-        embedded AS INTEGER
-        followMode AS INTEGER
-        followEntity AS INTEGER
-        constrainMode AS INTEGER
-        frame AS _UNSIGNED LONG
-        fullscreen AS INTEGER
+        filename AS STRING
     END TYPE
 
-    TYPE GXFont
-        eid AS INTEGER
-        charSpacing AS INTEGER
-        lineSpacing AS INTEGER
+    TYPE GXTile
+        id AS INTEGER
+        animationId AS INTEGER
+        animationSpeed AS INTEGER
+        animationFrame AS INTEGER
+    END TYPE
+
+    TYPE GXTileFrame
+        tileId AS INTEGER
+        firstFrame AS INTEGER
+        nextFrame AS INTEGER
+    END TYPE
+
+    TYPE GXMap
+        rows AS INTEGER
+        columns AS INTEGER
+        layers AS INTEGER
+        isometric AS INTEGER
+        version AS INTEGER
+    END TYPE
+
+    TYPE GXMapTile
+        tile AS INTEGER
+    END TYPE
+
+    TYPE GXMapLayer
+        id AS INTEGER
+        hidden AS INTEGER
     END TYPE
 
     TYPE GXPlayer
@@ -268,7 +303,6 @@ $IF GXBI = UNDEFINED THEN
 
     TYPE GXAction
         type AS INTEGER
-        'key AS LONG
         diDeviceId AS INTEGER
         diDeviceType AS INTEGER
         diInputType AS INTEGER
@@ -290,51 +324,51 @@ $IF GXBI = UNDEFINED THEN
         font AS INTEGER
     END TYPE
 
-    TYPE GXDeviceInput
-        deviceId AS INTEGER
-        deviceType AS INTEGER
-        inputType AS INTEGER
-        inputId AS INTEGER
-        inputValue AS INTEGER
-    END TYPE
-
 
     ' System Private Globals
     ' ------------------------------------------------------------------------
-    DIM SHARED gx_framerate AS INTEGER
-    gx_framerate = 90
+    DIM SHARED __gx_framerate AS INTEGER
+    __gx_framerate = 90
 
-    DIM SHARED gx_tileset AS GXTileset
-    REDIM SHARED gx_map(0, 0) AS GXMapTile
-    DIM SHARED gx_map_loading AS INTEGER
+    DIM SHARED __gx_tileset AS GXTileset
+    REDIM SHARED __gx_tileset_tiles(0) AS GXTile
+    REDIM SHARED __gx_tileset_animations(0) AS GXTileFrame
 
-    REDIM SHARED gx_images(0) AS GXImage
-    DIM SHARED gx_image_count AS INTEGER
+    DIM SHARED __gx_map AS GXMap
+    REDIM SHARED __gx_map_layer_info(0) AS GXMapLayer
+    REDIM SHARED __gx_map_layers(0, 0) AS GXMapTile
+    DIM SHARED __gx_map_loading AS INTEGER
 
-    DIM SHARED gx_map AS GXMap
-    DIM SHARED gx_scene AS GXScene
-    DIM SHARED gx_img_blank AS LONG
+    REDIM SHARED __gx_images(0) AS GXImage
+    DIM SHARED __gx_image_count AS INTEGER
 
-    REDIM SHARED gx_bg(0) AS GXBackground
-    DIM SHARED gx_bg_count AS INTEGER
+    DIM SHARED __gx_scene AS GXScene
+    DIM SHARED __gx_img_blank AS LONG
 
-    DIM SHARED gx_entity_count AS INTEGER
-    REDIM SHARED gx_entities(0) AS GXEntity
+    REDIM SHARED __gx_bg(0) AS GXBackground
+    DIM SHARED __gx_bg_count AS INTEGER
 
-    REDIM SHARED gx_fonts(2) AS GXFont
-    REDIM SHARED gx_font_charmap(256, 2) AS GXPosition
-    DIM SHARED gx_font_count AS INTEGER
-    gx_font_count = 2
+    DIM SHARED __gx_entity_count AS INTEGER
+    REDIM SHARED __gx_entities(0) AS GXEntity
 
-    REDIM SHARED gx_players(0) AS GXPlayer
-    REDIM SHARED gx_player_keymap(0, 10) AS GXAction
-    DIM SHARED gx_player_count AS INTEGER
+    REDIM SHARED __gx_fonts(2) AS GXFont
+    REDIM SHARED __gx_font_charmap(256, 2) AS GXPosition
+    DIM SHARED __gx_font_count AS INTEGER
+    __gx_font_count = 2
 
-    DIM SHARED gx_debug AS GXDebug
-    gx_debug.font = GXFONT_DEFAULT
-    gx_debug.tileBorderColor = _RGB32(255, 255, 255)
-    gx_debug.entityBorderColor = _RGB32(255, 255, 255)
-    gx_debug.entityCollisionColor = _RGB32(255, 255, 0)
+    REDIM SHARED __gx_players(0) AS GXPlayer
+    REDIM SHARED __gx_player_keymap(0, 10) AS GXAction
+    DIM SHARED __gx_player_count AS INTEGER
+
+    REDIM SHARED __gx_objects(0) AS GXObject
+
+    DIM SHARED __gx_sound_muted AS INTEGER
+
+    DIM SHARED __gx_debug AS GXDebug
+    __gx_debug.font = GXFONT_DEFAULT
+    __gx_debug.tileBorderColor = _RGB32(255, 255, 255)
+    __gx_debug.entityBorderColor = _RGB32(255, 255, 255)
+    __gx_debug.entityCollisionColor = _RGB32(255, 255, 0)
 
     $LET GXBI = TRUE
 $END IF

@@ -6,14 +6,14 @@ _TITLE "Detect Device Input"
 PRINT "Waiting for input..."
 DO
     DIM di AS GXDeviceInput
-    GXDeviceDetectInput di
+    GXDeviceInputDetect di
     CLS
     PRINT "Device #:    "; di.deviceId
     PRINT "Device Name: "; GXDeviceName(di.deviceId)
     PRINT "Device Type: "; GXDeviceTypeName(di.deviceType)
     PRINT "Input Type:  "; GXInputTypeName(di.inputType)
     PRINT "Input Id:    "; di.inputId;
-    IF di.deviceType = GX_DEVICE_KEYBOARD THEN
+    IF di.deviceType = GXDEVICE_KEYBOARD THEN
         PRINT " [ "; GXKeyButtonName(di.inputId); " ]"
     ELSE
         PRINT

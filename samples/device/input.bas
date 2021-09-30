@@ -8,17 +8,17 @@ GXFrameRate 10
 
 DIM SHARED dleft AS GXDeviceInput
 PRINT "Press Left... ";
-GXDeviceDetectInput dleft
+GXDeviceInputDetect dleft
 PrintDeviceInput dleft
 
 DIM SHARED dright AS GXDeviceInput
 PRINT "Press Right...";
-GXDeviceDetectInput dright
+GXDeviceInputDetect dright
 PrintDeviceInput dright
 
 DIM SHARED djump AS GXDeviceInput
 PRINT "Press Jump...";
-GXDeviceDetectInput djump
+GXDeviceInputDetect djump
 PrintDeviceInput djump
 
 GXSleep 1
@@ -49,7 +49,7 @@ SUB PrintDeviceInput (di AS GXDeviceInput)
     PRINT GXDeviceName(di.deviceId) + " : ";
     PRINT GXInputTypeName(di.inputType) + " : ";
     PRINT STR$(di.inputId) + " : ";
-    IF di.deviceType = GX_DEVICE_KEYBOARD THEN
+    IF di.deviceType = GXDEVICE_KEYBOARD THEN
         PRINT " [ "; GXKeyButtonName(di.inputId); " ]";
     ELSE
         PRINT ;
