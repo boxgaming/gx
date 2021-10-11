@@ -12,7 +12,7 @@ The current alpha build has support for:
   - Including a world/map editor
   - Support for layered tiles
   - Support for animated tiles
-  - Support for flat(rectangular) as well as isometric tilesets
+  - Support for orthogonal and isometric tilesets
 - Bitmap font support
 - Collision detection
 - Basic physics/gravity
