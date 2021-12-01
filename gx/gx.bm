@@ -1733,6 +1733,7 @@ $If GXBM = UNDEFINED Then
         lstr = _Inflate$(lstr)
         ' TODO: use a temp file strategy that will avoid file collisions
         '       or potentially read and write from memory instead
+        If Not _DirExists("./tmp") Then MkDir "./tmp"
         Open "./tmp/layer" For Binary As #2
         Put #2, , lstr
         Close #2
