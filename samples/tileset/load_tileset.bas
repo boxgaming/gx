@@ -1,7 +1,7 @@
-OPTION _EXPLICIT
-'$INCLUDE:'../../gx/gx.bi'
+Option _Explicit
+'$Include:'../../gx/gx.bi'
 
-DIM SHARED toggleDebug AS INTEGER
+Dim Shared toggleDebug As Integer
 
 GXSceneCreate 64, 64
 GXSceneWindowSize 192, 192
@@ -20,23 +20,23 @@ GXMapTile 2, 2, 1, 325
 
 
 GXSceneStart
-SYSTEM
+System
 
-SUB GXOnGameEvent (e AS GXEvent)
-    SELECT CASE e.event
-        CASE GXEVENT_UPDATE
-            IF GXKeyDown(GXKEY_ESC) THEN GXSceneStop
+Sub GXOnGameEvent (e As GXEvent)
+    Select Case e.event
+        Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_ESC) Then GXSceneStop
             ' Toggle debug mode when F1 key is pressed
 
-            IF GXKeyDown(GXKEY_F1) THEN toggleDebug = GX_TRUE
-            IF NOT GXKeyDown(GXKEY_F1) AND toggleDebug THEN
-                GXDebug NOT GXDebug
+            If GXKeyDown(GXKEY_F1) Then toggleDebug = GX_TRUE
+            If Not GXKeyDown(GXKEY_F1) And toggleDebug Then
+                GXDebug Not GXDebug
                 toggleDebug = GX_FALSE
-            END IF
-    END SELECT
+            End If
+    End Select
 
-END SUB
+End Sub
 
 
-'$INCLUDE:'../../gx/gx.bm'
+'$Include:'../../gx/gx.bm'
 

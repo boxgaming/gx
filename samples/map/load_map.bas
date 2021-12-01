@@ -1,4 +1,4 @@
-'$INCLUDE:'../../gx/gx.bi'
+'$Include:'../../gx/gx.bi'
 
 GXSceneCreate 640, 400
 GXMapLoad "../overworld/map/overworld.map"
@@ -17,11 +17,11 @@ GXMapLoad "../overworld/map/overworld.map"
 
 GXSceneStart
 
-SUB GXOnGameEvent (e AS GXEvent)
-    SELECT CASE e.event
-        CASE GXEVENT_UPDATE
-            IF GXKeyDown(GXKEY_ESC) THEN GXSceneStop
-    END SELECT
-END SUB
-'$INCLUDE:'../../gx/gx.bm'
+Sub GXOnGameEvent (e As GXEvent)
+    Select Case e.event
+        Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_ESC) Then GXSceneStop
+    End Select
+End Sub
+'$Include:'../../gx/gx.bm'
 

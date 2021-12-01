@@ -1,23 +1,23 @@
-$CONSOLE:ONLY
-'$INCLUDE:'../../gx/gx.bi'
-_DEST _CONSOLE
+$Console:Only
+'$Include:'../../gx/gx.bi'
+_Dest _Console
 
 'GXSceneEmbedded GX_TRUE
 'GXSceneCreate 640, 480
 
-IF NOT _FILEEXISTS(COMMAND$) THEN
-    PRINT "Specified file does not exists"
-    SYSTEM 0
-END IF
+If Not _FileExists(Command$) Then
+    Print "Specified file does not exists"
+    System 0
+End If
 
-GXMapLoad COMMAND$
-PRINT "Version:   "; GXMapVersion
-PRINT "Rows:      "; GXMapRows
-PRINT "Columns:   "; GXMapColumns
-PRINT "Layers:    "; GXMapLayers
-PRINT "Isometric: "; GXMapIsometric
-SYSTEM
+GXMapLoad Command$
+Print "Version:   "; GXMapVersion
+Print "Rows:      "; GXMapRows
+Print "Columns:   "; GXMapColumns
+Print "Layers:    "; GXMapLayers
+Print "Isometric: "; GXMapIsometric
+System
 
-SUB GXOnGameEvent (e AS GXEvent): END SUB
-'$INCLUDE:'../../gx/gx.bm'
+Sub GXOnGameEvent (e As GXEvent): End Sub
+'$Include:'../../gx/gx.bm'
 

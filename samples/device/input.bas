@@ -1,23 +1,23 @@
-OPTION _EXPLICIT
-$EXEICON:'./../../gx/resource/gx.ico'
-'$include: '../../gx/gx.bi'
-_TITLE "Test Device Input"
+Option _Explicit
+$ExeIcon:'./../../gx/resource/gx.ico'
+'$Include:'../../gx/gx.bi'
+_Title "Test Device Input"
 
 GXSceneCreate 500, 300
 GXFrameRate 10
 
-DIM SHARED dleft AS GXDeviceInput
-PRINT "Press Left... ";
+Dim Shared dleft As GXDeviceInput
+Print "Press Left... ";
 GXDeviceInputDetect dleft
 PrintDeviceInput dleft
 
-DIM SHARED dright AS GXDeviceInput
-PRINT "Press Right...";
+Dim Shared dright As GXDeviceInput
+Print "Press Right...";
 GXDeviceInputDetect dright
 PrintDeviceInput dright
 
-DIM SHARED djump AS GXDeviceInput
-PRINT "Press Jump...";
+Dim Shared djump As GXDeviceInput
+Print "Press Jump...";
 GXDeviceInputDetect djump
 PrintDeviceInput djump
 
@@ -28,34 +28,34 @@ GXSleep 1
 
 GXSceneStart
 
-SUB GXOnGameEvent (e AS GXEvent)
-    DIM ldown AS INTEGER
-    SELECT CASE e.event
-        CASE GXEVENT_DRAWSCREEN
-            IF GXDeviceInputTest(dleft) THEN
+Sub GXOnGameEvent (e As GXEvent)
+    Dim ldown As Integer
+    Select Case e.event
+        Case GXEVENT_DRAWSCREEN
+            If GXDeviceInputTest(dleft) Then
                 GXDrawText GXFONT_DEFAULT, 100, 100, "Left"
-            END IF
-            IF GXDeviceInputTest(dright) THEN
+            End If
+            If GXDeviceInputTest(dright) Then
                 GXDrawText GXFONT_DEFAULT, 150, 100, "Right"
-            END IF
-            IF GXDeviceInputTest(djump) THEN
+            End If
+            If GXDeviceInputTest(djump) Then
                 GXDrawText GXFONT_DEFAULT, 125, 125, "Jump"
-            END IF
-    END SELECT
-END SUB
+            End If
+    End Select
+End Sub
 
 
-SUB PrintDeviceInput (di AS GXDeviceInput)
-    PRINT GXDeviceName(di.deviceId) + " : ";
-    PRINT GXInputTypeName(di.inputType) + " : ";
-    PRINT STR$(di.inputId) + " : ";
-    IF di.deviceType = GXDEVICE_KEYBOARD THEN
-        PRINT " [ "; GXKeyButtonName(di.inputId); " ]";
-    ELSE
-        PRINT ;
-    END IF
-    PRINT " : "; di.inputValue
-    PRINT
-END SUB
+Sub PrintDeviceInput (di As GXDeviceInput)
+    Print GXDeviceName(di.deviceId) + " : ";
+    Print GXInputTypeName(di.inputType) + " : ";
+    Print Str$(di.inputId) + " : ";
+    If di.deviceType = GXDEVICE_KEYBOARD Then
+        Print " [ "; GXKeyButtonName(di.inputId); " ]";
+    Else
+        Print ;
+    End If
+    Print " : "; di.inputValue
+    Print
+End Sub
 
-'$include: '../../gx/gx.bm'
+'$Include:'../../gx/gx.bm'

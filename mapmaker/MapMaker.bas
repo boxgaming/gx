@@ -1,32 +1,32 @@
-OPTION _EXPLICIT
-$EXEICON:'./../gx/resource/gx.ico'
-'$INCLUDE:'../gx/gx.bi'
+Option _Explicit
+$ExeIcon:'./../gx/resource/gx.ico'
+'$Include:'../gx/gx.bi'
 
-CONST FD_OPEN = 1
-CONST FD_SAVE = 2
+Const FD_OPEN = 1
+Const FD_SAVE = 2
 
-DIM SHARED scale AS INTEGER '             - Scale used to apply zoom level to map
-DIM SHARED tscale AS INTEGER '            - Scale used to apply zoom level to tileset
-DIM SHARED gxloaded AS INTEGER '          - Indicates when the GX engine is initialized
-DIM SHARED mapLoaded AS INTEGER '         - True when a map is currently loaded
-DIM SHARED mapFilename AS STRING '        - Name of the map file currently loaded
-DIM SHARED tilesetPos AS GXPosition '     - Tileset screen position for scrolling the tileset window
-DIM SHARED tileSelStart AS GXPosition '   - Tile selection start position
-DIM SHARED tileSelEnd AS GXPosition '     - Tile selection end position
-DIM SHARED tileSelSizing AS INTEGER '     - Tile selection sizing flag
-DIM SHARED mapSelSizing AS INTEGER '      - Map selection sizing flag
-DIM SHARED mapSelMode AS INTEGER '        - Map selection mode (True=map, False=tileset)
-DIM SHARED saving AS INTEGER '            - Set to True when the map is currently being saved
-DIM SHARED deleting AS INTEGER '          - When true the delete key is pressed but not yet released
-DIM SHARED dialogMode AS INTEGER '        - Indicates whethere a dialog is currently being displayed
-DIM SHARED fileDialogMode AS INTEGER '    - Type of file dialog opened (Open, Save)
-DIM SHARED fileDialogPath AS STRING '     - Current/last path selected in the file dialog
-DIM SHARED fileDialogTargetForm AS LONG ' - Control which opened the file dialog
-DIM SHARED lastControlClicked AS LONG '   - Used for capturing double-click events
-DIM SHARED lastClick AS DOUBLE '          - Used for capturing double-click events
-DIM SHARED animationMode AS INTEGER
-DIM SHARED resizeMode AS INTEGER
-REDIM SHARED hiddenLayers(0) AS INTEGER
+Dim Shared scale As Integer '             - Scale used to apply zoom level to map
+Dim Shared tscale As Integer '            - Scale used to apply zoom level to tileset
+Dim Shared gxloaded As Integer '          - Indicates when the GX engine is initialized
+Dim Shared mapLoaded As Integer '         - True when a map is currently loaded
+Dim Shared mapFilename As String '        - Name of the map file currently loaded
+Dim Shared tilesetPos As GXPosition '     - Tileset screen position for scrolling the tileset window
+Dim Shared tileSelStart As GXPosition '   - Tile selection start position
+Dim Shared tileSelEnd As GXPosition '     - Tile selection end position
+Dim Shared tileSelSizing As Integer '     - Tile selection sizing flag
+Dim Shared mapSelSizing As Integer '      - Map selection sizing flag
+Dim Shared mapSelMode As Integer '        - Map selection mode (True=map, False=tileset)
+Dim Shared saving As Integer '            - Set to True when the map is currently being saved
+Dim Shared deleting As Integer '          - When true the delete key is pressed but not yet released
+Dim Shared dialogMode As Integer '        - Indicates whethere a dialog is currently being displayed
+Dim Shared fileDialogMode As Integer '    - Type of file dialog opened (Open, Save)
+Dim Shared fileDialogPath As String '     - Current/last path selected in the file dialog
+Dim Shared fileDialogTargetForm As Long ' - Control which opened the file dialog
+Dim Shared lastControlClicked As Long '   - Used for capturing double-click events
+Dim Shared lastClick As Double '          - Used for capturing double-click events
+Dim Shared animationMode As Integer
+Dim Shared resizeMode As Integer
+ReDim Shared hiddenLayers(0) As Integer
 
 
 ': This program uses
@@ -35,122 +35,122 @@ REDIM SHARED hiddenLayers(0) AS INTEGER
 ': https://github.com/FellippeHeitor/InForm
 '-----------------------------------------------------------
 ' Menus and Menu Items
-DIM SHARED MainForm AS LONG
-DIM SHARED FileMenu AS LONG
-DIM SHARED FileMenuNew AS LONG
-DIM SHARED FileMenuOpen AS LONG
-DIM SHARED FileMenuSave AS LONG
-DIM SHARED FileMenuSaveAs AS LONG
-DIM SHARED FileMenuExit AS LONG
-DIM SHARED MapMenu AS LONG
-DIM SHARED MapMenuZoomIn AS LONG
-DIM SHARED MapMenuZoomOut AS LONG
-DIM SHARED MapMenuResize AS LONG
-DIM SHARED TilesetMenu AS LONG
-DIM SHARED TilesetMenuReplace AS LONG
-DIM SHARED TilesetMenuZoomIn AS LONG
-DIM SHARED TilesetMenuZoomOut AS LONG
+Dim Shared MainForm As Long
+Dim Shared FileMenu As Long
+Dim Shared FileMenuNew As Long
+Dim Shared FileMenuOpen As Long
+Dim Shared FileMenuSave As Long
+Dim Shared FileMenuSaveAs As Long
+Dim Shared FileMenuExit As Long
+Dim Shared MapMenu As Long
+Dim Shared MapMenuZoomIn As Long
+Dim Shared MapMenuZoomOut As Long
+Dim Shared MapMenuResize As Long
+Dim Shared TilesetMenu As Long
+Dim Shared TilesetMenuReplace As Long
+Dim Shared TilesetMenuZoomIn As Long
+Dim Shared TilesetMenuZoomOut As Long
 
 ' Map control
-DIM SHARED Map AS LONG
-DIM SHARED lblLayer AS LONG
-DIM SHARED lblEditLayer AS LONG
-DIM SHARED cboLayer AS LONG
-DIM SHARED cboEditLayer AS LONG
-DIM SHARED chkLayerHidden AS LONG
-DIM SHARED lblMapInfo AS LONG
-DIM SHARED btnLayerAdd AS LONG
-DIM SHARED btnLayerRemove AS LONG
+Dim Shared Map As Long
+Dim Shared lblLayer As Long
+Dim Shared lblEditLayer As Long
+Dim Shared cboLayer As Long
+Dim Shared cboEditLayer As Long
+Dim Shared chkLayerHidden As Long
+Dim Shared lblMapInfo As Long
+Dim Shared btnLayerAdd As Long
+Dim Shared btnLayerRemove As Long
 
 ' Tile control
-DIM SHARED Tiles AS LONG
-DIM SHARED frmTile AS LONG
-DIM SHARED lblTileId AS LONG
-DIM SHARED lblTileIdValue AS LONG
-DIM SHARED lblTileAnimated AS LONG
-DIM SHARED tglTileAnimate AS LONG
-DIM SHARED lblTileAnimationSpeed AS LONG
-DIM SHARED txtTileAnimationSpeed AS LONG
-DIM SHARED lblTileFrames AS LONG
-DIM SHARED lstTileFrames AS LONG
-DIM SHARED btnTileAddFrame AS LONG
+Dim Shared Tiles As Long
+Dim Shared frmTile As Long
+Dim Shared lblTileId As Long
+Dim Shared lblTileIdValue As Long
+Dim Shared lblTileAnimated As Long
+Dim Shared tglTileAnimate As Long
+Dim Shared lblTileAnimationSpeed As Long
+Dim Shared txtTileAnimationSpeed As Long
+Dim Shared lblTileFrames As Long
+Dim Shared lstTileFrames As Long
+Dim Shared btnTileAddFrame As Long
 
 ' Tile Frame Context Menu
-DIM SHARED TileFrameMenu AS LONG
-DIM SHARED TileFrameMenuRemove AS LONG
+Dim Shared TileFrameMenu As Long
+Dim Shared TileFrameMenuRemove As Long
 
 ' Status bar
-DIM SHARED lblStatus AS LONG
+Dim Shared lblStatus As Long
 
 ' New Map Dialog
-DIM SHARED frmNewMap AS LONG
-DIM SHARED lblColumns AS LONG
-DIM SHARED txtColumns AS LONG
-DIM SHARED lblRows AS LONG
-DIM SHARED txtRows AS LONG
-DIM SHARED lblLayers AS LONG
-DIM SHARED txtLayers AS LONG
-DIM SHARED lblTilesetImage AS LONG
-DIM SHARED txtTilesetImage AS LONG
-DIM SHARED btnSelectTilesetImage AS LONG
-DIM SHARED lblTileHeight AS LONG
-DIM SHARED txtTileHeight AS LONG
-DIM SHARED lblTileWidth AS LONG
-DIM SHARED txtTileWidth AS LONG
-DIM SHARED lblIsometric AS LONG
-DIM SHARED tglIsometric AS LONG
-DIM SHARED lblLine AS LONG
-DIM SHARED btnCreateMap AS LONG
-DIM SHARED btnCancel AS LONG
+Dim Shared frmNewMap As Long
+Dim Shared lblColumns As Long
+Dim Shared txtColumns As Long
+Dim Shared lblRows As Long
+Dim Shared txtRows As Long
+Dim Shared lblLayers As Long
+Dim Shared txtLayers As Long
+Dim Shared lblTilesetImage As Long
+Dim Shared txtTilesetImage As Long
+Dim Shared btnSelectTilesetImage As Long
+Dim Shared lblTileHeight As Long
+Dim Shared txtTileHeight As Long
+Dim Shared lblTileWidth As Long
+Dim Shared txtTileWidth As Long
+Dim Shared lblIsometric As Long
+Dim Shared tglIsometric As Long
+Dim Shared lblLine As Long
+Dim Shared btnCreateMap As Long
+Dim Shared btnCancel As Long
 
 ' Replace Tileset Dialog
-DIM SHARED frmReplaceTileset AS LONG
-DIM SHARED lblRTTileWidth AS LONG
-DIM SHARED txtRTTileWidth AS LONG
-DIM SHARED lblRTTileHeight AS LONG
-DIM SHARED txtRTTileHeight AS LONG
-DIM SHARED lblRTTilesetImage AS LONG
-DIM SHARED txtRTTilesetImage AS LONG
-DIM SHARED btnRTSelectTilesetImage AS LONG
-DIM SHARED lblRTLine AS LONG
-DIM SHARED btnRTReplaceImage AS LONG
-DIM SHARED btnRTCancel AS LONG
+Dim Shared frmReplaceTileset As Long
+Dim Shared lblRTTileWidth As Long
+Dim Shared txtRTTileWidth As Long
+Dim Shared lblRTTileHeight As Long
+Dim Shared txtRTTileHeight As Long
+Dim Shared lblRTTilesetImage As Long
+Dim Shared txtRTTilesetImage As Long
+Dim Shared btnRTSelectTilesetImage As Long
+Dim Shared lblRTLine As Long
+Dim Shared btnRTReplaceImage As Long
+Dim Shared btnRTCancel As Long
 
 ' Resize Map Dialog
-DIM SHARED frmResizeMap AS LONG
-DIM SHARED lblResizeColumns AS LONG
-DIM SHARED lblResizeRows AS LONG
-DIM SHARED txtResizeColumns AS LONG
-DIM SHARED txtResizeRows AS LONG
-DIM SHARED lblResizeSeparator AS LONG
-DIM SHARED btnResizeMap AS LONG
-DIM SHARED btnResizeCancel AS LONG
+Dim Shared frmResizeMap As Long
+Dim Shared lblResizeColumns As Long
+Dim Shared lblResizeRows As Long
+Dim Shared txtResizeColumns As Long
+Dim Shared txtResizeRows As Long
+Dim Shared lblResizeSeparator As Long
+Dim Shared btnResizeMap As Long
+Dim Shared btnResizeCancel As Long
 
 ' File Dialog
-DIM SHARED frmFile AS LONG
-DIM SHARED lblFDFilename AS LONG
-DIM SHARED txtFDFilename AS LONG
-DIM SHARED lblFDPath AS LONG
-DIM SHARED lblFDPathValue AS LONG
-DIM SHARED lblFDFiles AS LONG
-DIM SHARED lblFDPaths AS LONG
-DIM SHARED lstFDFiles AS LONG
-DIM SHARED lstFDPaths AS LONG
-DIM SHARED chkFDFilterExt AS LONG
-DIM SHARED btnFDOK AS LONG
-DIM SHARED btnFDCancel AS LONG
+Dim Shared frmFile As Long
+Dim Shared lblFDFilename As Long
+Dim Shared txtFDFilename As Long
+Dim Shared lblFDPath As Long
+Dim Shared lblFDPathValue As Long
+Dim Shared lblFDFiles As Long
+Dim Shared lblFDPaths As Long
+Dim Shared lstFDFiles As Long
+Dim Shared lstFDPaths As Long
+Dim Shared chkFDFilterExt As Long
+Dim Shared btnFDOK As Long
+Dim Shared btnFDCancel As Long
 
 
 ': External modules: ---------------------------------------------------------------
-'$INCLUDE: './inform/InForm.ui'
-'$INCLUDE: './inform/xp.uitheme'
-'$INCLUDE: 'MapMaker.frm'
+'$Include:'./inform/InForm.ui'
+'$Include:'./inform/xp.uitheme'
+'$Include:'MapMaker.frm'
 
 ': Event procedures: ---------------------------------------------------------------
-SUB __UI_BeforeInit
-END SUB
+Sub __UI_BeforeInit
+End Sub
 
-SUB __UI_OnLoad
+Sub __UI_OnLoad
     ' Hide the dialog forms
     Control(frmNewMap).Hidden = True
     Control(frmReplaceTileset).Hidden = True
@@ -210,86 +210,86 @@ SUB __UI_OnLoad
     SetFrameRate 60
     GXFrameRate 30
 
-    IF INSTR(COMMAND$, ".map") OR INSTR(COMMAND$, ".gxm") THEN
-        LoadMap COMMAND$
-    END IF
-END SUB
+    If InStr(Command$, ".map") Or InStr(Command$, ".gxm") Then
+        LoadMap Command$
+    End If
+End Sub
 
-SUB __UI_BeforeUpdateDisplay
-    IF gxloaded = False THEN EXIT SUB ' We're not ready yet, abort!
-    IF dialogMode = True THEN EXIT SUB ' Nothing to do here
+Sub __UI_BeforeUpdateDisplay
+    If gxloaded = False Then Exit Sub ' We're not ready yet, abort!
+    If dialogMode = True Then Exit Sub ' Nothing to do here
 
-    IF mapFilename <> "" THEN
-        _TITLE "GX Map Maker - " + GXFS_GetFilename(mapFilename)
-    ELSEIF mapLoaded THEN
-        _TITLE "GX Map Maker - <New Map>"
-    END IF
+    If mapFilename <> "" Then
+        _Title "GX Map Maker - " + GXFS_GetFilename(mapFilename)
+    ElseIf mapLoaded Then
+        _Title "GX Map Maker - <New Map>"
+    End If
 
 
-    DIM mc AS LONG
+    Dim mc As Long
     mc = GetControlAtMousePos
 
-    DIM tsHeight AS INTEGER
-    IF GXMapIsometric THEN
+    Dim tsHeight As Integer
+    If GXMapIsometric Then
         tsHeight = GXTilesetWidth / 2
-    ELSE
+    Else
         tsHeight = GXTilesetHeight
-    END IF
+    End If
 
     ' Use WASD or arrow keys to navigate around the map or tileset
-    IF GXKeyDown(GXKEY_S) OR GXKeyDown(GXKEY_DOWN) THEN ' move down
-        IF mc = Map THEN
+    If GXKeyDown(GXKEY_S) Or GXKeyDown(GXKEY_DOWN) Then ' move down
+        If mc = Map Then
             GXSceneMove 0, tsHeight 'GXTilesetHeight
-        ELSEIF mc = Tiles THEN
+        ElseIf mc = Tiles Then
             tilesetPos.y = tilesetPos.y + 1
-        END IF
-        IF (mapSelMode AND mc = Map) OR (NOT mapSelMode AND mc = Tiles) THEN
+        End If
+        If (mapSelMode And mc = Map) Or (Not mapSelMode And mc = Tiles) Then
             tileSelStart.y = tileSelStart.y - 1: tileSelEnd.y = tileSelEnd.y - 1
-        END IF
+        End If
 
-    ELSEIF GXKeyDown(GXKEY_W) OR GXKeyDown(GXKEY_UP) THEN ' move up
-        IF mc = Map THEN
+    ElseIf GXKeyDown(GXKEY_W) Or GXKeyDown(GXKEY_UP) Then ' move up
+        If mc = Map Then
             GXSceneMove 0, -tsHeight '-GXTilesetHeight
-        ELSEIF mc = Tiles THEN
+        ElseIf mc = Tiles Then
             tilesetPos.y = tilesetPos.y - 1
-        END IF
-        IF (mapSelMode AND mc = Map) OR (NOT mapSelMode AND mc = Tiles) THEN
+        End If
+        If (mapSelMode And mc = Map) Or (Not mapSelMode And mc = Tiles) Then
             tileSelStart.y = tileSelStart.y + 1: tileSelEnd.y = tileSelEnd.y + 1
-        END IF
+        End If
 
-    ELSEIF GXKeyDown(GXKEY_D) OR GXKeyDown(GXKEY_RIGHT) THEN ' move right
-        IF mc = Map THEN
+    ElseIf GXKeyDown(GXKEY_D) Or GXKeyDown(GXKEY_RIGHT) Then ' move right
+        If mc = Map Then
             GXSceneMove GXTilesetWidth, 0
-        ELSEIF mc = Tiles THEN
+        ElseIf mc = Tiles Then
             tilesetPos.x = tilesetPos.x + 1
-        END IF
-        IF (mapSelMode AND mc = Map) OR (NOT mapSelMode AND mc = Tiles) THEN
+        End If
+        If (mapSelMode And mc = Map) Or (Not mapSelMode And mc = Tiles) Then
             tileSelStart.x = tileSelStart.x - 1: tileSelEnd.x = tileSelEnd.x - 1
-        END IF
+        End If
 
-    ELSEIF GXKeyDown(GXKEY_A) OR GXKeyDown(GXKEY_LEFT) THEN ' move left
-        IF mc = Map THEN
+    ElseIf GXKeyDown(GXKEY_A) Or GXKeyDown(GXKEY_LEFT) Then ' move left
+        If mc = Map Then
             GXSceneMove -GXTilesetWidth, 0
-        ELSEIF mc = Tiles THEN
+        ElseIf mc = Tiles Then
             tilesetPos.x = tilesetPos.x - 1
-        END IF
-        IF (mapSelMode AND mc = Map) OR (NOT mapSelMode AND mc = Tiles) THEN
+        End If
+        If (mapSelMode And mc = Map) Or (Not mapSelMode And mc = Tiles) Then
             tileSelStart.x = tileSelStart.x + 1: tileSelEnd.x = tileSelEnd.x + 1
-        END IF
-    END IF
+        End If
+    End If
 
     ' Adjust the current selection if selection sizing is in progress
-    IF tileSelSizing THEN
+    If tileSelSizing Then
         'GetTilePosAt Tiles, _MOUSEX, _MOUSEY, tscale, tileSelEnd
-        GetTilePosAt Tiles, _MOUSEX, _MOUSEY, tileSelEnd
-    ELSEIF mapSelSizing THEN
+        GetTilePosAt Tiles, _MouseX, _MouseY, tileSelEnd
+    ElseIf mapSelSizing Then
         'GetTilePosAt Map, _MOUSEX, _MOUSEY, scale, tileSelEnd
-        GetTilePosAt Map, _MOUSEX, _MOUSEY, tileSelEnd
-    END IF
+        GetTilePosAt Map, _MouseX, _MouseY, tileSelEnd
+    End If
 
     ' If X or DEL key is pressed, delete the tiles in the current selection
-    IF GXKeyDown(GXKEY_DELETE) OR GXKeyDown(GXKEY_X) THEN deleting = 1
-    IF NOT (GXKeyDown(GXKEY_X) OR GXKeyDown(GXKEY_X)) AND deleting THEN DeleteTile: deleting = 0
+    If GXKeyDown(GXKEY_DELETE) Or GXKeyDown(GXKEY_X) Then deleting = 1
+    If Not (GXKeyDown(GXKEY_X) Or GXKeyDown(GXKEY_X)) And deleting Then DeleteTile: deleting = 0
 
     ' Draw the map
     GXSceneUpdate
@@ -297,194 +297,194 @@ SUB __UI_BeforeUpdateDisplay
 
     ' Draw the tileset
     DrawTileset
-END SUB
+End Sub
 
-SUB __UI_BeforeUnload
+Sub __UI_BeforeUnload
     ' If the user is in the process of saving the map
     ' prevent the application from closing
-    IF saving THEN __UI_UnloadSignal = False
-END SUB
+    If saving Then __UI_UnloadSignal = False
+End Sub
 
-SUB __UI_Click (id AS LONG)
+Sub __UI_Click (id As Long)
 
-    SELECT CASE id
+    Select Case id
 
-        CASE Map: OnMapClick
+        Case Map: OnMapClick
 
-        CASE FileMenuNew: ShowNewMapDialog
-        CASE FileMenuOpen: ShowFileDialog FD_OPEN, MainForm
-        CASE FileMenuSave: SaveMap mapFilename
-        CASE FileMenuSaveAs: ShowFileDialog FD_SAVE, MainForm
-        CASE FileMenuExit: SYSTEM 0
+        Case FileMenuNew: ShowNewMapDialog
+        Case FileMenuOpen: ShowFileDialog FD_OPEN, MainForm
+        Case FileMenuSave: SaveMap mapFilename
+        Case FileMenuSaveAs: ShowFileDialog FD_SAVE, MainForm
+        Case FileMenuExit: System 0
 
-        CASE MapMenuZoomIn: ZoomMap 1
-        CASE MapMenuZoomOut: ZoomMap -1
+        Case MapMenuZoomIn: ZoomMap 1
+        Case MapMenuZoomOut: ZoomMap -1
 
-        CASE MapMenuResize: OnResizeMap
-        CASE btnResizeCancel: CancelResizeMap
-        CASE btnResizeMap: ResizeMap
+        Case MapMenuResize: OnResizeMap
+        Case btnResizeCancel: CancelResizeMap
+        Case btnResizeMap: ResizeMap
 
-        CASE TilesetMenuZoomIn: ZoomTileset 1
-        CASE TilesetMenuZoomOut: ZoomTileset -1
-        CASE TilesetMenuReplace: ShowReplaceTilesetDialog
+        Case TilesetMenuZoomIn: ZoomTileset 1
+        Case TilesetMenuZoomOut: ZoomTileset -1
+        Case TilesetMenuReplace: ShowReplaceTilesetDialog
 
-        CASE btnCancel: CancelDialog frmNewMap
-        CASE btnRTCancel: CancelDialog frmReplaceTileset
-        CASE btnFDCancel: CancelDialog frmFile
-        CASE btnCreateMap: CreateMap
-        CASE btnRTReplaceImage: ReplaceTileset
-        CASE btnSelectTilesetImage: ShowFileDialog FD_OPEN, frmNewMap
-        CASE btnRTSelectTilesetImage: ShowFileDialog FD_OPEN, frmReplaceTileset
-        CASE btnFDOK: OnSelectFile
-        CASE btnLayerAdd: OnLayerAdd
-        CASE btnLayerRemove: OnLayerRemove
+        Case btnCancel: CancelDialog frmNewMap
+        Case btnRTCancel: CancelDialog frmReplaceTileset
+        Case btnFDCancel: CancelDialog frmFile
+        Case btnCreateMap: CreateMap
+        Case btnRTReplaceImage: ReplaceTileset
+        Case btnSelectTilesetImage: ShowFileDialog FD_OPEN, frmNewMap
+        Case btnRTSelectTilesetImage: ShowFileDialog FD_OPEN, frmReplaceTileset
+        Case btnFDOK: OnSelectFile
+        Case btnLayerAdd: OnLayerAdd
+        Case btnLayerRemove: OnLayerRemove
 
-        CASE lstFDFiles: OnFileListClick id
-        CASE lstFDPaths: OnPathListClick id
+        Case lstFDFiles: OnFileListClick id
+        Case lstFDPaths: OnPathListClick id
 
-        CASE btnTileAddFrame: OnTileFrameAdd
+        Case btnTileAddFrame: OnTileFrameAdd
 
-    END SELECT
+    End Select
 
     lastControlClicked = id
-    lastClick = TIMER
-END SUB
+    lastClick = Timer
+End Sub
 
-SUB __UI_MouseEnter (id AS LONG)
-    SELECT CASE id
-        CASE Map: IF NOT dialogMode AND mapLoaded THEN _MOUSEHIDE
-        CASE Tiles: IF NOT dialogMode AND mapLoaded THEN _MOUSEHIDE
-    END SELECT
-END SUB
+Sub __UI_MouseEnter (id As Long)
+    Select Case id
+        Case Map: If Not dialogMode And mapLoaded Then _MouseHide
+        Case Tiles: If Not dialogMode And mapLoaded Then _MouseHide
+    End Select
+End Sub
 
-SUB __UI_MouseLeave (id AS LONG)
-    SELECT CASE id
-        CASE Map: _MOUSESHOW
-        CASE Tiles: _MOUSESHOW
-    END SELECT
-END SUB
+Sub __UI_MouseLeave (id As Long)
+    Select Case id
+        Case Map: _MouseShow
+        Case Tiles: _MouseShow
+    End Select
+End Sub
 
-SUB __UI_FocusIn (id AS LONG)
-    SELECT CASE id
-    END SELECT
-END SUB
+Sub __UI_FocusIn (id As Long)
+    Select Case id
+    End Select
+End Sub
 
-SUB __UI_FocusOut (id AS LONG)
+Sub __UI_FocusOut (id As Long)
     'This event occurs right before a control loses focus.
     'To prevent a control from losing focus, set __UI_KeepFocus = True below.
-    SELECT CASE id
-    END SELECT
-END SUB
+    Select Case id
+    End Select
+End Sub
 
-SUB __UI_MouseDown (id AS LONG)
-    SELECT CASE id
+Sub __UI_MouseDown (id As Long)
+    Select Case id
 
-        CASE Map
+        Case Map
             ' If the SHIFT key is pressed while clicking the map
             ' start resizing the selection cursor
-            IF (GXKeyDown(GXKEY_LSHIFT) OR GXKeyDown(GXKEY_RSHIFT)) AND NOT GXMapIsometric THEN
+            If (GXKeyDown(GXKEY_LSHIFT) Or GXKeyDown(GXKEY_RSHIFT)) And Not GXMapIsometric Then
                 mapSelMode = True
                 mapSelSizing = True
                 '                GetTilePosAt Map, _MOUSEX, _MOUSEY, scale, tileSelStart
-                GetTilePosAt Map, _MOUSEX, _MOUSEY, tileSelStart
+                GetTilePosAt Map, _MouseX, _MouseY, tileSelStart
                 tileSelEnd = tileSelStart
-            END IF
+            End If
 
 
-        CASE Tiles
+        Case Tiles
             ' If we detect a mouse down event on the tileset control
             ' start resizing the tileset selection cursor
             mapSelMode = False
             tileSelSizing = True
             'GetTilePosAt Tiles, _MOUSEX, _MOUSEY, tscale, tileSelStart
-            GetTilePosAt Tiles, _MOUSEX, _MOUSEY, tileSelStart
+            GetTilePosAt Tiles, _MouseX, _MouseY, tileSelStart
             tileSelEnd = tileSelStart
 
-    END SELECT
-END SUB
+    End Select
+End Sub
 
-SUB __UI_MouseUp (id AS LONG)
-    SELECT CASE id
-        CASE Tiles
+Sub __UI_MouseUp (id As Long)
+    Select Case id
+        Case Tiles
             tileSelSizing = False
             OnTileSelection
-        CASE tglTileAnimate: OnChangeTileAnimate
-    END SELECT
-END SUB
+        Case tglTileAnimate: OnChangeTileAnimate
+    End Select
+End Sub
 
-SUB __UI_KeyPress (id AS LONG)
+Sub __UI_KeyPress (id As Long)
     'When this event is fired, __UI_KeyHit will contain the code of the key hit.
     'You can change it and even cancel it by making it = 0
-    SELECT CASE id
-    END SELECT
-END SUB
+    Select Case id
+    End Select
+End Sub
 
-SUB __UI_TextChanged (id AS LONG)
-    SELECT CASE id
-        CASE txtTileAnimationSpeed: OnChangeTileAnimationSpeed
-        CASE txtResizeColumns: OnChangeResize
-        CASE txtResizeRows: OnChangeResize
-    END SELECT
-END SUB
+Sub __UI_TextChanged (id As Long)
+    Select Case id
+        Case txtTileAnimationSpeed: OnChangeTileAnimationSpeed
+        Case txtResizeColumns: OnChangeResize
+        Case txtResizeRows: OnChangeResize
+    End Select
+End Sub
 
-SUB __UI_ValueChanged (id AS LONG)
-    SELECT CASE id
-        CASE chkFDFilterExt: RefreshFileList
-        CASE cboLayer: OnChangeLayer
-        CASE chkLayerHidden: OnChangeLayerHidden
-    END SELECT
-END SUB
+Sub __UI_ValueChanged (id As Long)
+    Select Case id
+        Case chkFDFilterExt: RefreshFileList
+        Case cboLayer: OnChangeLayer
+        Case chkLayerHidden: OnChangeLayerHidden
+    End Select
+End Sub
 
-SUB __UI_FormResized
+Sub __UI_FormResized
     ' The window has been resized so resize the child components accordingly
     ResizeControls
-END SUB
+End Sub
 
 
 ' GX Events
 ' ----------------------------------------------------------------------------
-SUB GXOnGameEvent (e AS GXEvent)
-    IF e.event = GXEVENT_PAINTBEFORE THEN BeginDraw Map
-    IF e.event = GXEVENT_PAINTAFTER THEN EndDraw Map
-    IF e.event = GXEVENT_DRAWSCREEN THEN
-        IF mapSelMode THEN DrawSelected Map
+Sub GXOnGameEvent (e As GXEvent)
+    If e.event = GXEVENT_PAINTBEFORE Then BeginDraw Map
+    If e.event = GXEVENT_PAINTAFTER Then EndDraw Map
+    If e.event = GXEVENT_DRAWSCREEN Then
+        If mapSelMode Then DrawSelected Map
         DrawMapBorder
         DrawCursor Map
-    END IF
-END SUB
+    End If
+End Sub
 
-SUB DrawMapBorder
+Sub DrawMapBorder
     ' draw a bounding rectangle around the border of the map
-    DIM bheight AS LONG
-    DIM bwidth AS LONG
-    DIM rwidth AS LONG
-    DIM rheight AS LONG
-    IF GXMapIsometric THEN
+    Dim bheight As Long
+    Dim bwidth As Long
+    Dim rwidth As Long
+    Dim rheight As Long
+    If GXMapIsometric Then
         bheight = (GXMapRows - 1) * (GXTilesetWidth / 4)
         bwidth = GXMapColumns * GXTilesetWidth - (GXTilesetWidth / 2)
         rheight = (Control(txtResizeRows).Value - 1) * (GXTilesetWidth / 4)
         rwidth = Control(txtResizeColumns).Value * GXTilesetWidth - (GXTilesetWidth / 2)
-    ELSE
+    Else
         bheight = GXMapRows * GXTilesetHeight
         bwidth = GXMapColumns * GXTilesetWidth
         rheight = Control(txtResizeRows).Value * GXTilesetHeight
         rwidth = Control(txtResizeColumns).Value * GXTilesetWidth
-    END IF
+    End If
 
-    LINE (-GXSceneX - 1, -GXSceneY - 1)-(bwidth - GXSceneX, bheight - GXSceneY), _RGB(100, 100, 100), B
-    IF resizeMode THEN
-        LINE (-GXSceneX - 1, -GXSceneY - 1)-(rwidth - GXSceneX, rheight - GXSceneY), _RGB(255, 255, 100), B
-    END IF
-END SUB
+    Line (-GXSceneX - 1, -GXSceneY - 1)-(bwidth - GXSceneX, bheight - GXSceneY), _RGB(100, 100, 100), B
+    If resizeMode Then
+        Line (-GXSceneX - 1, -GXSceneY - 1)-(rwidth - GXSceneX, rheight - GXSceneY), _RGB(255, 255, 100), B
+    End If
+End Sub
 
 ' Create a new map from the parameters specified by the user on the new map dialog.
-SUB CreateMap
+Sub CreateMap
     SetStatus "Creating new map..."
-    DIM columns AS INTEGER, rows AS INTEGER, layers AS INTEGER
-    DIM tilesetImage AS STRING
-    DIM tileWidth AS INTEGER, tileHeight AS INTEGER
-    DIM isometric AS INTEGER
-    DIM msgRes AS INTEGER
+    Dim columns As Integer, rows As Integer, layers As Integer
+    Dim tilesetImage As String
+    Dim tileWidth As Integer, tileHeight As Integer
+    Dim isometric As Integer
+    Dim msgRes As Integer
 
     columns = Control(txtColumns).Value
     rows = Control(txtRows).Value
@@ -494,12 +494,12 @@ SUB CreateMap
     tileHeight = Control(txtTileHeight).Value
     isometric = Control(tglIsometric).Value
 
-    IF columns < 1 THEN msgRes = MessageBox("Map must have at least 1 column.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
-    IF rows < 1 THEN msgRes = MessageBox("Map must have at least 1 row.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
-    IF layers < 1 THEN msgRes = MessageBox("Map must have at least 1 layer.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
-    IF tilesetImage = "" THEN msgRes = MessageBox("Please select a tileset image.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
-    IF tileWidth < 1 THEN msgRes = MessageBox("Tile width must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
-    IF tileHeight < 1 THEN msgRes = MessageBox("Tile height must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
+    If columns < 1 Then msgRes = MessageBox("Map must have at least 1 column.", "Invalid Option", MsgBox_OkOnly): Exit Sub
+    If rows < 1 Then msgRes = MessageBox("Map must have at least 1 row.", "Invalid Option", MsgBox_OkOnly): Exit Sub
+    If layers < 1 Then msgRes = MessageBox("Map must have at least 1 layer.", "Invalid Option", MsgBox_OkOnly): Exit Sub
+    If tilesetImage = "" Then msgRes = MessageBox("Please select a tileset image.", "Invalid Option", MsgBox_OkOnly): Exit Sub
+    If tileWidth < 1 Then msgRes = MessageBox("Tile width must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): Exit Sub
+    If tileHeight < 1 Then msgRes = MessageBox("Tile height must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): Exit Sub
 
     GXScenePos 0, 0
     GXMapCreate columns, rows, layers
@@ -521,7 +521,7 @@ SUB CreateMap
     Control(TilesetMenuReplace).Disabled = False
     Control(frmNewMap).Hidden = True
 
-    REDIM hiddenLayers(layers) AS INTEGER
+    ReDim hiddenLayers(layers) As Integer
 
     SetDialogMode False
     mapLoaded = True
@@ -532,10 +532,10 @@ SUB CreateMap
     ResizeControls
     SetStatus "Map created."
     '_TITLE "GX Map Maker - <New Map>"
-END SUB
+End Sub
 
 ' Load the map at the specified file location
-SUB LoadMap (filename AS STRING)
+Sub LoadMap (filename As String)
     SetStatus "Loading map..."
 
     EnableFileDialog False
@@ -557,7 +557,7 @@ SUB LoadMap (filename AS STRING)
     scale = 1
     tscale = 1
 
-    REDIM hiddenLayers(GXMapLayers) AS INTEGER
+    ReDim hiddenLayers(GXMapLayers) As Integer
 
     Control(frmFile).Hidden = True
     SetDialogMode False
@@ -569,10 +569,10 @@ SUB LoadMap (filename AS STRING)
     ResizeControls
     SetStatus "Map loaded."
     '_TITLE "GX Map Maker - " + __GXFS_GetFilename(filename)
-END SUB
+End Sub
 
 ' Save the current map date to the specified file location
-SUB SaveMap (filename AS STRING)
+Sub SaveMap (filename As String)
     SetStatus "Saving map..."
     EnableFileDialog False
 
@@ -588,58 +588,58 @@ SUB SaveMap (filename AS STRING)
 
     SetStatus "Map saved."
     '_TITLE "GX Map Maker - " + __GXFS_GetFilename(filename)
-END SUB
+End Sub
 
-SUB OnTileSelection
-    IF tileSelStart.x = tileSelEnd.x AND tileSelStart.y = tileSelEnd.y THEN
-        DIM tile
+Sub OnTileSelection
+    If tileSelStart.x = tileSelEnd.x And tileSelStart.y = tileSelEnd.y Then
+        Dim tile
         tile = tileSelStart.x + tilesetPos.x + (tileSelStart.y + tilesetPos.y) * GXTilesetColumns + 1
 
-        IF animationMode THEN
-            DIM animationSpeed AS INTEGER
+        If animationMode Then
+            Dim animationSpeed As Integer
             GXTilesetAnimationAdd SelectedTile, tile
             RefreshTileFrameList
             animationMode = False
-        ELSE
+        Else
             ClearTileForm
-            Caption(lblTileIdValue) = STR$(tile)
+            Caption(lblTileIdValue) = Str$(tile)
             Control(tglTileAnimate).Value = (GXTilesetAnimationSpeed(tile) > 0)
             Control(frmTile).Disabled = False
             Control(lblTileId).Disabled = False
             Control(lblTileIdValue).Disabled = False
             Control(lblTileAnimated).Disabled = False
             Control(tglTileAnimate).Disabled = False
-            IF Control(tglTileAnimate).Value = True THEN
-                Text(txtTileAnimationSpeed) = STR$(GXTilesetAnimationSpeed(tile))
+            If Control(tglTileAnimate).Value = True Then
+                Text(txtTileAnimationSpeed) = Str$(GXTilesetAnimationSpeed(tile))
                 Control(lblTileAnimationSpeed).Disabled = False
                 Control(txtTileAnimationSpeed).Disabled = False
                 Control(lblTileFrames).Disabled = False
                 Control(lstTileFrames).Disabled = False
                 Control(btnTileAddFrame).Disabled = False
-            END IF
+            End If
             RefreshTileFrameList
-        END IF
-    ELSE
+        End If
+    Else
         ClearTileForm
-    END IF
-END SUB
+    End If
+End Sub
 
-FUNCTION SelectedTile
-    SelectedTile = VAL(Caption(lblTileIdValue))
-END FUNCTION
+Function SelectedTile
+    SelectedTile = Val(Caption(lblTileIdValue))
+End Function
 
-SUB DrawTileFrameSelection
-    IF SelectedTile = 0 THEN EXIT SUB
+Sub DrawTileFrameSelection
+    If SelectedTile = 0 Then Exit Sub
 
-    DIM tileFrames(0) AS INTEGER, frameCount AS INTEGER, i AS INTEGER
+    Dim tileFrames(0) As Integer, frameCount As Integer, i As Integer
     frameCount = GXTilesetAnimationFrames(SelectedTile, tileFrames())
-    FOR i = 1 TO frameCount
-        DIM tpos AS GXPosition
+    For i = 1 To frameCount
+        Dim tpos As GXPosition
         GXTilesetPos tileFrames(i), tpos
 
         ' Calculate the position of the tileset selection
-        DIM swidth AS INTEGER, sheight AS INTEGER
-        DIM startx AS INTEGER, starty AS INTEGER, endx AS INTEGER, endy AS INTEGER
+        Dim swidth As Integer, sheight As Integer
+        Dim startx As Integer, starty As Integer, endx As Integer, endy As Integer
         swidth = GXTilesetWidth * tscale
         sheight = GXTilesetHeight * tscale
         startx = (tpos.x - tilesetPos.x - 1) * swidth
@@ -648,11 +648,11 @@ SUB DrawTileFrameSelection
         endy = (tpos.y - tilesetPos.y - 1) * sheight + sheight - 1
 
         ' Draw the selection rectangle
-        LINE (startx, starty)-(endx, endy), _RGB(0, 0, 255), B ', &B1010101010101010
-    NEXT i
-END SUB
+        Line (startx, starty)-(endx, endy), _RGB(0, 0, 255), B ', &B1010101010101010
+    Next i
+End Sub
 
-SUB ClearTileForm
+Sub ClearTileForm
     ' clear the values
     Caption(lblTileIdValue) = ""
     Control(tglTileAnimate).Value = False
@@ -670,23 +670,23 @@ SUB ClearTileForm
     Control(lblTileFrames).Disabled = True
     Control(lstTileFrames).Disabled = True
     Control(btnTileAddFrame).Disabled = True
-END SUB
+End Sub
 
-SUB OnChangeTileAnimate
+Sub OnChangeTileAnimate
     'DIM r: r = MessageBox("animate change", "", MsgBox_OkOnly)
-    IF Control(tglTileAnimate).Value = False THEN
+    If Control(tglTileAnimate).Value = False Then
         Control(lblTileAnimationSpeed).Disabled = False
         Control(txtTileAnimationSpeed).Disabled = False
         Control(btnTileAddFrame).Disabled = False
         Control(lblTileFrames).Disabled = False
         Control(lstTileFrames).Disabled = False
 
-        DIM animationSpeed AS INTEGER
+        Dim animationSpeed As Integer
         animationSpeed = 5
         Control(txtTileAnimationSpeed).Value = animationSpeed
         GXTilesetAnimationCreate SelectedTile, animationSpeed
         RefreshTileFrameList
-    ELSE
+    Else
         GXTilesetAnimationRemove SelectedTile
 
         ' clear the values
@@ -699,61 +699,61 @@ SUB OnChangeTileAnimate
         Control(lblTileFrames).Disabled = True
         Control(lstTileFrames).Disabled = True
         Control(btnTileAddFrame).Disabled = True
-    END IF
-END SUB
+    End If
+End Sub
 
-SUB OnChangeTileAnimationSpeed
-    GXTilesetAnimationSpeed SelectedTile, VAL(Text(txtTileAnimationSpeed))
-END SUB
+Sub OnChangeTileAnimationSpeed
+    GXTilesetAnimationSpeed SelectedTile, Val(Text(txtTileAnimationSpeed))
+End Sub
 
-SUB OnTileFrameAdd
+Sub OnTileFrameAdd
     animationMode = True
-END SUB
+End Sub
 
 
-SUB RefreshTileFrameList
-    DIM tileFrames(0) AS INTEGER, frameCount AS INTEGER
+Sub RefreshTileFrameList
+    Dim tileFrames(0) As Integer, frameCount As Integer
     frameCount = GXTilesetAnimationFrames(SelectedTile, tileFrames())
 
     ResetList lstTileFrames
-    DIM i AS INTEGER
-    FOR i = 1 TO frameCount
-        AddItem lstTileFrames, GXSTR_LPad(STR$(i), "0", 2) + ": " + STR$(tileFrames(i))
-    NEXT i
-END SUB
+    Dim i As Integer
+    For i = 1 To frameCount
+        AddItem lstTileFrames, GXSTR_LPad(Str$(i), "0", 2) + ": " + Str$(tileFrames(i))
+    Next i
+End Sub
 
 ' Replace the current tileset with one specified by the user on the replace
 ' tileset dialog.
-SUB ReplaceTileset
-    DIM tilesetImage AS STRING
-    DIM tileWidth AS INTEGER, tileHeight AS INTEGER
-    DIM msgRes AS INTEGER
+Sub ReplaceTileset
+    Dim tilesetImage As String
+    Dim tileWidth As Integer, tileHeight As Integer
+    Dim msgRes As Integer
 
     tilesetImage = Text(txtRTTilesetImage)
     tileWidth = Control(txtRTTileWidth).Value
     tileHeight = Control(txtRTTileHeight).Value
 
-    IF tilesetImage = "" THEN msgRes = MessageBox("Please select a tileset image.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
-    IF tileWidth < 1 THEN msgRes = MessageBox("Tile width must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
-    IF tileHeight < 1 THEN msgRes = MessageBox("Tile height must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): EXIT SUB
+    If tilesetImage = "" Then msgRes = MessageBox("Please select a tileset image.", "Invalid Option", MsgBox_OkOnly): Exit Sub
+    If tileWidth < 1 Then msgRes = MessageBox("Tile width must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): Exit Sub
+    If tileHeight < 1 Then msgRes = MessageBox("Tile height must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): Exit Sub
 
     'GXTilesetCreate tilesetImage, tileWidth, tileHeight
     GXTilesetReplaceImage tilesetImage, tileWidth, tileHeight
     Control(frmReplaceTileset).Hidden = True
 
     SetDialogMode False
-END SUB
+End Sub
 
-SUB RefreshLayerDropdown
-    DIM i AS INTEGER
+Sub RefreshLayerDropdown
+    Dim i As Integer
     ResetList cboLayer
     ResetList cboEditLayer
     AddItem cboLayer, "All"
     AddItem cboEditLayer, "All"
-    FOR i = 1 TO GXMapLayers
-        AddItem cboLayer, STR$(i)
-        AddItem cboEditLayer, STR$(i)
-    NEXT i
+    For i = 1 To GXMapLayers
+        AddItem cboLayer, Str$(i)
+        AddItem cboEditLayer, Str$(i)
+    Next i
     Control(cboLayer).Disabled = False
     Control(lblLayer).Disabled = False
     Control(cboEditLayer).Disabled = False
@@ -761,46 +761,48 @@ SUB RefreshLayerDropdown
     Control(chkLayerHidden).Disabled = False
     Control(cboLayer).Value = 1
     Control(cboEditLayer).Value = 1
-END SUB
+End Sub
 
-SUB RefreshMapInfo
-    Caption(lblMapInfo) = _TRIM$(STR$(GXMapColumns)) + "x" + _TRIM$(STR$(GXMapRows))
-END SUB
+Sub RefreshMapInfo
+    Caption(lblMapInfo) = _Trim$(Str$(GXMapColumns)) + "x" + _Trim$(Str$(GXMapRows))
+End Sub
 
-FUNCTION SelectedLayer
+Function SelectedLayer
     SelectedLayer = Control(cboLayer).Value - 1
-END FUNCTION
+End Function
 
-FUNCTION SelectedEditLayer
-    SelectedEditLayer = SelectedLayer
-    IF SelectedEditLayer = 0 THEN
-        SelectedEditLayer = Control(cboEditLayer).Value - 1
-    END IF
-END FUNCTION
+Function SelectedEditLayer
+    Dim layer As Integer
+    layer = SelectedLayer
+    If layer = 0 Then
+        layer = Control(cboEditLayer).Value - 1
+    End If
+    SelectedEditLayer = layer
+End Function
 
-SUB OnChangeLayerHidden
-    IF SelectedLayer = 0 THEN EXIT SUB
-    DIM selected AS INTEGER
+Sub OnChangeLayerHidden
+    If SelectedLayer = 0 Then Exit Sub
+    Dim selected As Integer
     selected = Control(chkLayerHidden).Value
-    IF selected = True THEN
+    If selected = True Then
         hiddenLayers(SelectedLayer) = 1
-    ELSE
+    Else
         hiddenLayers(SelectedLayer) = 0
-    END IF
-END SUB
+    End If
+End Sub
 
-SUB OnChangeLayer
-    DIM layer AS INTEGER
+Sub OnChangeLayer
+    Dim layer As Integer
     layer = SelectedLayer
 
-    IF layer = 0 THEN
+    If layer = 0 Then
         Control(chkLayerHidden).Hidden = True
         Control(lblEditLayer).Hidden = False
         Control(cboEditLayer).Hidden = False
         Control(btnLayerAdd).Hidden = False
         ToolTip(btnLayerAdd) = "Add a new layer to the map"
         Control(btnLayerRemove).Hidden = True
-    ELSE
+    Else
         Control(chkLayerHidden).Hidden = False
         Control(lblEditLayer).Hidden = True
         Control(cboEditLayer).Hidden = True
@@ -808,389 +810,389 @@ SUB OnChangeLayer
         ToolTip(btnLayerAdd) = "Insert a new layer before the currently selected layer"
         Control(btnLayerRemove).Hidden = False
 
-        IF (hiddenLayers(layer) = 0) THEN
+        If (hiddenLayers(layer) = 0) Then
             Control(chkLayerHidden).Value = False
-        ELSE
+        Else
             Control(chkLayerHidden).Value = True
-        END IF
-    END IF
+        End If
+    End If
 
-    DIM i AS INTEGER
-    FOR i = 1 TO GXMapLayers
-        IF (layer = 0 AND hiddenLayers(i) = 0) OR layer = i THEN
+    Dim i As Integer
+    For i = 1 To GXMapLayers
+        If (layer = 0 And hiddenLayers(i) = 0) Or layer = i Then
             GXMapLayerVisible i, True
-        ELSE
+        Else
             GXMapLayerVisible i, False
-        END IF
-    NEXT i
-END SUB
+        End If
+    Next i
+End Sub
 
-SUB OnLayerAdd
-    REDIM _PRESERVE hiddenLayers(GXMapLayers + 1) AS INTEGER
-    IF SelectedLayer = 0 THEN
+Sub OnLayerAdd
+    ReDim _Preserve hiddenLayers(GXMapLayers + 1) As Integer
+    If SelectedLayer = 0 Then
         GXMapLayerAdd
         SetStatus "New layer added."
-    ELSE
+    Else
         GXMapLayerInsert SelectedLayer
         SetStatus "New layer inserted."
-    END IF
+    End If
     RefreshLayerDropdown
-END SUB
+End Sub
 
-SUB OnLayerRemove
-    IF SelectedLayer = 1 AND GXMapLayers < 2 THEN EXIT SUB
+Sub OnLayerRemove
+    If SelectedLayer = 1 And GXMapLayers < 2 Then Exit Sub
 
-    REDIM _PRESERVE hiddenLayers(GXMapLayers - 1) AS INTEGER
+    ReDim _Preserve hiddenLayers(GXMapLayers - 1) As Integer
     GXMapLayerRemove SelectedLayer
     SetStatus "Layer removed."
     RefreshLayerDropdown
-END SUB
+End Sub
 
 
 ' Place selected tiles in the location indicated by the cursor.  The tile
 ' selection can be made either in the tileset window or from another location
 ' on the map.
-SUB PutTile ()
-    IF resizeMode THEN EXIT SUB
-    IF GXMapIsometric THEN
+Sub PutTile ()
+    If resizeMode Then Exit Sub
+    If GXMapIsometric Then
         PutTileIso
-        EXIT SUB
-    END IF
+        Exit Sub
+    End If
 
-    DIM x AS INTEGER, y AS INTEGER, sx AS INTEGER
-    DIM tx AS INTEGER, ty AS INTEGER
-    DIM mtx AS INTEGER, mty AS INTEGER
-    DIM tile AS INTEGER
+    Dim x As Integer, y As Integer, sx As Integer
+    Dim tx As Integer, ty As Integer
+    Dim mtx As Integer, mty As Integer
+    Dim tile As Integer
 
-    sx = FIX((_MOUSEX / scale - Control(Map).Left + GXSceneX) / GXTilesetWidth)
-    y = FIX((_MOUSEY / scale - Control(Map).Top + GXSceneY) / GXTilesetHeight)
+    sx = Fix((_MouseX / scale - Control(Map).Left + GXSceneX) / GXTilesetWidth)
+    y = Fix((_MouseY / scale - Control(Map).Top + GXSceneY) / GXTilesetHeight)
 
-    FOR ty = tileSelStart.y TO tileSelEnd.y
+    For ty = tileSelStart.y To tileSelEnd.y
         x = sx
-        FOR tx = tileSelStart.x TO tileSelEnd.x
-            IF mapSelMode THEN
+        For tx = tileSelStart.x To tileSelEnd.x
+            If mapSelMode Then
                 ' select the tile from the top layer of the map selection position
                 mtx = tx + GXSceneX / GXTilesetWidth
                 mty = ty + GXSceneY / GXTilesetHeight
-                IF SelectedEditLayer = 0 THEN
+                If SelectedEditLayer = 0 Then
                     tile = GXMapTile(mtx, mty, GXMapTileDepth(mtx, mty))
-                ELSE
+                Else
                     tile = GXMapTile(mtx, mty, SelectedEditLayer)
-                END IF
-            ELSE
+                End If
+            Else
                 ' calculate the tile id from the current selection position
                 'tile = tx + ty * GXTilesetColumns
                 tile = tx + tilesetPos.x + (ty + tilesetPos.y) * GXTilesetColumns + 1
-            END IF
+            End If
             ' add the tile to the map at the next unpopulated layer
-            IF SelectedEditLayer = 0 THEN
+            If SelectedEditLayer = 0 Then
                 GXMapTileAdd x, y, tile
-            ELSE
+            Else
                 GXMapTile x, y, SelectedEditLayer, tile
-            END IF
+            End If
             x = x + 1
-        NEXT tx
+        Next tx
         y = y + 1
-    NEXT ty
-END SUB
+    Next ty
+End Sub
 
-SUB PutTileIso ()
-    DIM x AS INTEGER, y AS INTEGER, sx AS INTEGER
-    DIM tx AS INTEGER, ty AS INTEGER
+Sub PutTileIso ()
+    Dim x As Integer, y As Integer, sx As Integer
+    Dim tx As Integer, ty As Integer
     'DIM mtx AS INTEGER, mty AS INTEGER
-    DIM tile AS INTEGER
+    Dim tile As Integer
 
-    DIM tpos AS GXPosition
-    GetTilePosAt Map, _MOUSEX + GXSceneX * scale, _MOUSEY + GXSceneY * scale, tpos
+    Dim tpos As GXPosition
+    GetTilePosAt Map, _MouseX + GXSceneX * scale, _MouseY + GXSceneY * scale, tpos
     'SetStatus "(" + STR$(tpos.x) + "," + STR$(tpos.y) + ")"
     sx = tpos.x
     y = tpos.y
     'SetStatus "(" + STR$(tileSelStart.x) + "," + STR$(tileSelStart.y) + ")-(" + STR$(tileSelEnd.x) + "," + STR$(tileSelEnd.y) + ")"
 
-    FOR ty = tileSelStart.y TO tileSelEnd.y
+    For ty = tileSelStart.y To tileSelEnd.y
         x = sx
-        FOR tx = tileSelStart.x TO tileSelEnd.x
+        For tx = tileSelStart.x To tileSelEnd.x
             tile = tx + tilesetPos.x + (ty + tilesetPos.y) * GXTilesetColumns + 1
             'SetStatus "(" + STR$(x) + "," + STR$(y) + ") " + STR$(tile)
-            IF SelectedEditLayer = 0 THEN
+            If SelectedEditLayer = 0 Then
                 GXMapTileAdd x, y, tile
-            ELSE
+            Else
                 GXMapTile x, y, SelectedEditLayer, tile
-            END IF
+            End If
             x = x + 1
-        NEXT tx
+        Next tx
         y = y + 1
-    NEXT ty
+    Next ty
 
-END SUB
+End Sub
 
 ' Delete the tiles in the location indicated by the cursor.  This will only
 ' remove the tile from the topmost layer in each selected position.
-SUB DeleteTile ()
-    IF resizeMode THEN EXIT SUB
-    IF GXMapIsometric THEN
+Sub DeleteTile ()
+    If resizeMode Then Exit Sub
+    If GXMapIsometric Then
         DeleteTileIso
-        EXIT SUB
-    END IF
+        Exit Sub
+    End If
 
-    DIM x AS INTEGER, y AS INTEGER, sx AS INTEGER
-    DIM tx AS INTEGER, ty AS INTEGER
-    sx = FIX((_MOUSEX / scale - Control(Map).Left + GXSceneX) / GXTilesetWidth)
-    y = FIX((_MOUSEY / scale - Control(Map).Top + GXSceneY) / GXTilesetHeight)
+    Dim x As Integer, y As Integer, sx As Integer
+    Dim tx As Integer, ty As Integer
+    sx = Fix((_MouseX / scale - Control(Map).Left + GXSceneX) / GXTilesetWidth)
+    y = Fix((_MouseY / scale - Control(Map).Top + GXSceneY) / GXTilesetHeight)
 
-    FOR ty = tileSelStart.y TO tileSelEnd.y
+    For ty = tileSelStart.y To tileSelEnd.y
         x = sx
-        FOR tx = tileSelStart.x TO tileSelEnd.x
-            IF SelectedEditLayer = 0 THEN
+        For tx = tileSelStart.x To tileSelEnd.x
+            If SelectedEditLayer = 0 Then
                 GXMapTileRemove x, y
-            ELSE
+            Else
                 GXMapTile x, y, SelectedEditLayer, 0
-            END IF
+            End If
             x = x + 1
-        NEXT tx
+        Next tx
         y = y + 1
-    NEXT ty
-END SUB
+    Next ty
+End Sub
 
-SUB DeleteTileIso ()
-    DIM x AS INTEGER, y AS INTEGER, sx AS INTEGER
-    DIM tx AS INTEGER, ty AS INTEGER
+Sub DeleteTileIso ()
+    Dim x As Integer, y As Integer, sx As Integer
+    Dim tx As Integer, ty As Integer
     'DIM mtx AS INTEGER, mty AS INTEGER
-    DIM tile AS INTEGER
+    Dim tile As Integer
 
-    DIM tpos AS GXPosition
-    GetTilePosAt Map, _MOUSEX + GXSceneX * scale, _MOUSEY + GXSceneY * scale, tpos
+    Dim tpos As GXPosition
+    GetTilePosAt Map, _MouseX + GXSceneX * scale, _MouseY + GXSceneY * scale, tpos
     sx = tpos.x
     y = tpos.y
 
-    FOR ty = tileSelStart.y TO tileSelEnd.y
+    For ty = tileSelStart.y To tileSelEnd.y
         x = sx
-        FOR tx = tileSelStart.x TO tileSelEnd.x
+        For tx = tileSelStart.x To tileSelEnd.x
             tile = tx + tilesetPos.x + (ty + tilesetPos.y) * GXTilesetColumns + 1
-            IF SelectedEditLayer = 0 THEN
+            If SelectedEditLayer = 0 Then
                 GXMapTileRemove x, y
-            ELSE
+            Else
                 GXMapTile x, y, SelectedEditLayer, 0
-            END IF
+            End If
             x = x + 1
-        NEXT tx
+        Next tx
         y = y + 1
-    NEXT ty
-END SUB
+    Next ty
+End Sub
 
 
 ' Draw the selection cursor
-SUB DrawCursor (id AS LONG)
-    DIM cx AS INTEGER, cy AS INTEGER
-    DIM endx AS INTEGER, endy AS INTEGER
-    DIM tpos AS GXPosition
+Sub DrawCursor (id As Long)
+    Dim cx As Integer, cy As Integer
+    Dim endx As Integer, endy As Integer
+    Dim tpos As GXPosition
 
-    IF id = Map THEN
+    If id = Map Then
 
         ' Calculate the position of the map cursor
         'GetTilePosAt id, _MOUSEX, _MOUSEY, scale, tpos
-        GetTilePosAt id, _MOUSEX, _MOUSEY, tpos
-        IF NOT GXMapIsometric THEN
+        GetTilePosAt id, _MouseX, _MouseY, tpos
+        If Not GXMapIsometric Then
             cx = tpos.x * GXTilesetWidth
             cy = tpos.y * GXTilesetHeight
             ' Display the cursor as a single tile sized sqaure while resizing the
             ' current selection
-            IF NOT mapSelSizing THEN
+            If Not mapSelSizing Then
                 endx = (tpos.x + tileSelEnd.x - tileSelStart.x + 1) * GXTilesetWidth - 1
                 endy = (tpos.y + tileSelEnd.y - tileSelStart.y + 1) * GXTilesetHeight - 1
-            ELSE
+            Else
                 endx = cx + GXTilesetWidth - 1
                 endy = cy + GXTilesetHeight - 1
-            END IF
+            End If
             ' Draw the cursor
-            LINE (cx, cy)-(endx, endy), _RGB(255, 255, 255), B , &B1010101010101010
-        ELSE
-            DIM columnOffset AS LONG
-            IF tpos.y MOD 2 = 1 THEN
+            Line (cx, cy)-(endx, endy), _RGB(255, 255, 255), B , &B1010101010101010
+        Else
+            Dim columnOffset As Long
+            If tpos.y Mod 2 = 1 Then
                 'columnOffset = GXTilesetWidth
                 columnOffset = 0
-            ELSE
+            Else
                 columnOffset = GXTilesetWidth / 2
-            END IF
+            End If
 
-            DIM rowOffset AS LONG
-            rowOffset = (tpos.y + 1) * _ROUND(GXTilesetHeight - GXTilesetWidth / 4)
+            Dim rowOffset As Long
+            rowOffset = (tpos.y + 1) * _Round(GXTilesetHeight - GXTilesetWidth / 4)
             'rowOffset = (tpos.y) * (GXTilesetHeight - GXTilesetWidth / 4)
 
-            DIM tx AS LONG: tx = tpos.x * GXTilesetWidth - columnOffset
-            DIM ty AS LONG: ty = tpos.y * GXTilesetHeight - rowOffset
+            Dim tx As Long: tx = tpos.x * GXTilesetWidth - columnOffset
+            Dim ty As Long: ty = tpos.y * GXTilesetHeight - rowOffset
 
-            LINE (tx, ty)-(tx + GXTilesetWidth, ty + GXTilesetHeight), _RGB32(200, 200, 200), B
+            Line (tx, ty)-(tx + GXTilesetWidth, ty + GXTilesetHeight), _RGB32(200, 200, 200), B
 
-            DIM topY AS LONG: topY = ty + (GXTilesetHeight - GXTilesetWidth / 2)
-            DIM midY AS LONG: midY = ty + (GXTilesetHeight - GXTilesetWidth / 4)
-            DIM midX AS LONG: midX = tx + GXTilesetWidth / 2
-            DIM rightX AS LONG: rightX = tx + GXTilesetWidth
-            DIM bottomY AS LONG: bottomY = ty + GXTilesetHeight
+            Dim topY As Long: topY = ty + (GXTilesetHeight - GXTilesetWidth / 2)
+            Dim midY As Long: midY = ty + (GXTilesetHeight - GXTilesetWidth / 4)
+            Dim midX As Long: midX = tx + GXTilesetWidth / 2
+            Dim rightX As Long: rightX = tx + GXTilesetWidth
+            Dim bottomY As Long: bottomY = ty + GXTilesetHeight
 
-            LINE (tx, midY)-(midX, topY), _RGB32(255, 255, 255)
-            LINE (midX, topY)-(rightX, midY), _RGB(255, 255, 255)
-            LINE (rightX, midY)-(midX, bottomY), _RGB(255, 255, 255)
-            LINE (midX, bottomY)-(tx, midY), _RGB(255, 255, 255)
+            Line (tx, midY)-(midX, topY), _RGB32(255, 255, 255)
+            Line (midX, topY)-(rightX, midY), _RGB(255, 255, 255)
+            Line (rightX, midY)-(midX, bottomY), _RGB(255, 255, 255)
+            Line (midX, bottomY)-(tx, midY), _RGB(255, 255, 255)
 
-        END IF
-    ELSE 'id = Tileset
+        End If
+    Else 'id = Tileset
         ' Calculate the position of the tileset cursor
         'GetTilePosAt id, _MOUSEX, _MOUSEY, tscale, tpos
-        GetTilePosAt id, _MOUSEX, _MOUSEY, tpos
+        GetTilePosAt id, _MouseX, _MouseY, tpos
         cx = tpos.x * GXTilesetWidth * tscale
         cy = tpos.y * GXTilesetHeight * tscale
         endx = cx + GXTilesetWidth * tscale - 1
         endy = cy + GXTilesetHeight * tscale - 1
 
         ' Draw the cursor
-        LINE (cx, cy)-(endx, endy), _RGB(255, 255, 255), B , &B1010101010101010
-    END IF
+        Line (cx, cy)-(endx, endy), _RGB(255, 255, 255), B , &B1010101010101010
+    End If
 
-END SUB
+End Sub
 
 ' Get the tile position at the specified window coordinates
-SUB GetTilePosAt (id AS LONG, x AS INTEGER, y AS INTEGER, tpos AS GXPosition)
+Sub GetTilePosAt (id As Long, x As Integer, y As Integer, tpos As GXPosition)
     'SUB GetTilePosAt (id AS LONG, x AS INTEGER, y AS INTEGER, scale AS INTEGER, tpos AS GXPosition)
-    IF id = Map THEN
-        IF NOT GXMapIsometric THEN
+    If id = Map Then
+        If Not GXMapIsometric Then
             x = x / scale - Control(id).Left
             y = y / scale - Control(id).Top
-            tpos.x = FIX(x / GXTilesetWidth)
-            tpos.y = FIX(y / GXTilesetHeight)
-        ELSE
+            tpos.x = Fix(x / GXTilesetWidth)
+            tpos.y = Fix(y / GXTilesetHeight)
+        Else
             x = x / scale - Control(id).Left
             y = y / scale - Control(id).Top
 
-            DIM tileWidthHalf AS INTEGER: tileWidthHalf = GXTilesetWidth / 2
+            Dim tileWidthHalf As Integer: tileWidthHalf = GXTilesetWidth / 2
             'DIM tileHeightHalf AS INTEGER: tileHeightHalf = GXTilesetHeight / 2
-            DIM tileHeightHalf AS INTEGER: tileHeightHalf = GXTilesetWidth / 2
-            DIM sx AS LONG: sx = x / tileWidthHalf
+            Dim tileHeightHalf As Integer: tileHeightHalf = GXTilesetWidth / 2
+            Dim sx As Long: sx = x / tileWidthHalf
 
-            DIM offset AS INTEGER
-            IF sx MOD 2 = 1 THEN
+            Dim offset As Integer
+            If sx Mod 2 = 1 Then
                 offset = tileWidthHalf
-            ELSE
+            Else
                 offset = 0
-            END IF
+            End If
 
             tpos.y = (2 * y) / tileHeightHalf
             tpos.x = (x - offset) / GXTilesetWidth
             'IF sx MOD 2 - 1 THEN tpos.x = tpos.x - 1
-        END IF
+        End If
 
         'IF GXMapIsometric THEN GXMapTilePosAt x, y, tpos
-    ELSE
+    Else
         x = x - Control(id).Left
         y = y - Control(id).Top
-        tpos.x = FIX(x / (GXTilesetWidth * tscale))
-        tpos.y = FIX(y / (GXTilesetHeight * tscale))
-    END IF
-END SUB
+        tpos.x = Fix(x / (GXTilesetWidth * tscale))
+        tpos.y = Fix(y / (GXTilesetHeight * tscale))
+    End If
+End Sub
 
 ' Draw a bounding rectangle around the tile selection
-SUB DrawSelected (id AS LONG)
-    DIM startx AS INTEGER, starty AS INTEGER, endx AS INTEGER, endy AS INTEGER
+Sub DrawSelected (id As Long)
+    Dim startx As Integer, starty As Integer, endx As Integer, endy As Integer
 
-    IF id = Map THEN
+    If id = Map Then
         ' Calculate the position of the map selection
         startx = tileSelStart.x * GXTilesetWidth
         starty = tileSelStart.y * GXTilesetHeight
         endx = tileSelEnd.x * GXTilesetWidth + GXTilesetWidth - 1
         endy = tileSelEnd.y * GXTilesetHeight + GXTilesetHeight - 1
 
-    ELSE ' id = Tileset
+    Else ' id = Tileset
         ' Calculate the position of the tileset selection
-        DIM swidth AS INTEGER, sheight AS INTEGER
+        Dim swidth As Integer, sheight As Integer
         swidth = GXTilesetWidth * tscale
         sheight = GXTilesetHeight * tscale
         startx = tileSelStart.x * swidth
         starty = tileSelStart.y * sheight
         endx = tileSelEnd.x * swidth + swidth - 1
         endy = tileSelEnd.y * sheight + sheight - 1
-    END IF
+    End If
 
     ' Draw the selection rectangle
-    LINE (startx, starty)-(endx, endy), _RGB(255, 255, 0), B
-END SUB
+    Line (startx, starty)-(endx, endy), _RGB(255, 255, 0), B
+End Sub
 
 ' Draw the tileset window
-SUB DrawTileset
-    DIM tcol AS INTEGER, trow AS INTEGER
-    DIM tx AS INTEGER, ty AS INTEGER
-    DIM totalTiles AS INTEGER
-    DIM xoffset AS INTEGER
-    DIM yoffset AS INTEGER
+Sub DrawTileset
+    Dim tcol As Integer, trow As Integer
+    Dim tx As Integer, ty As Integer
+    Dim totalTiles As Integer
+    Dim xoffset As Integer
+    Dim yoffset As Integer
 
     xoffset = -tilesetPos.x * GXTilesetWidth * tscale
     yoffset = -tilesetPos.y * GXTilesetHeight * tscale
 
     totalTiles = GXTilesetColumns * GXTilesetRows
-    DIM img AS LONG
+    Dim img As Long
     img = GXTilesetImage
 
     BeginDraw Tiles
-    CLS
-    FOR trow = 1 TO GXTilesetRows
+    Cls
+    For trow = 1 To GXTilesetRows
         tx = 0
-        FOR tcol = 1 TO GXTilesetColumns
+        For tcol = 1 To GXTilesetColumns
             GXSpriteDrawScaled img, tx + xoffset, ty + yoffset, GXTilesetWidth * tscale, GXTilesetHeight * tscale, trow, tcol, GXTilesetWidth, GXTilesetHeight, 0
             tx = tx + GXTilesetWidth * tscale
-        NEXT tcol
+        Next tcol
         ty = ty + GXTilesetHeight * tscale
-    NEXT trow
+    Next trow
 
     ' draw a bounding rectangle around the border of the tileset
     tx = -tilesetPos.x * GXTilesetWidth * tscale
     ty = -tilesetPos.y * GXTilesetHeight * tscale
-    LINE (tx - 1, ty - 1)-(GXTilesetColumns * GXTilesetWidth * tscale + tx, GXTilesetRows * GXTilesetHeight * tscale + ty), _RGB(100, 100, 100), B
+    Line (tx - 1, ty - 1)-(GXTilesetColumns * GXTilesetWidth * tscale + tx, GXTilesetRows * GXTilesetHeight * tscale + ty), _RGB(100, 100, 100), B
 
 
-    IF NOT mapSelMode THEN DrawSelected Tiles
+    If Not mapSelMode Then DrawSelected Tiles
     DrawTileFrameSelection
     DrawCursor Tiles
 
     EndDraw Tiles
-END SUB
+End Sub
 
 ' Handle map click events
-SUB OnMapClick
-    IF NOT mapSelSizing THEN
+Sub OnMapClick
+    If Not mapSelSizing Then
         PutTile
-    ELSE
+    Else
         mapSelSizing = False
-        _MOUSEMOVE tileSelStart.x * GXTilesetWidth * scale, (tileSelStart.y + 2) * GXTilesetHeight * scale
-    END IF
-END SUB
+        _MouseMove tileSelStart.x * GXTilesetWidth * scale, (tileSelStart.y + 2) * GXTilesetHeight * scale
+    End If
+End Sub
 
 ' Update the status bar message
-SUB SetStatus (msg AS STRING)
+Sub SetStatus (msg As String)
     SetCaption lblStatus, msg
-END SUB
+End Sub
 
 ' Zoom the map view
-SUB ZoomMap (amount AS INTEGER)
+Sub ZoomMap (amount As Integer)
     scale = scale + amount
-    IF scale < 0 THEN scale = 1
-    IF scale > 4 THEN scale = 4
+    If scale < 0 Then scale = 1
+    If scale > 4 Then scale = 4
     Control(MapMenuZoomOut).Disabled = False
-    IF scale = 1 THEN Control(MapMenuZoomOut).Disabled = True
-    IF scale = 4 THEN Control(MapMenuZoomIn).Disabled = True
+    If scale = 1 Then Control(MapMenuZoomOut).Disabled = True
+    If scale = 4 Then Control(MapMenuZoomIn).Disabled = True
     ResizeControls
-END SUB
+End Sub
 
 ' Zoom the map view
-SUB ZoomTileset (amount AS INTEGER)
+Sub ZoomTileset (amount As Integer)
     tscale = tscale + amount
-    IF tscale < 0 THEN tscale = 1
-    IF tscale > 4 THEN tscale = 4
+    If tscale < 0 Then tscale = 1
+    If tscale > 4 Then tscale = 4
     Control(TilesetMenuZoomOut).Disabled = False
-    IF tscale = 1 THEN Control(TilesetMenuZoomOut).Disabled = True
-    IF tscale = 4 THEN Control(TilesetMenuZoomIn).Disabled = True
+    If tscale = 1 Then Control(TilesetMenuZoomOut).Disabled = True
+    If tscale = 4 Then Control(TilesetMenuZoomIn).Disabled = True
     ResizeControls
-END SUB
+End Sub
 
-SUB OnResizeMap
+Sub OnResizeMap
     resizeMode = True
     Control(frmResizeMap).Hidden = False
     Control(Tiles).Hidden = True
@@ -1200,9 +1202,9 @@ SUB OnResizeMap
     Control(TilesetMenu).Hidden = True
     Control(txtResizeColumns).Value = GXMapColumns
     Control(txtResizeRows).Value = GXMapRows
-END SUB
+End Sub
 
-SUB CancelResizeMap
+Sub CancelResizeMap
     resizeMode = False
     Control(frmResizeMap).Hidden = True
     Control(Tiles).Hidden = False
@@ -1210,42 +1212,42 @@ SUB CancelResizeMap
     Control(FileMenu).Hidden = False
     Control(MapMenu).Hidden = False
     Control(TilesetMenu).Hidden = False
-END SUB
+End Sub
 
-SUB ResizeMap
+Sub ResizeMap
     GXMapResize Control(txtResizeColumns).Value, Control(txtResizeRows).Value
     CancelResizeMap
     SetStatus "Map resized."
-END SUB
+End Sub
 
-SUB OnChangeResize
-    DIM columns AS LONG
-    DIM rows AS LONG
+Sub OnChangeResize
+    Dim columns As Long
+    Dim rows As Long
     columns = Control(txtResizeColumns).Value
     rows = Control(txtResizeRows).Value
 
-    IF (columns > 0 AND NOT columns = GXMapColumns) OR (rows > 0 AND NOT rows = GXMapRows) THEN
+    If (columns > 0 And Not columns = GXMapColumns) Or (rows > 0 And Not rows = GXMapRows) Then
         Control(btnResizeMap).Disabled = False
-    ELSE
+    Else
         Control(btnResizeMap).Disabled = True
-    END IF
-END SUB
+    End If
+End Sub
 
 ' Resize the application controls
-SUB ResizeControls
+Sub ResizeControls
     ' Position tileset control
-    DIM twidth AS INTEGER
+    Dim twidth As Integer
     twidth = GXTilesetColumns * GXTilesetWidth * tscale
-    DIM maxwidth AS INTEGER
-    DIM minwidth AS INTEGER
+    Dim maxwidth As Integer
+    Dim minwidth As Integer
     minwidth = 300
     maxwidth = Control(MainForm).Width / 3
-    IF maxwidth < minwidth THEN maxwidth = minwidth
-    IF twidth < minwidth THEN
+    If maxwidth < minwidth Then maxwidth = minwidth
+    If twidth < minwidth Then
         twidth = minwidth
-    ELSEIF twidth >= maxwidth THEN
+    ElseIf twidth >= maxwidth Then
         twidth = maxwidth
-    END IF
+    End If
     Control(Tiles).Top = 23
     Control(Tiles).Width = twidth
     Control(Tiles).Left = Control(MainForm).Width - twidth
@@ -1289,12 +1291,12 @@ SUB ResizeControls
     Control(frmResizeMap).Left = Control(MainForm).Width - twidth + 1
     Control(frmResizeMap).Height = Control(MainForm).Height - 53
     Control(lblResizeSeparator).Width = twidth - 40
-END SUB
+End Sub
 
-FUNCTION GetControlAtMousePos
-    DIM mx AS LONG, my AS LONG
-    mx = _MOUSEX
-    my = _MOUSEY
+Function GetControlAtMousePos
+    Dim mx As Long, my As Long
+    mx = _MouseX
+    my = _MouseY
 
     GetControlAtMousePos = 0
 
@@ -1305,12 +1307,12 @@ FUNCTION GetControlAtMousePos
     elseIF mx > Control(Tiles).Left AND mx < Control(Tiles).Left + Control(Tiles).Width AND _
            my > Control(Tiles).Top AND my < Control(Tiles).Top + Control(Tiles).Height THEN
         GetControlAtMousePos = Tiles
-    END IF
-END FUNCTION
+    End If
+End Function
 
 ' General Dialog Methods
 ' ----------------------------------------------------------------------------
-SUB SetDialogMode (newDialogMode AS INTEGER)
+Sub SetDialogMode (newDialogMode As Integer)
     dialogMode = newDialogMode
     Control(FileMenu).Hidden = dialogMode
     Control(MapMenu).Hidden = dialogMode
@@ -1321,47 +1323,47 @@ SUB SetDialogMode (newDialogMode AS INTEGER)
     Control(cboLayer).Hidden = dialogMode
     Control(lblMapInfo).Hidden = dialogMode
     Control(frmTile).Hidden = dialogMode
-    IF dialogMode = True THEN
+    If dialogMode = True Then
         Control(cboEditLayer).Hidden = True
         Control(lblEditLayer).Hidden = True
         Control(chkLayerHidden).Hidden = True
         Control(btnLayerAdd).Hidden = True
         Control(btnLayerRemove).Hidden = True
-    ELSEIF SelectedLayer = 0 THEN
+    ElseIf SelectedLayer = 0 Then
         Control(cboEditLayer).Hidden = False
         Control(lblEditLayer).Hidden = False
         Control(btnLayerAdd).Hidden = False
-    ELSEIF SelectedLayer > 0 THEN
+    ElseIf SelectedLayer > 0 Then
         Control(chkLayerHidden).Hidden = False
         Control(btnLayerAdd).Hidden = False
         Control(btnLayerRemove).Hidden = False
-    END IF
+    End If
 
-END SUB
+End Sub
 
-SUB ResizeDialog (dialogId AS LONG)
+Sub ResizeDialog (dialogId As Long)
     Control(dialogId).Left = 5
     Control(dialogId).Top = 15
     Control(dialogId).Width = Control(MainForm).Width - 10
     Control(dialogId).Height = Control(MainForm).Height - 45
 
-    IF dialogId = frmFile THEN
+    If dialogId = frmFile Then
         Control(btnFDOK).Top = Control(MainForm).Height - 85
         Control(btnFDCancel).Top = Control(MainForm).Height - 85
         Control(lstFDFiles).Height = Control(MainForm).Height - 200
         Control(lstFDPaths).Height = Control(MainForm).Height - 230
         Control(chkFDFilterExt).Top = Control(MainForm).Height - 125
-    END IF
+    End If
     __UI_ForceRedraw = True
-END SUB
+End Sub
 
-SUB CancelDialog (dialogId AS LONG)
+Sub CancelDialog (dialogId As Long)
     SetStatus ""
     Control(dialogId).Hidden = True
     SetDialogMode False
-END SUB
+End Sub
 
-SUB ShowNewMapDialog
+Sub ShowNewMapDialog
     SetDialogMode True
     Control(txtColumns).Value = 0
     Control(txtRows).Value = 0
@@ -1371,56 +1373,56 @@ SUB ShowNewMapDialog
     Control(txtTileHeight).Value = 0
     Control(tglIsometric).Value = False
     Control(frmNewMap).Hidden = False
-    _MOUSESHOW
-END SUB
+    _MouseShow
+End Sub
 
-SUB ShowReplaceTilesetDialog
+Sub ShowReplaceTilesetDialog
     dialogMode = True
     Control(frmReplaceTileset).Hidden = False
     Control(txtRTTileWidth).Value = GXTilesetWidth
     Control(txtRTTileHeight).Value = GXTilesetHeight
     SetDialogMode True
-    _MOUSESHOW
-END SUB
+    _MouseShow
+End Sub
 
 ' File Dialog Methods
 ' ----------------------------------------------------------------------------
-SUB ShowFileDialog (mode AS INTEGER, targetForm AS LONG)
+Sub ShowFileDialog (mode As Integer, targetForm As Long)
     SetDialogMode (True)
 
     fileDialogMode = mode
     fileDialogTargetForm = targetForm
-    IF fileDialogTargetForm <> MainForm THEN
+    If fileDialogTargetForm <> MainForm Then
         Control(fileDialogTargetForm).Hidden = True
-    END IF
+    End If
 
-    IF fileDialogMode = FD_OPEN THEN
+    If fileDialogMode = FD_OPEN Then
         SetCaption frmFile, "Open"
-    ELSE
+    Else
         SetCaption frmFile, "Save"
-    END IF
+    End If
 
     Text(txtFDFilename) = ""
     Control(frmFile).Hidden = False
 
     RefreshFileDialog
-END SUB
+End Sub
 
-SUB EnableFileDialog (enabled AS INTEGER)
-    DIM disabled AS INTEGER
-    disabled = NOT enabled
+Sub EnableFileDialog (enabled As Integer)
+    Dim disabled As Integer
+    disabled = Not enabled
     Control(txtFDFilename).Disabled = disabled
     Control(lstFDFiles).Disabled = disabled
     Control(lstFDPaths).Disabled = disabled
     Control(chkFDFilterExt).Disabled = disabled
     Control(btnFDOK).Disabled = disabled
     Control(btnFDCancel).Disabled = disabled
-END SUB
+End Sub
 
-SUB RefreshFileDialog
-    DIM i AS INTEGER
-    DIM path AS STRING
-    DIM fitems(0) AS STRING
+Sub RefreshFileDialog
+    Dim i As Integer
+    Dim path As String
+    Dim fitems(0) As String
 
     ' Set the last selected path
     SetCaption lblFDPathValue, fileDialogPath
@@ -1429,133 +1431,133 @@ SUB RefreshFileDialog
 
     ' Refresh the folder list
     ResetList lstFDPaths
-    IF GXFS_IsDriveLetter(path) THEN
+    If GXFS_IsDriveLetter(path) Then
         path = path + GXFS_PathSeparator
-    ELSE
+    Else
         AddItem lstFDPaths, ".."
-    END IF
-    FOR i = 1 TO GXFS_DirList(path, True, fitems())
+    End If
+    For i = 1 To GXFS_DirList(path, True, fitems())
         AddItem lstFDPaths, fitems(i)
-    NEXT i
-    FOR i = 1 TO GXFS_DriveList(fitems())
+    Next i
+    For i = 1 To GXFS_DriveList(fitems())
         AddItem lstFDPaths, fitems(i)
-    NEXT i
+    Next i
 
     ' Refresh the file list
     RefreshFileList
-END SUB
+End Sub
 
-SUB RefreshFileList
-    DIM i AS INTEGER
-    DIM path AS STRING
-    DIM fitems(0) AS STRING
+Sub RefreshFileList
+    Dim i As Integer
+    Dim path As String
+    Dim fitems(0) As String
 
     path = fileDialogPath
 
-    IF GXFS_IsDriveLetter(path) THEN path = path + GXFS_PathSeparator
+    If GXFS_IsDriveLetter(path) Then path = path + GXFS_PathSeparator
 
     ' Refresh the folder list
     ResetList lstFDFiles
-    FOR i = 1 TO GXFS_DirList(path, False, fitems())
-        IF NOT Control(chkFDFilterExt).Value OR ExtFilterMatch(fitems(i)) THEN
+    For i = 1 To GXFS_DirList(path, False, fitems())
+        If Not Control(chkFDFilterExt).Value Or ExtFilterMatch(fitems(i)) Then
             AddItem lstFDFiles, fitems(i)
-        END IF
-    NEXT i
-END SUB
+        End If
+    Next i
+End Sub
 
-FUNCTION ExtFilterMatch (filename AS STRING)
-    DIM match AS INTEGER
-    DIM ext AS STRING
-    ext = UCASE$(GXFS_GetFileExtension(filename))
+Function ExtFilterMatch (filename As String)
+    Dim match As Integer
+    Dim ext As String
+    ext = UCase$(GXFS_GetFileExtension(filename))
 
-    IF fileDialogTargetForm = MainForm THEN
-        IF ext = "GXM" OR ext = "MAP" THEN match = True
-    ELSE
-        IF ext = "PNG" OR ext = "BMP" OR ext = "GIF" OR ext = "BMP" OR ext = "JPG" OR ext = "JPEG" THEN match = True
-    END IF
+    If fileDialogTargetForm = MainForm Then
+        If ext = "GXM" Or ext = "MAP" Then match = True
+    Else
+        If ext = "PNG" Or ext = "BMP" Or ext = "GIF" Or ext = "BMP" Or ext = "JPG" Or ext = "JPEG" Then match = True
+    End If
 
     ExtFilterMatch = match
-END FUNCTION
+End Function
 
-SUB OnChangeDirectory
+Sub OnChangeDirectory
     ' Change current path
-    DIM dir AS STRING
+    Dim dir As String
     dir = GetItem(lstFDPaths, Control(lstFDPaths).Value)
-    IF dir = ".." THEN
+    If dir = ".." Then
         fileDialogPath = GXFS_GetParentPath(fileDialogPath)
-    ELSEIF GXFS_IsDriveLetter(dir) THEN
+    ElseIf GXFS_IsDriveLetter(dir) Then
         fileDialogPath = dir
-    ELSEIF fileDialogPath = GXFS_PathSeparator THEN
+    ElseIf fileDialogPath = GXFS_PathSeparator Then
         fileDialogPath = GXFS_PathSeparator + dir
-    ELSE
+    Else
         fileDialogPath = fileDialogPath + GXFS_PathSeparator + dir
-    END IF
+    End If
     RefreshFileDialog
-END SUB
+End Sub
 
-SUB OnSelectFile
-    DIM msgRes AS INTEGER
-    DIM filename AS STRING
+Sub OnSelectFile
+    Dim msgRes As Integer
+    Dim filename As String
     filename = Text(txtFDFilename)
 
-    IF filename = "" THEN
+    If filename = "" Then
         msgRes = MessageBox("Please select a file.", "No File Selection", MsgBox_OkOnly + MsgBox_Exclamation)
-        EXIT SUB
-    END IF
+        Exit Sub
+    End If
 
     filename = fileDialogPath + GXFS_PathSeparator + filename
 
-    IF fileDialogMode = FD_OPEN THEN
-        IF NOT _FILEEXISTS(filename) THEN
+    If fileDialogMode = FD_OPEN Then
+        If Not _FileExists(filename) Then
             msgRes = MessageBox("The specified file was not found.", "File Not Found", MsgBox_OkOnly + MsgBox_Exclamation)
-            EXIT SUB
-        END IF
+            Exit Sub
+        End If
 
-        SELECT CASE fileDialogTargetForm
+        Select Case fileDialogTargetForm
 
-            CASE MainForm
+            Case MainForm
                 LoadMap filename
 
-            CASE frmNewMap
+            Case frmNewMap
                 Text(txtTilesetImage) = filename
                 Control(frmNewMap).Hidden = False
                 Control(frmFile).Hidden = True
 
-            CASE frmReplaceTileset
+            Case frmReplaceTileset
                 Text(txtRTTilesetImage) = filename
                 Control(frmReplaceTileset).Hidden = False
                 Control(frmFile).Hidden = True
 
-        END SELECT
+        End Select
 
-    ELSE 'FD_SAVE
-        SELECT CASE fileDialogTargetForm
-            CASE MainForm:
-                IF _FILEEXISTS(filename) THEN
+    Else 'FD_SAVE
+        Select Case fileDialogTargetForm
+            Case MainForm:
+                If _FileExists(filename) Then
                     msgRes = MessageBox("File exists, overwrite existing file?", "File Exists", MsgBox_YesNo + MsgBox_Question)
-                    IF msgRes = MsgBox_No THEN EXIT SUB
-                END IF
+                    If msgRes = MsgBox_No Then Exit Sub
+                End If
 
                 SaveMap filename
-        END SELECT
-    END IF
+        End Select
+    End If
 
-END SUB
+End Sub
 
 ' Handle file list click events
-SUB OnFileListClick (id AS LONG)
+Sub OnFileListClick (id As Long)
     Text(txtFDFilename) = GetItem(lstFDFiles, Control(lstFDFiles).Value)
-    IF lastControlClicked = id AND TIMER - lastClick < .3 THEN ' Double-click
+    If lastControlClicked = id And Timer - lastClick < .3 Then ' Double-click
         OnSelectFile
-    END IF
-END SUB
+    End If
+End Sub
 
 ' Handle path list click events
-SUB OnPathListClick (id AS LONG)
-    IF lastControlClicked = id AND TIMER - lastClick < .3 THEN ' Double-click
+Sub OnPathListClick (id As Long)
+    If lastControlClicked = id And Timer - lastClick < .3 Then ' Double-click
         OnChangeDirectory
-    END IF
-END SUB
+    End If
+End Sub
 
 
-'$include:'../gx/gx.bm'
+'$Include:'../gx/gx.bm'

@@ -1,17 +1,17 @@
-$CONSOLE:ONLY
-'$INCLUDE:'../../gx/gx.bi'
-_DEST _CONSOLE
+$Console:Only
+'$Include:'../../gx/gx.bi'
+_Dest _Console
 
-GXMapLoad COMMAND$
-PRINT "Version:   "; GXMapVersion
-PRINT "Rows:      "; GXMapRows
-PRINT "Columns:   "; GXMapColumns
-PRINT "Layers:    "; GXMapLayers
-PRINT "Isometric: "; GXMapIsometric
+GXMapLoad Command$
+Print "Version:   "; GXMapVersion
+Print "Rows:      "; GXMapRows
+Print "Columns:   "; GXMapColumns
+Print "Layers:    "; GXMapLayers
+Print "Isometric: "; GXMapIsometric
 
-GXMapSave COMMAND$ + ".updated.gxm"
-SYSTEM
+GXMapSave Command$ + ".updated.gxm"
+System
 
-SUB GXOnGameEvent (e AS GXEvent): END SUB
-'$INCLUDE:'../../gx/gx.bm'
+Sub GXOnGameEvent (e As GXEvent): End Sub
+'$Include:'../../gx/gx.bm'
 

@@ -1,41 +1,37 @@
-OPTION _EXPLICIT
-'$RESIZE:ON
-$EXEICON:'./../../gx/resource/gx.ico'
-'$include: '../../gx/gx.bi'
+Option _Explicit
+$ExeIcon:'./../../gx/resource/gx.ico'
+'$Include:'../../gx/gx.bi'
 
-'GXSceneCreate 355, 200
 GXSceneCreate 500, 282
-'GXSceneCreate 710, 400
 GXMapLoad "map/overworld.map"
 GXFullScreen GX_TRUE
 
-DIM flag AS INTEGER
+Dim flag As Integer
 flag = GXEntityCreate("img/flag.png", 32, 64, 5)
 GXEntityPos flag, 30, 20
 GXEntityAnimate flag, 1, 10
 
-DIM fire AS INTEGER
+Dim fire As Integer
 fire = GXEntityCreate("img/fire.png", 16, 16, 7)
 GXEntityPos fire, 267, 135
 GXEntityAnimate fire, 1, 10
 
-CONST ETYPE_COIN = 1000
+Const ETYPE_COIN = 1000
 
-DIM coin AS INTEGER
+Dim coin As Integer
 coin = GXEntityCreate("img/coin.png", 16, 16, 4)
-'GXEntityPos coin, 265, 17
 GXEntityPos coin, 265, 70
 GXEntityAnimate coin, 1, 8
 GXEntityType coin, ETYPE_COIN
 GXEntityCollisionOffset coin, 4, 5, 4, 3
 
 
-DIM bob AS INTEGER
+Dim bob As Integer
 bob = GXEntityCreate("img/character.png", 16, 20, 4)
 GXEntityPos bob, GXSceneWidth / 2 - 8, GXSceneHeight / 2 - 10
 GXEntityCollisionOffset bob, 3, 10, 3, 0
 
-DIM player AS INTEGER
+Dim player As Integer
 player = GXPlayerCreate(bob)
 GXPlayerMoveSpeed player, 90
 MapPlayerMoveAction player, GXACTION_MOVE_LEFT, GXKEY_A, 2, 10
@@ -47,59 +43,59 @@ GXSceneFollowEntity bob, GXSCENE_FOLLOW_ENTITY_CENTER
 GXSceneConstrain GXSCENE_CONSTRAIN_TO_MAP
 
 
-DIM SHARED movetilecount AS INTEGER
-REDIM SHARED movetiles(movetilecount) AS INTEGER
+Dim Shared movetilecount As Integer
+ReDim Shared movetiles(movetilecount) As Integer
 SetMoveTiles
 
 GXSceneStart
-SYSTEM 0
+System 0
 
-DIM SHARED toggleDebug AS INTEGER
+Dim Shared toggleDebug As Integer
 
-SUB GXOnGameEvent (e AS GXEvent)
-    SELECT CASE e.event
+Sub GXOnGameEvent (e As GXEvent)
+    Select Case e.event
 
-        CASE GXEVENT_UPDATE
-            IF GXKeyDown(GXKEY_ESC) THEN GXSceneStop
+        Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_ESC) Then GXSceneStop
 
             ' Toggle debug mode when F1 key is pressed
-            IF GXKeyDown(GXKEY_F1) THEN toggleDebug = GX_TRUE
-            IF NOT GXKeyDown(GXKEY_F1) AND toggleDebug THEN
-                GXDebug NOT GXDebug
+            If GXKeyDown(GXKEY_F1) Then toggleDebug = GX_TRUE
+            If Not GXKeyDown(GXKEY_F1) And toggleDebug Then
+                GXDebug Not GXDebug
                 toggleDebug = GX_FALSE
-            END IF
+            End If
 
-        CASE GXEVENT_COLLISION_TILE
-            IF IsMoveTile(e) <> 1 THEN e.collisionResult = 1
+        Case GXEVENT_COLLISION_TILE
+            If IsMoveTile(e) <> 1 Then e.collisionResult = 1
 
-        CASE GXEVENT_COLLISION_ENTITY
-            IF GXEntityType(e.collisionEntity) = ETYPE_COIN THEN e.collisionResult = 1
+        Case GXEVENT_COLLISION_ENTITY
+            If GXEntityType(e.collisionEntity) = ETYPE_COIN Then e.collisionResult = 1
 
-    END SELECT
-END SUB
+    End Select
+End Sub
 
-SUB MapPlayerMoveAction (pid AS INTEGER, action AS INTEGER, akey AS INTEGER, animationSeq AS INTEGER, animationSpeed AS INTEGER)
+Sub MapPlayerMoveAction (pid As Integer, action As Integer, akey As Integer, animationSeq As Integer, animationSpeed As Integer)
     GXPlayerActionKey pid, action, akey
     GXPlayerActionAnimationSeq pid, action, animationSeq
     GXPlayerActionAnimationSpeed pid, action, animationSpeed
-END SUB
+End Sub
 
-FUNCTION IsMoveTile (e AS GXEvent)
-    DIM tile AS INTEGER
+Function IsMoveTile (e As GXEvent)
+    Dim tile As Integer
     tile = GXMapTile(e.collisionTileX, e.collisionTileY, 1)
     IsMoveTile = 0
-    DIM i AS INTEGER
-    FOR i = 1 TO movetilecount
-        IF tile = movetiles(i) THEN
+    Dim i As Integer
+    For i = 1 To movetilecount
+        If tile = movetiles(i) Then
             IsMoveTile = 1
-            EXIT FOR
-        END IF
-    NEXT i
-END FUNCTION
+            Exit For
+        End If
+    Next i
+End Function
 
-SUB SetMoveTiles
+Sub SetMoveTiles
     movetilecount = 24
-    REDIM movetiles(movetilecount) AS INTEGER
+    ReDim movetiles(movetilecount) As Integer
     movetiles(1) = 1
     movetiles(2) = 445
     movetiles(3) = 446
@@ -123,9 +119,7 @@ SUB SetMoveTiles
     movetiles(22) = 407
     movetiles(23) = 406
     movetiles(24) = 366
-END SUB
+End Sub
 
 
-
-'$include: '../../gx/gx.bm'
-
+'$Include:'../../gx/gx.bm'

@@ -1,4 +1,4 @@
-'$INCLUDE:'../../gx/gx.bi'
+'$Include:'../../gx/gx.bi'
 
 GXSceneCreate 320, 200
 GXTilesetCreate "../overworld/img/overworld.png", 16, 16
@@ -15,13 +15,13 @@ GXMapTile 5, 5, 2, 2
 
 GXSceneStart
 
-SUB GXOnGameEvent (e AS GXEvent)
-    SELECT CASE e.event
-        CASE GXEVENT_UPDATE
-            IF GXKeyDown(GXKEY_ESC) THEN
+Sub GXOnGameEvent (e As GXEvent)
+    Select Case e.event
+        Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_ESC) Then
                 GXSceneStop
                 GXMapSave "test.gxm"
-            END IF
-    END SELECT
-END SUB
-'$INCLUDE:'../../gx/gx.bm'
+            End If
+    End Select
+End Sub
+'$Include:'../../gx/gx.bm'

@@ -1,9 +1,9 @@
-'$INCLUDE:'../../gx/gx.bi'
-DIM SHARED toggleDebug
+'$Include: '../../gx/gx.bi'
+Dim Shared toggleDebug
 
 GXSceneCreate 320, 200
 GXSceneScale 3
-GXMapLoad "interior-test.gxm"
+GXMapLoad "map/interior-test.gxm"
 GXSceneConstrain GXSCENE_CONSTRAIN_TO_MAP
 
 ' Hide the collision layer from view
@@ -13,23 +13,23 @@ CreatePlayer
 
 GXSceneStart
 
-SUB GXOnGameEvent (e AS GXEvent)
-    SELECT CASE e.event
-        CASE GXEVENT_UPDATE
-            IF GXKeyDown(GXKEY_ESC) THEN GXSceneStop
+Sub GXOnGameEvent (e As GXEvent)
+    Select Case e.event
+        Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_ESC) Then GXSceneStop
             TestToggleDebug
 
-        CASE GXEVENT_COLLISION_TILE
-            DIM tile AS INTEGER
+        Case GXEVENT_COLLISION_TILE
+            Dim tile As Integer
             tile = GXMapTile(e.collisionTileX, e.collisionTileY, 5)
-            IF tile > 0 THEN e.collisionResult = 1
+            If tile > 0 Then e.collisionResult = 1
 
-    END SELECT
-END SUB
+    End Select
+End Sub
 
-SUB CreatePlayer
+Sub CreatePlayer
     GXEntityCreate "../overworld/img/character.png", 16, 20, 4, "player"
-    DIM playerEntity AS LONG
+    Dim playerEntity As Long
     playerEntity = GX("player")
 
     GXEntityAnimate playerEntity, 3, 0
@@ -37,24 +37,24 @@ SUB CreatePlayer
     GXEntityCollisionOffset playerEntity, 4, 12, 4, 0
     GXSceneFollowEntity playerEntity, GXSCENE_FOLLOW_ENTITY_CENTER
 
-    DIM player AS LONG
+    Dim player As Long
     player = GXPlayerCreate(playerEntity)
     GXPlayerMoveKey player, GXACTION_MOVE_LEFT, GXKEY_LEFT, 2, 10
     GXPlayerMoveKey player, GXACTION_MOVE_RIGHT, GXKEY_RIGHT, 1, 10
     GXPlayerMoveKey player, GXACTION_MOVE_UP, GXKEY_UP, 4, 10
     GXPlayerMoveKey player, GXACTION_MOVE_DOWN, GXKEY_DOWN, 3, 10
-END SUB
+End Sub
 
-SUB TestToggleDebug
+Sub TestToggleDebug
     ' Toggle debug mode when F1 key is pressed
-    IF GXKeyDown(GXKEY_F1) THEN toggleDebug = GX_TRUE
-    IF NOT GXKeyDown(GXKEY_F1) AND toggleDebug THEN
-        GXDebug NOT GXDebug
+    If GXKeyDown(GXKEY_F1) Then toggleDebug = GX_TRUE
+    If Not GXKeyDown(GXKEY_F1) And toggleDebug Then
+        GXDebug Not GXDebug
         GXMapLayerVisible 5, GXDebug
         toggleDebug = GX_FALSE
-    END IF
-END SUB
+    End If
+End Sub
 
 
-'$INCLUDE:'../../gx/gx.bm'
+'$Include: '../../gx/gx.bm'
 

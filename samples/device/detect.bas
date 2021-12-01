@@ -1,26 +1,26 @@
-OPTION _EXPLICIT
-$EXEICON:'./../../gx/resource/gx.ico'
-'$include: '../../gx/gx.bi'
-_TITLE "Detect Device Input"
+Option _Explicit
+$ExeIcon:'./../../gx/resource/gx.ico'
+'$Include:'../../gx/gx.bi'
+_Title "Detect Device Input"
 
-PRINT "Waiting for input..."
-DO
-    DIM di AS GXDeviceInput
+Print "Waiting for input..."
+Do
+    Dim di As GXDeviceInput
     GXDeviceInputDetect di
-    CLS
-    PRINT "Device #:    "; di.deviceId
-    PRINT "Device Name: "; GXDeviceName(di.deviceId)
-    PRINT "Device Type: "; GXDeviceTypeName(di.deviceType)
-    PRINT "Input Type:  "; GXInputTypeName(di.inputType)
-    PRINT "Input Id:    "; di.inputId;
-    IF di.deviceType = GXDEVICE_KEYBOARD THEN
-        PRINT " [ "; GXKeyButtonName(di.inputId); " ]"
-    ELSE
-        PRINT
-    END IF
-    PRINT "Input Value: "; di.inputValue
-    PRINT
-LOOP
+    Cls
+    Print "Device #:    "; di.deviceId
+    Print "Device Name: "; GXDeviceName(di.deviceId)
+    Print "Device Type: "; GXDeviceTypeName(di.deviceType)
+    Print "Input Type:  "; GXInputTypeName(di.inputType)
+    Print "Input Id:    "; di.inputId;
+    If di.deviceType = GXDEVICE_KEYBOARD Then
+        Print " [ "; GXKeyButtonName(di.inputId); " ]"
+    Else
+        Print
+    End If
+    Print "Input Value: "; di.inputValue
+    Print
+Loop
 
-SUB GXOnGameEvent (e AS GXEvent): END SUB
-'$include: '../../gx/gx.bm'
+Sub GXOnGameEvent (e As GXEvent): End Sub
+'$Include:'../../gx/gx.bm'

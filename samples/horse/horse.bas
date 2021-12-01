@@ -1,11 +1,14 @@
-$EXEICON:'./../../gx/resource/gx.ico'
-'$include: '../../gx/gx.bi'
-_TITLE "Horse Runner!"
+$ExeIcon:'./../../gx/resource/gx.ico'
+'$Include:'../../gx/gx.bi'
+_Title "Horse Runner!"
 
+GXHardwareAcceleration GX_TRUE
+GXFrameRate 90
 GXSceneCreate 1280, 720
+'GXFrameRate 60
 GXMapLoad "map/horse.map"
 
-DIM bg, bg2
+Dim bg, bg2
 bg = GXBackgroundAdd("img/scroll_bg_far.png", GXBG_SCROLL)
 bg2 = GXBackgroundAdd("img/hills-scroll.png", GXBG_WRAP)
 GXBackgroundY bg2, GXSceneHeight - 256
@@ -19,10 +22,10 @@ GXEntityCreate "img/horse.png", 192, 144, 7, "horse"
 GXEntityPos GX("horse"), -300, 548
 GXEntityAnimate GX("horse"), 2, 20
 
-FOR i% = 1 TO 4
+For i% = 1 To 4
     tree = GXEntityCreate("img/foreground_tree.png", 207, 382, 1)
     GXEntityPos tree, i% * 3000, 350
-NEXT i%
+Next i%
 
 GXSceneFollowEntity GX("horse"), GXSCENE_FOLLOW_ENTITY_CENTER_X
 GXSceneConstrain GXSCENE_CONSTRAIN_TO_MAP
@@ -32,45 +35,56 @@ GXDebugFont GXFONT_DEFAULT_BLACK
 GXDebugTileBorderColor _RGB32(0, 0, 0)
 GXDebugEntityBorderColor _RGB32(0, 0, 0)
 
+GXCustomDraw GXEVENT_DRAWSCREEN, GX_TRUE
+
 GXSceneStart
-SYSTEM 0
+System 0
 
 
-SUB GXOnGameEvent (e AS GXEvent)
-    SHARED toggleDebug, done, finish
+Sub GXOnGameEvent (e As GXEvent)
+    Shared toggleDebug, done, finish, gameOver
 
-    IF e.event = GXEVENT_UPDATE THEN
+    Select Case e.event
 
-        IF GXEntityX(GX("horse")) > 11400 AND done = 0 THEN
-            done = GXFrame + 30
-            GXEntityFrameSet GX("horse"), 4, 1
-            GXEntityAnimateStop GX("horse")
-            GXEntityVX GX("horse"), 0
+        Case GXEVENT_UPDATE
 
-        ELSEIF GXFrame = done THEN
-            GXEntityAnimateMode GX("horse"), GXANIMATE_SINGLE
-            GXEntityFrameSet GX("horse"), 4, 1
-            GXEntityAnimate GX("horse"), 4, 9
-            finish = GXFrame + 50
+            If GXEntityX(GX("horse")) > 11400 And done = 0 Then
+                done = GXFrame + 30
+                GXEntityFrameSet GX("horse"), 4, 1
+                GXEntityAnimateStop GX("horse")
+                GXEntityVX GX("horse"), 0
 
-        ELSEIF GXFrame = finish THEN
-            GXEntityAnimate GX("girl"), 1, 8
-        END IF
+            ElseIf GXFrame = done Then
+                GXEntityAnimateMode GX("horse"), GXANIMATE_SINGLE
+                GXEntityFrameSet GX("horse"), 4, 1
+                GXEntityAnimate GX("horse"), 4, 9
+                finish = GXFrame + 50
 
-        IF GXKeyDown(GXKEY_ESC) THEN
-            GXSceneStop
-        END IF
+            ElseIf GXFrame = finish Then
+                GXEntityAnimate GX("girl"), 1, 8
+            End If
 
-        ' Toggle debug mode when F1 key is pressed
-        IF GXKeyDown(GXKEY_F1) THEN toggleDebug = GX_TRUE
-        IF NOT GXKeyDown(GXKEY_F1) AND toggleDebug THEN
-            GXDebug NOT GXDebug
-            toggleDebug = GX_FALSE
-        END IF
+            If GXKeyDown(GXKEY_ESC) Then
+                GXSceneStop
+            End If
 
-    END IF
+            ' Toggle debug mode when F1 key is pressed
+            If GXKeyDown(GXKEY_F1) Then toggleDebug = GX_TRUE
+            If Not GXKeyDown(GXKEY_F1) And toggleDebug Then
+                GXDebug Not GXDebug
+                toggleDebug = GX_FALSE
+            End If
 
-END SUB
+        Case GXEVENT_ANIMATE_COMPLETE
+            If e.entity = GX("girl") Then gameOver = GX_TRUE
+
+        Case GXEVENT_DRAWSCREEN
+            If gameOver Then GXDrawText GXFONT_DEFAULT_BLACK, 675, 550, "GAME OVER"
 
 
-'$include: '../../gx/gx.bm'
+    End Select
+
+End Sub
+
+
+'$Include:'../../gx/gx.bm'

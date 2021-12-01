@@ -1,76 +1,76 @@
-$IF GXSTR = UNDEFINED THEN
+$If GXSTR = UNDEFINED Then
     ' Pseudo-Constants
     ' ------------------------------------------------------------------------
-    FUNCTION GX_LF$: GX_LF = CHR$(10): END FUNCTION
-    FUNCTION GX_CR$: GX_CR = CHR$(13): END FUNCTION
-    FUNCTION GX_CRLF$: GX_CRLF = GX_CR + GX_LF: END FUNCTION
+    Function GX_LF$: GX_LF = Chr$(10): End Function
+    Function GX_CR$: GX_CR = Chr$(13): End Function
+    Function GX_CRLF$: GX_CRLF = GX_CR + GX_LF: End Function
 
     ' String Utility Methods
     ' ------------------------------------------------------------------------
-    FUNCTION GXSTR_Replace$ (s AS STRING, searchString AS STRING, newString AS STRING)
-        DIM ns AS STRING
-        DIM i AS INTEGER
+    Function GXSTR_Replace$ (s As String, searchString As String, newString As String)
+        Dim ns As String
+        Dim i As Integer
 
-        DIM slen AS INTEGER
-        slen = LEN(searchString)
+        Dim slen As Integer
+        slen = Len(searchString)
 
-        FOR i = 1 TO LEN(s) '- slen + 1
-            IF MID$(s, i, slen) = searchString THEN
+        For i = 1 To Len(s) '- slen + 1
+            If Mid$(s, i, slen) = searchString Then
                 ns = ns + newString
                 i = i + slen - 1
-            ELSE
-                ns = ns + MID$(s, i, 1)
-            END IF
-        NEXT i
+            Else
+                ns = ns + Mid$(s, i, 1)
+            End If
+        Next i
 
         GXSTR_Replace = ns
-    END FUNCTION
+    End Function
 
-    FUNCTION GXSTR_Split (sourceString AS STRING, delimiter AS STRING, results() AS STRING)
+    Function GXSTR_Split (sourceString As String, delimiter As String, results() As String)
         ' Modified version of:
         ' https://www.qb64.org/forum/index.php?topic=1073.msg102711#msg102711
-        DIM cstr AS STRING, p AS LONG, curpos AS LONG, arrpos AS LONG, dpos AS LONG
+        Dim cstr As String, p As Long, curpos As Long, arrpos As Long, dpos As Long
 
         ' Make a copy of the source string
         cstr = sourceString
 
         ' Special case if the delimiter is space, remove all excess space
-        IF delimiter = " " THEN
-            cstr = RTRIM$(LTRIM$(cstr))
-            p = INSTR(cstr, "  ")
-            WHILE p > 0
-                cstr = MID$(cstr, 1, p - 1) + MID$(cstr, p + 1)
-                p = INSTR(cstr, "  ")
-            WEND
-        END IF
+        If delimiter = " " Then
+            cstr = RTrim$(LTrim$(cstr))
+            p = InStr(cstr, "  ")
+            While p > 0
+                cstr = Mid$(cstr, 1, p - 1) + Mid$(cstr, p + 1)
+                p = InStr(cstr, "  ")
+            Wend
+        End If
         curpos = 1
         arrpos = 0
-        dpos = INSTR(curpos, cstr, delimiter)
-        DO UNTIL dpos = 0
+        dpos = InStr(curpos, cstr, delimiter)
+        Do Until dpos = 0
             arrpos = arrpos + 1
-            REDIM _PRESERVE results(arrpos) AS STRING
-            results(arrpos) = MID$(cstr, curpos, dpos - curpos)
-            curpos = dpos + LEN(delimiter)
-            dpos = INSTR(curpos, cstr, delimiter)
-        LOOP
+            ReDim _Preserve results(arrpos) As String
+            results(arrpos) = Mid$(cstr, curpos, dpos - curpos)
+            curpos = dpos + Len(delimiter)
+            dpos = InStr(curpos, cstr, delimiter)
+        Loop
         arrpos = arrpos + 1
-        REDIM _PRESERVE results(arrpos) AS STRING
-        results(arrpos) = MID$(cstr, curpos)
+        ReDim _Preserve results(arrpos) As String
+        results(arrpos) = Mid$(cstr, curpos)
 
         GXSTR_Split = arrpos
-    END FUNCTION
+    End Function
 
-    FUNCTION GXSTR_LPad$ (s AS STRING, padChar AS STRING, swidth AS INTEGER)
-        DIM padding AS STRING
-        padding = STRING$(swidth - LEN(s), padChar)
+    Function GXSTR_LPad$ (s As String, padChar As String, swidth As Integer)
+        Dim padding As String
+        padding = String$(swidth - Len(s), padChar)
         GXSTR_LPad = padding + s
-    END FUNCTION
+    End Function
 
-    FUNCTION GXSTR_RPad$ (s AS STRING, padChar AS STRING, swidth AS INTEGER)
-        DIM padding AS STRING
-        padding = STRING$(swidth - LEN(s), padChar)
+    Function GXSTR_RPad$ (s As String, padChar As String, swidth As Integer)
+        Dim padding As String
+        padding = String$(swidth - Len(s), padChar)
         GXSTR_RPad = s + padding
-    END FUNCTION
+    End Function
 
-    $LET GXSTR = 1
-$END IF
+    $Let GXSTR = 1
+$End If
