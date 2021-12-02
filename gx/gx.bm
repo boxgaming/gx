@@ -426,8 +426,15 @@ $If GXBM = UNDEFINED Then
         dactive = _DeviceInput(di.deviceId)
 
         If di.inputType = GXDEVICE_BUTTON Then
-            If _Button(di.inputId) = di.inputValue Then
-                result = GX_TRUE
+            'If _Button(di.inputId) = di.inputValue Then
+            '    result = GX_TRUE
+            'End If
+            If di.deviceType = GXDEVICE_KEYBOARD Then
+                result = __GX_DeviceKeyDown(di.inputId)
+            Else
+                If _Button(di.inputId) = di.inputValue Then
+                    result = GX_TRUE
+                End If
             End If
 
         ElseIf di.inputType = GXDEVICE_AXIS Then
@@ -439,6 +446,20 @@ $If GXBM = UNDEFINED Then
         GXDeviceInputTest = result
     End Function
 
+    Function __GX_DeviceKeyDown (inputId As Integer)
+        Dim k As KeyEntry
+        k = __gx_keymap(inputId)
+
+        Dim result As Integer
+        result = GX_FALSE
+        If _KeyDown(k.value) Then
+            result = GX_TRUE
+        ElseIf k.shift <> 0 Then
+            If _KeyDown(k.shift) Then result = GX_TRUE
+        End If
+
+        __GX_DeviceKeyDown = result
+    End Function
 
     Sub GXPlayerActionAnimationSeq (pid As Integer, actionType As Integer, animationSeq As Integer)
         __gx_player_keymap(actionType, pid).animationSeq = animationSeq
@@ -2903,7 +2924,7 @@ $If GXBM = UNDEFINED Then
             Case GXKEY_PERIOD: k = "."
             Case GXKEY_SLASH: k = "/"
             Case GXKEY_RSHIFT: k = "RShift"
-            Case GXKEY_NUMPAD_ASTERISK: k = "NPad *"
+            Case GXKEY_NUMPAD_MULTIPLY: k = "NPad *"
             Case GXKEY_SPACEBAR: k = "Space"
             Case GXKEY_CAPSLOCK: k = "CapsLk"
             Case GXKEY_F1: k = "F1"
@@ -2934,7 +2955,7 @@ $If GXBM = UNDEFINED Then
             Case GXKEY_F12: k = "F12"
             Case GXKEY_NUMPAD_ENTER: k = "NPad Enter"
             Case GXKEY_RCTRL: k = "RCtrl"
-            Case GXKEY_NUMPAD_SLASH: k = "NPad /"
+            Case GXKEY_NUMPAD_DIVIDE: k = "NPad /"
             Case GXKEY_NUMLOCK: k = "NumLk"
             Case GXKEY_HOME: k = "Home"
             Case GXKEY_UP: k = "Up"
