@@ -2804,6 +2804,35 @@ $If GXBM = UNDEFINED Then
                     End If
                 Next i
             End If
+            ' No device input found, as a workaround let's loop through the key map looking for a keydown
+            For i = 1 To UBound(__gx_keymap)
+                Dim keyIsDown As Integer, inputId As Integer
+                keyIsDown = GX_FALSE
+                If __gx_keymap(i).value <> 0 Then
+                    'If i > 29 Then
+                    '    Print i; __gx_keymap(i).value
+                    '    Dim x: Input x
+                    'End If
+                    If _KeyDown(__gx_keymap(i).value) Then
+                        keyIsDown = GX_TRUE
+                        inputId = i
+                    ElseIf __gx_keymap(i).shift <> 0 Then
+                        If _KeyDown(__gx_keymap(i).shift) Then
+                            keyIsDown = GX_TRUE
+                            inputId = i
+                        End If
+                    End If
+                End If
+                If keyIsDown Then
+                    di.deviceId = GXDEVICE_KEYBOARD
+                    di.deviceType = __GX_DeviceTypeName(GXDEVICE_KEYBOARD)
+                    di.inputType = GXDEVICE_BUTTON
+                    di.inputId = inputId
+                    di.inputValue = GX_TRUE
+                    found = 1
+                    Exit Do
+                End If
+            Next i
         Loop Until found
 
         While _DeviceInput

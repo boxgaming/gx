@@ -391,8 +391,8 @@ $If GXBI = UNDEFINED Then
     ' TODO: Remove this section if keyboard device input fixed for linux and macos
     ' TODO: Conditionally include this section if not windows
     Type KeyEntry
-        value As Integer
-        shift As Integer
+        value As Long
+        shift As Long
     End Type
     Dim Shared __gx_keymap(350) As KeyEntry
     __gx_keymap(GXKEY_ESC).value = 27

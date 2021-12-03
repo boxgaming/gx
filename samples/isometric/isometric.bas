@@ -1,5 +1,5 @@
-OPTION _EXPLICIT
-'$INCLUDE:'../../gx/gx.bi'
+Option _Explicit
+'$Include:'../../gx/gx.bi'
 
 GXSceneCreate 640, 400
 GXTilesetCreate "./iso-tiles.png", 64, 64
@@ -21,53 +21,53 @@ GXMapTileAdd 2, 2, 83
 
 GXSceneStart
 
-SUB GXOnGameEvent (e AS GXEvent)
-    SELECT CASE e.event
-        CASE GXEVENT_UPDATE
-            IF GXKeyDown(GXKEY_ESC) THEN GXSceneStop
-        CASE GXEVENT_DRAWSCREEN
-            DIM p AS GXPosition
+Sub GXOnGameEvent (e As GXEvent)
+    Select Case e.event
+        Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_ESC) Then GXSceneStop
+        Case GXEVENT_DRAWSCREEN
+            Dim p As GXPosition
             DrawCursor
-    END SELECT
-END SUB
-'$INCLUDE:'../../gx/gx.bm'
+    End Select
+End Sub
+'$Include:'../../gx/gx.bm'
 
 
 
 
-SUB DrawCursor
-    DIM p AS GXPosition
-    GXMapTilePosAt _MOUSEX, _MOUSEY, p
-    GXDrawText GXFONT_DEFAULT, _MOUSEX, _MOUSEY, "(" + STR$(p.x) + "," + STR$(p.y) + ")"
+Sub DrawCursor
+    Dim p As GXPosition
+    GXMapTilePosAt _MouseX, _MouseY, p
+    GXDrawText GXFONT_DEFAULT, _MouseX, _MouseY, "(" + Str$(p.x) + "," + Str$(p.y) + ")"
 
-    IF NOT GXMapIsometric THEN
-        LINE (p.x * GXTilesetWidth, p.y * GXTilesetHeight)-(p.x * GXTilesetWidth + GXTilesetWidth, p.y * GXTilesetHeight + GXTilesetHeight), _RGB32(200, 200, 200), B
-    ELSE
-        DIM columnOffset AS LONG
-        IF p.y MOD 2 = 1 THEN
+    If Not GXMapIsometric Then
+        Line (p.x * GXTilesetWidth, p.y * GXTilesetHeight)-(p.x * GXTilesetWidth + GXTilesetWidth, p.y * GXTilesetHeight + GXTilesetHeight), _RGB32(200, 200, 200), B
+    Else
+        Dim columnOffset As Long
+        If p.y Mod 2 = 1 Then
             columnOffset = 0 'GXTilesetWidth
-        ELSE
+        Else
             columnOffset = GXTilesetWidth / 2
-        END IF
+        End If
 
-        DIM rowOffset AS LONG
+        Dim rowOffset As Long
         rowOffset = (p.y + 1) * (GXTilesetHeight * .75)
 
-        DIM tx AS LONG: tx = p.x * GXTilesetWidth - columnOffset
-        DIM ty AS LONG: ty = p.y * GXTilesetHeight - rowOffset
+        Dim tx As Long: tx = p.x * GXTilesetWidth - columnOffset
+        Dim ty As Long: ty = p.y * GXTilesetHeight - rowOffset
 
         'LINE (tx, ty)-(tx + GXTilesetWidth, ty + GXTilesetHeight), _RGB32(200, 200, 200), B
 
-        DIM topY AS LONG: topY = ty + GXTilesetHeight * .5
-        DIM midY AS LONG: midY = ty + GXTilesetHeight * .75
-        DIM midX AS LONG: midX = tx + GXTilesetWidth * .5
-        DIM rightX AS LONG: rightX = tx + GXTilesetWidth
-        DIM bottomY AS LONG: bottomY = ty + GXTilesetHeight
+        Dim topY As Long: topY = ty + GXTilesetHeight * .5
+        Dim midY As Long: midY = ty + GXTilesetHeight * .75
+        Dim midX As Long: midX = tx + GXTilesetWidth * .5
+        Dim rightX As Long: rightX = tx + GXTilesetWidth
+        Dim bottomY As Long: bottomY = ty + GXTilesetHeight
 
-        LINE (tx, midY)-(midX, topY), _RGB32(255, 255, 255)
-        LINE (midX, topY)-(rightX, midY), _RGB(255, 255, 255)
-        LINE (rightX, midY)-(midX, bottomY), _RGB(255, 255, 255)
-        LINE (midX, bottomY)-(tx, midY), _RGB(255, 255, 255)
-    END IF
-END SUB
+        Line (tx, midY)-(midX, topY), _RGB32(255, 255, 255)
+        Line (midX, topY)-(rightX, midY), _RGB(255, 255, 255)
+        Line (rightX, midY)-(midX, bottomY), _RGB(255, 255, 255)
+        Line (midX, bottomY)-(tx, midY), _RGB(255, 255, 255)
+    End If
+End Sub
 
