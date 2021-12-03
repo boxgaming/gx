@@ -180,10 +180,7 @@ Function pipecom& (cmd As String, stdout As String, stderr As String)
         Kill "pipestderr"
         End If
 
-        Dim cmdf as String * 200
-        cmdf = cmd + " 2>pipestderr"
-        stream = popen(cmdf, "r")
-        'stream = popen(cmd + " 2>pipestderr", "r")
+        stream = popen(cmd + " 2>pipestderr" + Chr$(0), "r")
 
         If stream Then
         While feof(stream) = 0
