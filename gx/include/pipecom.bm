@@ -182,7 +182,7 @@ Function pipecom& (cmd As String, stdout As String, stderr As String)
 
         Dim cmdf as String * 200
         cmdf = cmd + " 2>pipestderr"
-        stream = popen(cmd2, "r")
+        stream = popen(cmdf, "r")
         'stream = popen(cmd + " 2>pipestderr", "r")
 
         If stream Then
