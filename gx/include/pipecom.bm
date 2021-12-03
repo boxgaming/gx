@@ -1,104 +1,104 @@
 ' Source: Spriggy's API Collection
 '         https://github.com/SpriggsySpriggs/Spriggsys-API-Collection/blob/master/Cross-Platform%20(Windows%2C%20Macintosh%2C%20Linux)/pipecomqb64.bas
 ' ----------------------------------------------------------------------------
-FUNCTION pipecom& (cmd AS STRING, stdout AS STRING, stderr AS STRING)
-    $IF WIN THEN
-        TYPE SECURITY_ATTRIBUTES
-            nLength AS LONG
-            $IF 64BIT THEN
-                padding AS LONG
-            $END IF
-            lpSecurityDescriptor AS _OFFSET
-            bInheritHandle AS LONG
-            $IF 64BIT THEN
-                padding2 AS LONG
-            $END IF
-        END TYPE
+Function pipecom& (cmd As String, stdout As String, stderr As String)
+    $If WIN Then
+        Type SECURITY_ATTRIBUTES
+            nLength As Long
+            $If 64BIT Then
+                padding As Long
+            $End If
+            lpSecurityDescriptor As _Offset
+            bInheritHandle As Long
+            $If 64BIT Then
+                padding2 As Long
+            $End If
+        End Type
 
-        TYPE STARTUPINFO
-            cb AS LONG
-            $IF 64BIT THEN
-                padding AS LONG
-            $END IF
-            lpReserved AS _OFFSET
-            lpDesktop AS _OFFSET
-            lpTitle AS _OFFSET
-            dwX AS LONG
-            dwY AS LONG
-            dwXSize AS LONG
-            dwYSize AS LONG
-            dwXCountChars AS LONG
-            dwYCountChars AS LONG
-            dwFillAttribute AS LONG
-            dwFlags AS LONG
-            wShowWindow AS INTEGER
-            cbReserved2 AS INTEGER
-            $IF 64BIT THEN
-                padding2 AS LONG
-            $END IF
-            lpReserved2 AS _OFFSET
-            hStdInput AS _OFFSET
-            hStdOutput AS _OFFSET
-            hStdError AS _OFFSET
-        END TYPE
+        Type STARTUPINFO
+            cb As Long
+            $If 64BIT Then
+                padding As Long
+            $End If
+            lpReserved As _Offset
+            lpDesktop As _Offset
+            lpTitle As _Offset
+            dwX As Long
+            dwY As Long
+            dwXSize As Long
+            dwYSize As Long
+            dwXCountChars As Long
+            dwYCountChars As Long
+            dwFillAttribute As Long
+            dwFlags As Long
+            wShowWindow As Integer
+            cbReserved2 As Integer
+            $If 64BIT Then
+                padding2 As Long
+            $End If
+            lpReserved2 As _Offset
+            hStdInput As _Offset
+            hStdOutput As _Offset
+            hStdError As _Offset
+        End Type
 
-        TYPE PROCESS_INFORMATION
-            hProcess AS _OFFSET
-            hThread AS _OFFSET
-            dwProcessId AS LONG
-            $IF 64BIT THEN
-                padding2 AS LONG
-            $END IF
-        END TYPE
+        Type PROCESS_INFORMATION
+            hProcess As _Offset
+            hThread As _Offset
+            dwProcessId As Long
+            $If 64BIT Then
+                padding2 As Long
+            $End If
+        End Type
 
-        CONST STARTF_USESTDHANDLES = &H00000100
-        CONST CREATE_NO_WINDOW = &H8000000
+        Const STARTF_USESTDHANDLES = &H00000100
+        Const CREATE_NO_WINDOW = &H8000000
 
-        CONST INFINITE = 4294967295
-        CONST WAIT_FAILED = &HFFFFFFFF
+        Const INFINITE = 4294967295
+        Const WAIT_FAILED = &HFFFFFFFF
 
-        DECLARE DYNAMIC LIBRARY "Kernel32"
-            FUNCTION CreatePipe% (BYVAL hReadPipe AS _OFFSET, BYVAL hWritePipe AS _OFFSET, BYVAL lpPipeAttributes AS _OFFSET, BYVAL nSize AS LONG)
-            FUNCTION CreateProcess% ALIAS CreateProcessA (BYVAL lpApplicationName AS _OFFSET, BYVAL lpCommandLine AS _OFFSET, BYVAL lpProcessAttributes AS _OFFSET, BYVAL lpThreadAttributes AS _OFFSET, BYVAL bInheritHandles AS INTEGER, BYVAL dwCreationFlags AS LONG, BYVAL lpEnvironment AS _OFFSET, BYVAL lpCurrentDirectory AS _OFFSET, BYVAL lpStartupInfor AS _OFFSET, BYVAL lpProcessInformation AS _OFFSET)
-            FUNCTION CloseHandle% (BYVAL hObject AS _OFFSET)
-            FUNCTION ReadFile% (BYVAL hFile AS _OFFSET, BYVAL lpBuffer AS _OFFSET, BYVAL nNumberOfBytesToRead AS LONG, BYVAL lpNumberOfBytesRead AS _OFFSET, BYVAL lpOverlapped AS _OFFSET)
-            FUNCTION GetExitCodeProcess% (BYVAL hProcess AS _OFFSET, BYVAL lpExitCode AS _OFFSET)
-            FUNCTION WaitForSingleObject& (BYVAL hHandle AS _OFFSET, BYVAL dwMilliseconds AS LONG)
-        END DECLARE
+        Declare Dynamic Library "Kernel32"
+            Function CreatePipe% (ByVal hReadPipe As _Offset, Byval hWritePipe As _Offset, Byval lpPipeAttributes As _Offset, Byval nSize As Long)
+            Function CreateProcess% Alias CreateProcessA (ByVal lpApplicationName As _Offset, Byval lpCommandLine As _Offset, Byval lpProcessAttributes As _Offset, Byval lpThreadAttributes As _Offset, Byval bInheritHandles As Integer, Byval dwCreationFlags As Long, Byval lpEnvironment As _Offset, Byval lpCurrentDirectory As _Offset, Byval lpStartupInfor As _Offset, Byval lpProcessInformation As _Offset)
+            Function CloseHandle% (ByVal hObject As _Offset)
+            Function ReadFile% (ByVal hFile As _Offset, Byval lpBuffer As _Offset, Byval nNumberOfBytesToRead As Long, Byval lpNumberOfBytesRead As _Offset, Byval lpOverlapped As _Offset)
+            Function GetExitCodeProcess% (ByVal hProcess As _Offset, Byval lpExitCode As _Offset)
+            Function WaitForSingleObject& (ByVal hHandle As _Offset, Byval dwMilliseconds As Long)
+        End Declare
 
-        DIM ok AS INTEGER: ok = 1
-        DIM hStdOutPipeRead AS _OFFSET
-        DIM hStdOutPipeWrite AS _OFFSET
-        DIM hStdReadPipeError AS _OFFSET
-        DIM hStdOutPipeError AS _OFFSET
-        DIM sa AS SECURITY_ATTRIBUTES: sa.nLength = LEN(sa): sa.lpSecurityDescriptor = 0: sa.bInheritHandle = 1
+        Dim ok As Integer: ok = 1
+        Dim hStdOutPipeRead As _Offset
+        Dim hStdOutPipeWrite As _Offset
+        Dim hStdReadPipeError As _Offset
+        Dim hStdOutPipeError As _Offset
+        Dim sa As SECURITY_ATTRIBUTES: sa.nLength = Len(sa): sa.lpSecurityDescriptor = 0: sa.bInheritHandle = 1
 
-        IF CreatePipe(_OFFSET(hStdOutPipeRead), _OFFSET(hStdOutPipeWrite), _OFFSET(sa), 0) = 0 THEN
+        If CreatePipe(_Offset(hStdOutPipeRead), _Offset(hStdOutPipeWrite), _Offset(sa), 0) = 0 Then
             pipecom = -1
-            EXIT FUNCTION
-        END IF
+            Exit Function
+        End If
 
-        IF CreatePipe(_OFFSET(hStdReadPipeError), _OFFSET(hStdOutPipeError), _OFFSET(sa), 0) = 0 THEN
+        If CreatePipe(_Offset(hStdReadPipeError), _Offset(hStdOutPipeError), _Offset(sa), 0) = 0 Then
             pipecom = -1
-            EXIT FUNCTION
-        END IF
+            Exit Function
+        End If
 
-        DIM si AS STARTUPINFO
-        si.cb = LEN(si)
+        Dim si As STARTUPINFO
+        si.cb = Len(si)
         si.dwFlags = STARTF_USESTDHANDLES
         si.hStdError = hStdOutPipeError
         si.hStdOutput = hStdOutPipeWrite
         si.hStdInput = 0
-        DIM pi AS PROCESS_INFORMATION
-        DIM lpApplicationName AS _OFFSET
-        DIM fullcmd AS STRING: fullcmd = "cmd /c " + cmd + CHR$(0)
-        DIM lpCommandLine AS STRING: lpCommandLine = fullcmd
-        DIM lpProcessAttributes AS _OFFSET
-        DIM lpThreadAttributes AS _OFFSET
-        DIM bInheritHandles AS INTEGER: bInheritHandles = 1
-        DIM dwCreationFlags AS LONG: dwCreationFlags = CREATE_NO_WINDOW
-        DIM lpEnvironment AS _OFFSET
-        DIM lpCurrentDirectory AS _OFFSET
+        Dim pi As PROCESS_INFORMATION
+        Dim lpApplicationName As _Offset
+        Dim fullcmd As String: fullcmd = "cmd /c " + cmd + Chr$(0)
+        Dim lpCommandLine As String: lpCommandLine = fullcmd
+        Dim lpProcessAttributes As _Offset
+        Dim lpThreadAttributes As _Offset
+        Dim bInheritHandles As Integer: bInheritHandles = 1
+        Dim dwCreationFlags As Long: dwCreationFlags = CREATE_NO_WINDOW
+        Dim lpEnvironment As _Offset
+        Dim lpCurrentDirectory As _Offset
         ok = CreateProcess(lpApplicationName,_
         _Offset(lpCommandLine),_
         lpProcessAttributes,_
@@ -109,57 +109,57 @@ FUNCTION pipecom& (cmd AS STRING, stdout AS STRING, stderr AS STRING)
         lpCurrentDirectory,_
         _Offset(si),_
         _Offset(pi))
-        IF ok = 0 THEN
+        If ok = 0 Then
             pipecom = -1
-            EXIT FUNCTION
-        END IF
+            Exit Function
+        End If
 
         ok = CloseHandle(hStdOutPipeWrite)
         ok = CloseHandle(hStdOutPipeError)
 
-        DIM buf AS STRING: buf = SPACE$(4096 + 1)
-        DIM dwRead AS LONG
-        WHILE ReadFile(hStdOutPipeRead, _OFFSET(buf), 4096, _OFFSET(dwRead), 0) <> 0 AND dwRead > 0
-            buf = MID$(buf, 1, dwRead)
-            GOSUB RemoveChr13
+        Dim buf As String: buf = Space$(4096 + 1)
+        Dim dwRead As Long
+        While ReadFile(hStdOutPipeRead, _Offset(buf), 4096, _Offset(dwRead), 0) <> 0 And dwRead > 0
+            buf = Mid$(buf, 1, dwRead)
+            GoSub RemoveChr13
             stdout = stdout + buf
-            buf = SPACE$(4096 + 1)
-        WEND
+            buf = Space$(4096 + 1)
+        Wend
 
-        WHILE ReadFile(hStdReadPipeError, _OFFSET(buf), 4096, _OFFSET(dwRead), 0) <> 0 AND dwRead > 0
-            buf = MID$(buf, 1, dwRead)
-            GOSUB RemoveChr13
+        While ReadFile(hStdReadPipeError, _Offset(buf), 4096, _Offset(dwRead), 0) <> 0 And dwRead > 0
+            buf = Mid$(buf, 1, dwRead)
+            GoSub RemoveChr13
             stderr = stderr + buf
-            buf = SPACE$(4096 + 1)
-        WEND
+            buf = Space$(4096 + 1)
+        Wend
 
-        DIM exit_code AS LONG
-        DIM ex_stat AS LONG
-        IF WaitForSingleObject(pi.hProcess, INFINITE) <> WAIT_FAILED THEN
-            IF GetExitCodeProcess(pi.hProcess, _OFFSET(exit_code)) THEN
+        Dim exit_code As Long
+        Dim ex_stat As Long
+        If WaitForSingleObject(pi.hProcess, INFINITE) <> WAIT_FAILED Then
+            If GetExitCodeProcess(pi.hProcess, _Offset(exit_code)) Then
                 ex_stat = 1
-            END IF
-        END IF
+            End If
+        End If
 
         ok = CloseHandle(hStdOutPipeRead)
         ok = CloseHandle(hStdReadPipeError)
-        IF ex_stat = 1 THEN
+        If ex_stat = 1 Then
             pipecom = exit_code
-        ELSE
+        Else
             pipecom = -1
-        END IF
+        End If
 
-        EXIT FUNCTION
+        Exit Function
 
         RemoveChr13:
-        DIM j AS LONG
-        j = INSTR(buf, CHR$(13))
-        DO WHILE j
-            buf = LEFT$(buf, j - 1) + MID$(buf, j + 1)
-            j = INSTR(buf, CHR$(13))
-        LOOP
-        RETURN
-    $ELSE
+        Dim j As Long
+        j = InStr(buf, Chr$(13))
+        Do While j
+            buf = Left$(buf, j - 1) + Mid$(buf, j + 1)
+            j = InStr(buf, Chr$(13))
+        Loop
+        Return
+    $Else
         Declare CustomType Library
         Function popen%& (cmd As String, readtype As String)
         Function feof& (ByVal stream As _Offset)
@@ -179,7 +179,12 @@ FUNCTION pipecom& (cmd AS STRING, stdout AS STRING, stderr AS STRING)
         If _FileExists("pipestderr") Then
         Kill "pipestderr"
         End If
-        stream = popen(cmd + " 2>pipestderr", "r")
+
+        Dim cmdf as String * 200
+        cmdf = cmd + " 2>pipestderr"
+        stream = popen(cmd2, "r")
+        'stream = popen(cmd + " 2>pipestderr", "r")
+
         If stream Then
         While feof(stream) = 0
         If fgets(buffer, 4096, stream) <> "" And feof(stream) = 0 Then
@@ -205,12 +210,12 @@ FUNCTION pipecom& (cmd AS STRING, stdout AS STRING, stderr AS STRING)
         Else
         pipecom = -1
         End If
-    $END IF
-END FUNCTION
+    $End If
+End Function
 
-FUNCTION pipecom_lite$ (cmd AS STRING)
-    DIM a AS LONG
-    DIM stdout AS STRING, stderr AS STRING
+Function pipecom_lite$ (cmd As String)
+    Dim a As Long
+    Dim stdout As String, stderr As String
     a = pipecom(cmd, stdout, stderr)
     pipecom_lite$ = stdout
-END FUNCTION
+End Function
