@@ -7,7 +7,6 @@ The goal here is to create a flexible, event-based game engine. Based on your ga
 The current alpha build has support for:
 - Scene(viewport) management
 - Entity(sprite) management
-- Player management
 - Tiled map creation and management
   - Including a world/map editor
   - Support for layered tiles
