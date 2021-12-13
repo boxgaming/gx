@@ -27,6 +27,7 @@ Dim Shared lastClick As Double '          - Used for capturing double-click even
 Dim Shared animationMode As Integer
 Dim Shared resizeMode As Integer
 ReDim Shared hiddenLayers(0) As Integer
+'Dim Shared resizing As Integer
 
 
 ': This program uses
@@ -50,6 +51,9 @@ Dim Shared TilesetMenu As Long
 Dim Shared TilesetMenuReplace As Long
 Dim Shared TilesetMenuZoomIn As Long
 Dim Shared TilesetMenuZoomOut As Long
+Dim Shared HelpMenu As Long
+Dim Shared HelpMenuView As Long
+Dim Shared HelpMenuAbout As Long
 
 ' Map control
 Dim Shared Map As Long
@@ -291,6 +295,11 @@ Sub __UI_BeforeUpdateDisplay
     If GXKeyDown(GXKEY_DELETE) Or GXKeyDown(GXKEY_X) Then deleting = 1
     If Not (GXKeyDown(GXKEY_X) Or GXKeyDown(GXKEY_X)) And deleting Then DeleteTile: deleting = 0
 
+    'If resizing > 0 And GXFrame - resizing > 5 Then
+    '    resizing = 0
+    '    ResizeControls
+    'End If
+
     ' Draw the map
     GXSceneUpdate
     GXSceneDraw
@@ -327,6 +336,9 @@ Sub __UI_Click (id As Long)
         Case TilesetMenuZoomIn: ZoomTileset 1
         Case TilesetMenuZoomOut: ZoomTileset -1
         Case TilesetMenuReplace: ShowReplaceTilesetDialog
+
+        Case HelpMenuView: ShowHelp
+        Case HelpMenuAbout: ShowAbout
 
         Case btnCancel: CancelDialog frmNewMap
         Case btnRTCancel: CancelDialog frmReplaceTileset
@@ -438,6 +450,7 @@ End Sub
 Sub __UI_FormResized
     ' The window has been resized so resize the child components accordingly
     ResizeControls
+    'resizing = GXFrame
 End Sub
 
 
@@ -1309,6 +1322,21 @@ Function GetControlAtMousePos
         GetControlAtMousePos = Tiles
     End If
 End Function
+
+
+Sub ShowHelp
+    Dim result As Integer
+    Dim stdout As String
+    Dim stderr As String
+    Dim url As String
+    url = "https://github.com/boxgaming/gx/wiki/Map-Maker"
+    result = pipecom("cmd.exe /c " + Chr$(32) + "start " + url + Chr$(32), stdout, stderr)
+End Sub
+
+Sub ShowAbout
+    Dim result
+    result = MessageBox("GX Map Maker" + GX_CRLF + "v0.2.0-alpha" + GX_CRLF + GX_CRLF + Chr$(169) + "2021 boxgaming", "About", MsgBox_OkOnly + MsgBox_Information)
+End Sub
 
 ' General Dialog Methods
 ' ----------------------------------------------------------------------------

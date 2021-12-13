@@ -27,15 +27,15 @@ $If GXBM = UNDEFINED Then
         __gx_hardware_acceleration = hardwareAcceleration
     End Sub
 
-    Function GXHardwareAcceleration
+    Function GXHardwareAcceleration%
         GXHardwareAcceleration = __gx_hardware_acceleration
     End Function
 
 
     ' Sound Methods
     ' ----------------------------------------------------------------------------
-    Function GXSoundLoad (filename As String)
-        $If MACOSX Then
+    Function GXSoundLoad& (filename As String)
+        $If MAC Then
             ' Sound not currently supported for macosx
         $Else
             GXSoundLoad = _SndOpen(filename)
@@ -43,7 +43,7 @@ $If GXBM = UNDEFINED Then
     End Function
 
     Sub GXSoundPlay (sid As Long)
-        $If MACOSX Then
+        $If MAC Then
             ' Sound not currently supported for macosx
         $Else
             If Not GXSoundMuted Then _SndPlay sid
@@ -51,7 +51,7 @@ $If GXBM = UNDEFINED Then
     End Sub
 
     Sub GXSoundRepeat (sid As Long)
-        $If MACOSX Then
+        $If MAC Then
             ' Sound not currently supported for macosx
         $Else
             If Not GXSoundMuted Then _SndLoop sid
@@ -59,7 +59,7 @@ $If GXBM = UNDEFINED Then
     End Sub
 
     Sub GXSoundVolume (sid As Long, v)
-        $If MACOSX Then
+        $If MAC Then
             ' Sound not currently supported for macosx
         $Else
             _SndVol sid, v / 100
@@ -67,7 +67,7 @@ $If GXBM = UNDEFINED Then
     End Sub
 
     Sub GXSoundPause (sid As Long)
-        $If MACOSX Then
+        $If MAC Then
             ' Sound not currently supported for macosx
         $Else
             _SndPause sid
@@ -75,7 +75,7 @@ $If GXBM = UNDEFINED Then
     End Sub
 
     Sub GXSoundStop (sid As Long)
-        $If MACOSX Then
+        $If MAC Then
             ' Sound not currently supported for macosx
         $Else
             _SndStop sid
@@ -87,7 +87,7 @@ $If GXBM = UNDEFINED Then
         'TODO: maintain a list of loaded sounds so they can all be muted
     End Sub
 
-    Function GXSoundMuted
+    Function GXSoundMuted%
         GXSoundMuted = __gx_sound_muted
     End Function
 
@@ -105,18 +105,18 @@ $If GXBM = UNDEFINED Then
         __gx_entities(eid).animateMode = mode
     End Sub
 
-    Function GXEntityAnimateMode (eid As Integer)
+    Function GXEntityAnimateMode% (eid As Integer)
         GXEntityAnimateMode = __gx_entities(eid).animateMode
     End Function
 
-    Function GXScreenEntityCreate (imageFilename As String, ewidth As Integer, height As Integer, seqFrames As Integer)
+    Function GXScreenEntityCreate% (imageFilename As String, ewidth As Integer, height As Integer, seqFrames As Integer)
         Dim eid As Integer
         eid = GXEntityCreate(imageFilename, ewidth, height, seqFrames)
         __gx_entities(eid).screen = 1
         GXScreenEntityCreate = eid
     End Function
 
-    Function GXEntityCreate (imageFilename As String, ewidth As Integer, height As Integer, seqFrames As Integer)
+    Function GXEntityCreate% (imageFilename As String, ewidth As Integer, height As Integer, seqFrames As Integer)
         Dim newent As GXEntity
         newent.x = 0
         newent.y = 0
@@ -143,13 +143,21 @@ $If GXBM = UNDEFINED Then
         __GX uid, eid, GXTYPE_ENTITY
     End Sub
 
-    Sub GXEntityHide (eid As Integer)
-        __gx_entities(eid).hidden = GX_TRUE '1
+    Sub GXEntityVisible (eid As Integer, visible As Integer)
+        __gx_entities(eid).hidden = Not visible
     End Sub
 
-    Sub GXEntityShow (eid As Integer)
-        __gx_entities(eid).hidden = GX_FALSE '0
-    End Sub
+    Function GXEntityVisible% (eid As Integer)
+        GXEntityVisible = Not __gx_entities(eid).hidden
+    End Function
+
+    'Sub GXEntityHide (eid As Integer)
+    '    __gx_entities(eid).hidden = GX_TRUE '1
+    'End Sub
+
+    'Sub GXEntityShow (eid As Integer)
+    '    __gx_entities(eid).hidden = GX_FALSE '0
+    'End Sub
 
     Sub __GX_EntityDraw (ent As GXEntity)
         If ent.hidden Then Exit Sub
@@ -180,7 +188,7 @@ $If GXBM = UNDEFINED Then
         __gx_entities(eid).vx = vx
     End Sub
 
-    Function GXEntityVX (eid As Integer)
+    Function GXEntityVX# (eid As Integer)
         GXEntityVX = __gx_entities(eid).vx
     End Function
 
@@ -188,24 +196,24 @@ $If GXBM = UNDEFINED Then
         __gx_entities(eid).vy = vy
     End Sub
 
-    Function GXEntityVY (eid As Integer)
+    Function GXEntityVY# (eid As Integer)
         GXEntityVY = __gx_entities(eid).vy
     End Function
 
 
-    Function GXEntityX (eid As Integer)
+    Function GXEntityX# (eid As Integer)
         GXEntityX = __gx_entities(eid).x
     End Function
 
-    Function GXEntityY (eid As Integer)
+    Function GXEntityY# (eid As Integer)
         GXEntityY = __gx_entities(eid).y
     End Function
 
-    Function GXEntityWidth (eid As Integer)
+    Function GXEntityWidth% (eid As Integer)
         GXEntityWidth = __gx_entities(eid).width
     End Function
 
-    Function GXEntityHeight (eid As Integer)
+    Function GXEntityHeight% (eid As Integer)
         GXEntityHeight = __gx_entities(eid).height
     End Function
 
@@ -245,7 +253,7 @@ $If GXBM = UNDEFINED Then
         __gx_entities(eid).type = etype
     End Sub
 
-    Function GXEntityType (eid As Integer)
+    Function GXEntityType% (eid As Integer)
         GXEntityType = __gx_entities(eid).type
     End Function
 
@@ -263,7 +271,7 @@ $If GXBM = UNDEFINED Then
 
     ' TODO: Expand this concept to lookup any GX object id by its user assigned id
     '       Maybe not "any" GX object... need to decide which ones would be applicable
-    Function GX (uid As String * 10)
+    Function GX% (uid As String * 10)
         GX = 0
         Dim i As Integer
         For i = 1 To UBound(__gx_objects)
@@ -303,7 +311,7 @@ $If GXBM = UNDEFINED Then
         __gx_entities(eid).jumpstart = GXFrame
     End Sub
 
-    Function GXEntityApplyGravity (eid As Integer)
+    Function GXEntityApplyGravity% (eid As Integer)
         GXEntityApplyGravity = __gx_entities(eid).applyGravity
     End Function
 
@@ -314,105 +322,105 @@ $If GXBM = UNDEFINED Then
         __gx_entities(eid).coBottom = bottom
     End Sub
 
-    Function GXEntityCollisionOffsetLeft (eid As Integer)
+    Function GXEntityCollisionOffsetLeft% (eid As Integer)
         GXEntityCollisionOffsetLeft = __gx_entities(eid).coLeft
     End Function
 
-    Function GXEntityCollisionOffsetTop (eid As Integer)
+    Function GXEntityCollisionOffsetTop% (eid As Integer)
         GXEntityCollisionOffsetTop = __gx_entities(eid).coTop
     End Function
 
-    Function GXEntityCollisionOffsetRight (eid As Integer)
+    Function GXEntityCollisionOffsetRight% (eid As Integer)
         GXEntityCollisionOffsetRight = __gx_entities(eid).coRight
     End Function
 
-    Function GXEntityCollisionOffsetBottom (eid As Integer)
+    Function GXEntityCollisionOffsetBottom% (eid As Integer)
         GXEntityCollisionOffsetBottom = __gx_entities(eid).coBottom
     End Function
 
 
-    Function GXPlayerCreate (eid As Integer)
-        __gx_player_count = __gx_player_count + 1
-        ReDim _Preserve __gx_players(__gx_player_count) As GXPlayer
-        ReDim _Preserve __gx_player_keymap(10, __gx_player_count) As GXAction
-        __gx_players(__gx_player_count).eid = eid
-        __gx_players(__gx_player_count).walkSpeed = 60
-        __gx_players(__gx_player_count).runSpeed = 120
-        __gx_players(__gx_player_count).jumpSpeed = 120
-        GXPlayerCreate = __gx_player_count
-    End Function
+    'Function GXPlayerCreate (eid As Integer)
+    '    __gx_player_count = __gx_player_count + 1
+    '    ReDim _Preserve __gx_players(__gx_player_count) As GXPlayer
+    '    ReDim _Preserve __gx_player_keymap(10, __gx_player_count) As GXAction
+    '    __gx_players(__gx_player_count).eid = eid
+    '    __gx_players(__gx_player_count).walkSpeed = 60
+    '    __gx_players(__gx_player_count).runSpeed = 120
+    '    __gx_players(__gx_player_count).jumpSpeed = 120
+    '    GXPlayerCreate = __gx_player_count
+    'End Function
 
-    Sub GXPlayerMoveSpeed (pid As Integer, moveSpeed As Integer)
-        __gx_players(pid).walkSpeed = moveSpeed
-    End Sub
+    'Sub GXPlayerMoveSpeed (pid As Integer, moveSpeed As Integer)
+    '    __gx_players(pid).walkSpeed = moveSpeed
+    'End Sub
 
-    Sub GXPlayerJumpSpeed (pid As Integer, jumpSpeed As Integer)
-        __gx_players(pid).jumpSpeed = jumpSpeed
-    End Sub
+    'Sub GXPlayerJumpSpeed (pid As Integer, jumpSpeed As Integer)
+    '    __gx_players(pid).jumpSpeed = jumpSpeed
+    'End Sub
 
-    Sub GXPlayerActionKey (pid As Integer, actionType As Integer, k As Long)
-        __gx_player_keymap(actionType, pid).type = actionType
-        __gx_player_keymap(actionType, pid).diDeviceType = GXDEVICE_KEYBOARD
-        __gx_player_keymap(actionType, pid).diDeviceId = 1
-        __gx_player_keymap(actionType, pid).diInputType = GXDEVICE_BUTTON
-        __gx_player_keymap(actionType, pid).diInputId = k
-        __gx_player_keymap(actionType, pid).diInputValue = -1
-    End Sub
+    'Sub GXPlayerActionKey (pid As Integer, actionType As Integer, k As Long)
+    '    __gx_player_keymap(actionType, pid).type = actionType
+    '    __gx_player_keymap(actionType, pid).diDeviceType = GXDEVICE_KEYBOARD
+    '    __gx_player_keymap(actionType, pid).diDeviceId = 1
+    '    __gx_player_keymap(actionType, pid).diInputType = GXDEVICE_BUTTON
+    '    __gx_player_keymap(actionType, pid).diInputId = k
+    '    __gx_player_keymap(actionType, pid).diInputValue = -1
+    'End Sub
 
-    Function GXPlayerActionKey (pid As Integer, actionType As Integer)
-        If __gx_player_keymap(actionType, pid).diDeviceType = GXDEVICE_KEYBOARD Then
-            GXPlayerActionKey = __gx_player_keymap(actionType, pid).diInputId
-        Else
-            GXPlayerActionKey = 0
-        End If
-    End Function
+    'Function GXPlayerActionKey (pid As Integer, actionType As Integer)
+    '    If __gx_player_keymap(actionType, pid).diDeviceType = GXDEVICE_KEYBOARD Then
+    '        GXPlayerActionKey = __gx_player_keymap(actionType, pid).diInputId
+    '    Else
+    '        GXPlayerActionKey = 0
+    '    End If
+    'End Function
 
-    Sub GXPlayerActionDisabled (pid As Integer, actionType As Integer, disabled As Integer)
-        __gx_player_keymap(actionType, pid).disabled = disabled
-    End Sub
+    'Sub GXPlayerActionDisabled (pid As Integer, actionType As Integer, disabled As Integer)
+    '    __gx_player_keymap(actionType, pid).disabled = disabled
+    'End Sub
 
-    Function GXPlayerActionDisabled (pid As Integer, actionType As Integer)
-        GXPlayerActionDisabled = __gx_player_keymap(actionType, pid).disabled
-    End Function
+    'Function GXPlayerActionDisabled (pid As Integer, actionType As Integer)
+    '    GXPlayerActionDisabled = __gx_player_keymap(actionType, pid).disabled
+    'End Function
 
-    Sub GXPlayerActionInput (pid As Integer, actionType As Integer, di As GXDeviceInput)
-        If di.deviceId = 0 Then
-            ' Get the currently set device input values
-            __GX_ActionInput __gx_player_keymap(actionType, pid), di
-        Else
-            ' Set the device input
-            __gx_player_keymap(actionType, pid).type = actionType
-            __gx_player_keymap(actionType, pid).diDeviceId = di.deviceId
-            __gx_player_keymap(actionType, pid).diDeviceType = di.deviceType
-            __gx_player_keymap(actionType, pid).diInputId = di.inputId
-            __gx_player_keymap(actionType, pid).diInputType = di.inputType
-            __gx_player_keymap(actionType, pid).diInputValue = di.inputValue
-        End If
-    End Sub
+    'Sub GXPlayerActionInput (pid As Integer, actionType As Integer, di As GXDeviceInput)
+    '    If di.deviceId = 0 Then
+    '        ' Get the currently set device input values
+    '        __GX_ActionInput __gx_player_keymap(actionType, pid), di
+    '    Else
+    '        ' Set the device input
+    '        __gx_player_keymap(actionType, pid).type = actionType
+    '        __gx_player_keymap(actionType, pid).diDeviceId = di.deviceId
+    '        __gx_player_keymap(actionType, pid).diDeviceType = di.deviceType
+    '        __gx_player_keymap(actionType, pid).diInputId = di.inputId
+    '        __gx_player_keymap(actionType, pid).diInputType = di.inputType
+    '        __gx_player_keymap(actionType, pid).diInputValue = di.inputValue
+    '    End If
+    'End Sub
 
-    Sub GXPlayerMoveKey (pid As Integer, action As Integer, k As Long, animationSeq As Integer, animationSpeed As Integer)
-        Dim di As GXDeviceInput
-        GXKeyInput k, di
-        GXPlayerActionInput pid, action, di
-        GXPlayerActionAnimationSeq pid, action, animationSeq
-        GXPlayerActionAnimationSpeed pid, action, animationSpeed
-    End Sub
+    'Sub GXPlayerMoveKey (pid As Integer, action As Integer, k As Long, animationSeq As Integer, animationSpeed As Integer)
+    '    Dim di As GXDeviceInput
+    '    GXKeyInput k, di
+    '    GXPlayerActionInput pid, action, di
+    '    GXPlayerActionAnimationSeq pid, action, animationSeq
+    '    GXPlayerActionAnimationSpeed pid, action, animationSpeed
+    'End Sub
 
-    Sub GXPlayerMoveInput (pid As Integer, action As Integer, di As GXDeviceInput, animationSeq As Integer, animationSpeed As Integer)
-        GXPlayerActionInput pid, action, di
-        GXPlayerActionAnimationSeq pid, action, animationSeq
-        GXPlayerActionAnimationSpeed pid, action, animationSpeed
-    End Sub
+    'Sub GXPlayerMoveInput (pid As Integer, action As Integer, di As GXDeviceInput, animationSeq As Integer, animationSpeed As Integer)
+    '    GXPlayerActionInput pid, action, di
+    '    GXPlayerActionAnimationSeq pid, action, animationSeq
+    '    GXPlayerActionAnimationSpeed pid, action, animationSpeed
+    'End Sub
 
-    Sub __GX_ActionInput (a As GXAction, di As GXDeviceInput)
-        di.deviceId = a.diDeviceId
-        di.deviceType = a.diDeviceType
-        di.inputId = a.diInputId
-        di.inputType = a.diInputType
-        di.inputValue = a.diInputValue
-    End Sub
+    'Sub __GX_ActionInput (a As GXAction, di As GXDeviceInput)
+    '    di.deviceId = a.diDeviceId
+    '    di.deviceType = a.diDeviceType
+    '    di.inputId = a.diInputId
+    '    di.inputType = a.diInputType
+    '    di.inputValue = a.diInputValue
+    'End Sub
 
-    Function GXDeviceInputTest (di As GXDeviceInput)
+    Function GXDeviceInputTest% (di As GXDeviceInput)
         Dim dcount As Integer
         dcount = _Devices
 
@@ -426,16 +434,19 @@ $If GXBM = UNDEFINED Then
         dactive = _DeviceInput(di.deviceId)
 
         If di.inputType = GXDEVICE_BUTTON Then
-            'If _Button(di.inputId) = di.inputValue Then
-            '    result = GX_TRUE
-            'End If
-            If di.deviceType = GXDEVICE_KEYBOARD Then
-                result = __GX_DeviceKeyDown(di.inputId)
-            Else
+            $If WIN Then
                 If _Button(di.inputId) = di.inputValue Then
                     result = GX_TRUE
                 End If
-            End If
+            $Else
+                If di.deviceType = GXDEVICE_KEYBOARD Then
+                result = __GX_DeviceKeyDown(di.inputId)
+                Else
+                If _Button(di.inputId) = di.inputValue Then
+                result = GX_TRUE
+                End If
+                End If
+            $End If
 
         ElseIf di.inputType = GXDEVICE_AXIS Then
             If _Axis(di.inputId) = di.inputValue Then
@@ -446,44 +457,46 @@ $If GXBM = UNDEFINED Then
         GXDeviceInputTest = result
     End Function
 
-    Function __GX_DeviceKeyDown (inputId As Integer)
+    $If LINUX OR MAC Then
+        Function __GX_DeviceKeyDown% (inputId As Integer)
         Dim k As KeyEntry
         k = __gx_keymap(inputId)
 
         Dim result As Integer
         result = GX_FALSE
         If _KeyDown(k.value) Then
-            result = GX_TRUE
+        result = GX_TRUE
         ElseIf k.shift <> 0 Then
-            If _KeyDown(k.shift) Then result = GX_TRUE
+        If _KeyDown(k.shift) Then result = GX_TRUE
         End If
 
         __GX_DeviceKeyDown = result
-    End Function
+        End Function
+    $End If
 
-    Sub GXPlayerActionAnimationSeq (pid As Integer, actionType As Integer, animationSeq As Integer)
-        __gx_player_keymap(actionType, pid).animationSeq = animationSeq
-    End Sub
+    'Sub GXPlayerActionAnimationSeq (pid As Integer, actionType As Integer, animationSeq As Integer)
+    '    __gx_player_keymap(actionType, pid).animationSeq = animationSeq
+    'End Sub
 
-    Function GXPlayerActionAnimationSeq (pid As Integer, actionType As Integer)
-        GXPlayerActionAnimationSeq = __gx_player_keymap(actionType, pid).animationSeq
-    End Function
+    'Function GXPlayerActionAnimationSeq (pid As Integer, actionType As Integer)
+    '    GXPlayerActionAnimationSeq = __gx_player_keymap(actionType, pid).animationSeq
+    'End Function
 
-    Sub GXPlayerActionAnimationMode (pid As Integer, actionType As Integer, animationMode As Integer)
-        __gx_player_keymap(actionType, pid).animationMode = animationMode
-    End Sub
+    'Sub GXPlayerActionAnimationMode (pid As Integer, actionType As Integer, animationMode As Integer)
+    '    __gx_player_keymap(actionType, pid).animationMode = animationMode
+    'End Sub
 
-    Function GXPlayerActionAnimationMode (pid As Integer, actionType As Integer)
-        GXPlayerActionAnimationMode = __gx_player_keymap(actionType, pid).animationMode
-    End Function
+    'Function GXPlayerActionAnimationMode (pid As Integer, actionType As Integer)
+    '    GXPlayerActionAnimationMode = __gx_player_keymap(actionType, pid).animationMode
+    'End Function
 
-    Sub GXPlayerActionAnimationSpeed (pid As Integer, actionType As Integer, animationSpeed As Integer)
-        __gx_player_keymap(actionType, pid).animationSpeed = animationSpeed
-    End Sub
+    'Sub GXPlayerActionAnimationSpeed (pid As Integer, actionType As Integer, animationSpeed As Integer)
+    '    __gx_player_keymap(actionType, pid).animationSpeed = animationSpeed
+    'End Sub
 
-    Function GXPlayerActionAnimationSpeed (pid As Integer, actionType As Integer)
-        GXPlayerActionAnimationSpeed = __gx_player_keymap(actionType, pid).animationSpeed
-    End Function
+    'Function GXPlayerActionAnimationSpeed (pid As Integer, actionType As Integer)
+    '    GXPlayerActionAnimationSpeed = __gx_player_keymap(actionType, pid).animationSpeed
+    'End Function
 
     ' Sets the fullscreen status.
     ' When set to true the scene content will stretch to fill the entire screen.
@@ -498,7 +511,7 @@ $If GXBM = UNDEFINED Then
     End Sub
 
     ' Sets the fullscreen status.
-    Function GXFullScreen
+    Function GXFullScreen%
         GXFullScreen = __gx_scene.fullscreen
     End Function
 
@@ -509,7 +522,7 @@ $If GXBM = UNDEFINED Then
     '   GXBG_SCROLL  - Fit the height of the background image to the size of the screen.
     '                   Scroll the horizontal position relative to the position on the map.
     '   GXBG_WRAP    - Continuously wrap the background as the scene is moved horizontally.
-    Function GXBackgroundAdd (imageFilename As String, mode As Integer)
+    Function GXBackgroundAdd% (imageFilename As String, mode As Integer)
         __gx_bg_count = __gx_bg_count + 1
         ReDim _Preserve __gx_bg(__gx_bg_count) As GXBackground
         __gx_bg(__gx_bg_count).mode = mode
@@ -586,7 +599,7 @@ $If GXBM = UNDEFINED Then
     ' The embedded flag should be set to true when the game loop is being
     ' managed manually or by an external framework (e.g. QB64 Inform).
     ' This value is set to false by default.
-    Function GXSceneEmbedded
+    Function GXSceneEmbedded%
         GXSceneEmbedded = __gx_scene.embedded
     End Function
 
@@ -706,13 +719,13 @@ $If GXBM = UNDEFINED Then
         GXOnGameEvent e
     End Sub
 
-    Sub GXCustomDraw (eventType As Integer, enabled As Integer)
-        __gx_draw_events(eventType) = enabled
-    End Sub
+    'Sub GXCustomDraw (eventType As Integer, enabled As Integer)
+    '    __gx_draw_events(eventType) = enabled
+    'End Sub
 
-    Function GXCustomDraw (eventType As Integer)
-        GXCustomDraw = __gx_draw_events(eventType)
-    End Function
+    'Function GXCustomDraw (eventType As Integer)
+    '    GXCustomDraw = __gx_draw_events(eventType)
+    'End Function
 
     Sub __GX_CustomDrawEvent (eventType As Integer)
         If Not GXHardwareAcceleration Then _Dest __gx_scene.image
@@ -779,14 +792,14 @@ $If GXBM = UNDEFINED Then
 
     ' Sets current frame rate (expressed in frames-per-second or FPS).
     ' The default value for the frame rate is 60
-    Function GXFrameRate
+    Function GXFrameRate%
         GXFrameRate = __gx_framerate
     End Function
 
     ' Returns the current frame.
     ' This is a frame counter that starts when GXSceneStart is called.
     ' It is initially set to zero and is incremented on each frame.
-    Function GXFrame
+    Function GXFrame~&
         GXFrame = __gx_scene.frame
     End Function
 
@@ -802,10 +815,12 @@ $If GXBM = UNDEFINED Then
         frame = __gx_scene.frame Mod GXFrameRate + 1
 
         ' If the screen has been resized, resize the destination screen image
-        If _Resize And Not GXSceneEmbedded Then
-            '_FREEIMAGE _SOURCE
-            'SCREEN _NEWIMAGE(_RESIZEWIDTH, _RESIZEHEIGHT, 32)
-            GXSceneWindowSize _ResizeWidth, _ResizeHeight
+        If Not GXSceneEmbedded Then
+            If _Resize Then
+                '_FREEIMAGE _SOURCE
+                'SCREEN _NEWIMAGE(_RESIZEWIDTH, _RESIZEHEIGHT, 32)
+                GXSceneWindowSize _ResizeWidth, _ResizeHeight
+            End If
         End If
 
         ' Clear the background
@@ -887,34 +902,34 @@ $If GXBM = UNDEFINED Then
     End Sub
 
     ' Returns the scene's current y position.
-    Function GXSceneX
+    Function GXSceneX%
         GXSceneX = __gx_scene.x
     End Function
 
     ' Returns the scene's current y position.
-    Function GXSceneY
+    Function GXSceneY%
         GXSceneY = __gx_scene.y
     End Function
 
     ' Returns the scene width.
-    Function GXSceneWidth
+    Function GXSceneWidth%
         GXSceneWidth = __gx_scene.width
     End Function
 
     ' Returns the scene height.
-    Function GXSceneHeight
+    Function GXSceneHeight%
         GXSceneHeight = __gx_scene.height
     End Function
 
     ' Returns the number of tile columns that can be displayed within the scene.
     ' This value will be zero unless a tiled map has been created or loaded.
-    Function GXSceneColumns
+    Function GXSceneColumns%
         GXSceneColumns = __gx_scene.columns
     End Function
 
     ' Returns the number of tile rows that can be displayed within the scene.
     ' This value will be zero unless a tiled map has been created or loaded.
-    Function GXSceneRows
+    Function GXSceneRows%
         GXSceneRows = __gx_scene.rows
     End Function
 
@@ -956,10 +971,10 @@ $If GXBM = UNDEFINED Then
         __GX_CustomEvent GXEVENT_UPDATE
 
         ' Perform any movement for registered player entities
-        Dim i As Integer
-        For i = 1 To __gx_player_count
-            __GX_PlayerAction i
-        Next i
+        'Dim i As Integer
+        'For i = 1 To __gx_player_count
+        '    __GX_PlayerAction i
+        'Next i
 
         ' Check for entity movement and collisions
         ' TODO: filter out non-moving entities
@@ -1127,7 +1142,7 @@ $If GXBM = UNDEFINED Then
             testy = GXEntityVY(eid) / GXFrameRate
             If testy > -1 Then testy = -1
             tmove = __GX_EntityTestMove(eid, 0, testy, tpos, centity)
-            If tmove = 0 Then
+            If Not tmove Then
                 If GXEntityApplyGravity(eid) Then
                     ' reverse the motion
                     GXEntityVY eid, GXEntityVY(eid) * -.5
@@ -1152,7 +1167,7 @@ $If GXBM = UNDEFINED Then
                 testy = GXEntityVY(eid) / GXFrameRate
                 If testy < 1 Then testy = 1
                 tmove = __GX_EntityTestMove(eid, 0, testy, tpos, centity)
-                If tmove = 0 Then
+                If Not tmove Then
                     ' stop the motion
                     GXEntityVY eid, 0
 
@@ -1172,7 +1187,7 @@ $If GXBM = UNDEFINED Then
             testy = GXEntityVY(eid) / GXFrameRate
             If testy < 1 Then testy = 1
             tmove = __GX_EntityTestMove(eid, 0, testy, tpos, centity)
-            If tmove = 1 Then
+            If tmove Then
                 ' calculate the number of seconds since the gravity started being applied
                 Dim t
                 t = (GXFrame - __gx_entities(eid).jumpstart) / GXFrameRate
@@ -1208,7 +1223,7 @@ $If GXBM = UNDEFINED Then
             testx = GXEntityVX(eid) / GXFrameRate
             If testx < 1 Then testx = 1
             tmove = __GX_EntityTestMove(eid, testx, 0, tpos, centity)
-            If tmove = 0 Then
+            If Not tmove Then
                 ' stop the motion
                 GXEntityVX eid, 0
 
@@ -1226,7 +1241,7 @@ $If GXBM = UNDEFINED Then
             testx = GXEntityVX(eid) / GXFrameRate
             If testx > -1 Then testx = -1
             tmove = __GX_EntityTestMove(eid, testx, 0, tpos, centity)
-            If tmove = 0 Then
+            If Not tmove Then
                 ' stop the motion
                 GXEntityVX eid, 0
 
@@ -1267,15 +1282,15 @@ $If GXBM = UNDEFINED Then
         Next l
     End Sub
 
-    Function GXMapColumns
+    Function GXMapColumns%
         GXMapColumns = __gx_map.columns
     End Function
 
-    Function GXMapRows
+    Function GXMapRows%
         GXMapRows = __gx_map.rows
     End Function
 
-    Function GXMapLayers
+    Function GXMapLayers%
         GXMapLayers = __gx_map.layers
     End Function
 
@@ -1283,7 +1298,7 @@ $If GXBM = UNDEFINED Then
         __gx_map_layer_info(layer).hidden = Not visible
     End Sub
 
-    Function GXMapLayerVisible (layer As Integer)
+    Function GXMapLayerVisible% (layer As Integer)
         GXMapLayerVisible = Not __gx_map_layer_info(layer).hidden
     End Function
 
@@ -1469,7 +1484,7 @@ $If GXBM = UNDEFINED Then
         End If
     End Sub
 
-    Function __GX_TileFrame (tileId)
+    Function __GX_TileFrame% (tileId)
         If tileId < 0 Or tileId > UBound(__gx_tileset_tiles) Then
             __GX_TileFrame = tileId
             Exit Function
@@ -1532,7 +1547,7 @@ $If GXBM = UNDEFINED Then
         End If
     End Sub
 
-    Function GXMapTile (col As Integer, row As Integer, layer As Integer)
+    Function GXMapTile% (col As Integer, row As Integer, layer As Integer)
         If col < 0 Or col >= GXMapColumns Or row < 0 Or row >= GXMapRows Or layer > GXMapLayers Then
             GXMapTile = 0
         Else
@@ -1546,7 +1561,7 @@ $If GXBM = UNDEFINED Then
         End If
     End Function
 
-    Function GXMapTileDepth (col As Integer, row As Integer)
+    Function GXMapTileDepth% (col As Integer, row As Integer)
         If col < 0 Or col >= GXMapColumns Or row < 0 Or row >= GXMapRows Then
             GXMapTileDepth = 0
         Else
@@ -1588,7 +1603,7 @@ $If GXBM = UNDEFINED Then
         End If
     End Sub
 
-    Function GXMapVersion
+    Function GXMapVersion%
         GXMapVersion = __gx_map.version
     End Function
 
@@ -1864,7 +1879,7 @@ $If GXBM = UNDEFINED Then
 
 
 
-    Function GXMapIsometric
+    Function GXMapIsometric%
         GXMapIsometric = __gx_map.isometric
     End Function
 
@@ -2056,19 +2071,19 @@ $If GXBM = UNDEFINED Then
         End If
     End Sub
 
-    Function GXTilesetWidth
+    Function GXTilesetWidth%
         GXTilesetWidth = __gx_tileset.width
     End Function
 
-    Function GXTilesetHeight
+    Function GXTilesetHeight%
         GXTilesetHeight = __gx_tileset.height
     End Function
 
-    Function GXTilesetColumns
+    Function GXTilesetColumns%
         GXTilesetColumns = __gx_tileset.columns
     End Function
 
-    Function GXTilesetRows
+    Function GXTilesetRows%
         GXTilesetRows = __gx_tileset.rows
     End Function
 
@@ -2076,7 +2091,7 @@ $If GXBM = UNDEFINED Then
         GXTilesetFilename = __gx_tileset.filename
     End Function
 
-    Function GXTilesetImage
+    Function GXTilesetImage&
         GXTilesetImage = __gx_tileset.image
     End Function
 
@@ -2115,7 +2130,7 @@ $If GXBM = UNDEFINED Then
         __gx_tileset_tiles(firstTileId).animationId = 0
     End Sub
 
-    Function GXTilesetAnimationFrames (tileId As Integer, tileFrames() As Integer)
+    Function GXTilesetAnimationFrames% (tileId As Integer, tileFrames() As Integer)
         If tileId < 0 Or tileId > GXTilesetRows * GXTilesetColumns Then
             GXTilesetAnimationFrames = 0
             Exit Function
@@ -2135,7 +2150,7 @@ $If GXBM = UNDEFINED Then
         GXTilesetAnimationFrames = frameCount
     End Function
 
-    Function GXTilesetAnimationSpeed (tileId As Integer)
+    Function GXTilesetAnimationSpeed% (tileId As Integer)
         If tileId > GXTilesetRows * GXTilesetColumns Then Exit Function
         GXTilesetAnimationSpeed = __gx_tileset_tiles(tileId).animationSpeed
     End Function
@@ -2153,7 +2168,7 @@ $If GXBM = UNDEFINED Then
 
     ' Bitmap Font Methods
     ' ----------------------------------------------------------------------------
-    Function GXFontCreate (filename As String, charWidth As Integer, charHeight As Integer, charref As String)
+    Function GXFontCreate% (filename As String, charWidth As Integer, charHeight As Integer, charref As String)
         __gx_font_count = __gx_font_count + 1
         ReDim _Preserve __gx_fonts(__gx_font_count) As GXFont
         ReDim _Preserve __gx_font_charmap(256, __gx_font_count) As GXPosition
@@ -2161,7 +2176,7 @@ $If GXBM = UNDEFINED Then
         ' Create a new game entity
         __gx_fonts(__gx_font_count).eid = GXEntityCreate(filename, charWidth, charHeight, 1)
         ' Hide the entity as we will not be displaying it as a normal sprite
-        GXEntityHide __gx_fonts(__gx_font_count).eid
+        GXEntityVisible __gx_fonts(__gx_font_count).eid, GX_FALSE
 
         ' map the character codes to the image location
         __GX_FontMapChars __gx_font_count, charref
@@ -2175,11 +2190,11 @@ $If GXBM = UNDEFINED Then
         __GX uid, fid, GXTYPE_FONT
     End Sub
 
-    Function GXFontWidth (fid As Long)
+    Function GXFontWidth% (fid As Long)
         GXFontWidth = GXEntityWidth(__gx_fonts(fid).eid)
     End Function
 
-    Function GXFontHeight (fid As Long)
+    Function GXFontHeight% (fid As Long)
         GXFontHeight = GXEntityHeight(__gx_fonts(fid).eid)
     End Function
 
@@ -2233,7 +2248,7 @@ $If GXBM = UNDEFINED Then
 
     ' Debugging methods
     ' ----------------------------------------------------------------------------
-    Function GXDebug
+    Function GXDebug%
         GXDebug = __gx_debug.enabled
     End Function
 
@@ -2241,7 +2256,7 @@ $If GXBM = UNDEFINED Then
         __gx_debug.enabled = enabled
     End Sub
 
-    Function GXDebugScreenEntities
+    Function GXDebugScreenEntities%
         GXDebugScreenEntities = __gx_debug.screenEntities
     End Function
 
@@ -2430,11 +2445,11 @@ $If GXBM = UNDEFINED Then
         __GX_ReadString_V1 = s
     End Function
 
-    Function __GX_EntityCollide (eid1, eid2)
+    Function __GX_EntityCollide% (eid1, eid2)
         __GX_EntityCollide = __GX_RectCollide(GXEntityX(eid1), GXEntityY(eid1), GXEntityWidth(eid1), GXEntityHeight(eid1), GXEntityX(eid2), GXEntityY(eid2), GXEntityWidth(eid2), GXEntityHeight(eid2))
     End Function
 
-    Function __GX_RectCollide (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
+    Function __GX_RectCollide% (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
 
         Dim r1x2%, r1y2%, r2x2%, r2y2%
         r1x2% = r1x1% + r1w%
@@ -2442,12 +2457,12 @@ $If GXBM = UNDEFINED Then
         r2x2% = r2x1% + r2w%
         r2y2% = r2y1% + r2h%
 
-        __GX_RectCollide = 0
+        __GX_RectCollide = GX_FALSE
         If r1x2% >= r2x1% Then
             If r1x1% <= r2x2% Then
                 If r1y2% >= r2y1% Then
                     If r1y1% <= r2y2% Then
-                        __GX_RectCollide = 1
+                        __GX_RectCollide = GX_TRUE
                     End If
                 End If
             End If
@@ -2486,13 +2501,13 @@ $If GXBM = UNDEFINED Then
 
         __gx_fonts(fid).eid = GXEntityCreate(filename, 6, 8, 1)
         Kill filename
-        GXEntityHide __gx_fonts(fid).eid
+        GXEntityVisible __gx_fonts(fid).eid, GX_FALSE
         __GX_FontMapChars fid, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789~`!@#$%^&*()_-+={}[]|\,./<>?:;" + Chr$(34) + "'"
         GXFontLineSpacing fid, 1
     End Sub
 
 
-    Function __GX_EntityTestMove (entity As Integer, mx As Long, my As Long, tpos As GXPosition, collisionEntity As Integer)
+    Function __GX_EntityTestMove% (entity As Integer, mx As Long, my As Long, tpos As GXPosition, collisionEntity As Integer)
         tpos.x = -1
         tpos.y = -1
         'IF nocollision THEN GX_EntityTestMove = 1: EXIT FUNCTION
@@ -2503,7 +2518,7 @@ $If GXBM = UNDEFINED Then
 
 
         Dim move As Integer
-        move = 1
+        move = GX_TRUE
 
         ' Test for tile collision
         Dim i As Integer, j As Integer
@@ -2518,7 +2533,7 @@ $If GXBM = UNDEFINED Then
             e.collisionTileY = tiles(i).y
             GXOnGameEvent e
             If e.collisionResult Then
-                move = 0
+                move = GX_FALSE
                 tpos = tiles(i)
             End If
             'NEXT j
@@ -2535,7 +2550,7 @@ $If GXBM = UNDEFINED Then
             ee.collisionEntity = entities(i)
             GXOnGameEvent ee
             If ee.collisionResult Then
-                move = 0
+                move = GX_FALSE
                 collisionEntity = entities(i)
             End If
         Next i
@@ -2543,7 +2558,7 @@ $If GXBM = UNDEFINED Then
         __GX_EntityTestMove = move
     End Function
 
-    Function __GX_EntityCollision (eid As Integer, movex As Integer, movey As Integer, entities() As Integer) ', ecount AS INTEGER)
+    Function __GX_EntityCollision% (eid As Integer, movex As Integer, movey As Integer, entities() As Integer) ', ecount AS INTEGER)
         Dim ecount As Integer
         ecount = 0
 
@@ -2646,111 +2661,111 @@ $If GXBM = UNDEFINED Then
         di.inputValue = -1
     End Sub
 
-    Function GXKeyDown (k As Long)
+    Function GXKeyDown% (k As Long)
         Dim di As GXDeviceInput
         GXKeyInput k, di
         GXKeyDown = GXDeviceInputTest(di)
     End Function
 
-    Function __GX_ActionTest (a As GXAction)
-        If a.disabled Then
-            __GX_ActionTest = GX_FALSE
-        Else
-            Dim di As GXDeviceInput
-            __GX_ActionInput a, di
-            __GX_ActionTest = GXDeviceInputTest(di)
-        End If
-    End Function
+    'Function __GX_ActionTest (a As GXAction)
+    '    If a.disabled Then
+    '        __GX_ActionTest = GX_FALSE
+    '    Else
+    '        Dim di As GXDeviceInput
+    '        __GX_ActionInput a, di
+    '        __GX_ActionTest = GXDeviceInputTest(di)
+    '    End If
+    'End Function
 
-    Sub __GX_PlayerAction (pid As Integer)
-        Dim tpos As GXPosition
-        Dim centity As Integer
+    'Sub __GX_PlayerAction (pid As Integer)
+    '    Dim tpos As GXPosition
+    '    Dim centity As Integer
 
-        Dim player As GXPlayer
-        player = __gx_players(pid)
+    '    Dim player As GXPlayer
+    '    player = __gx_players(pid)
 
-        Dim actionLeft As GXAction, actionRight As GXAction, actionUp As GXAction, actionDown As GXAction
-        Dim actionJump As GXAction, actionJumpRight As GXAction, actionJumpLeft As GXAction
-        actionLeft = __gx_player_keymap(GXACTION_MOVE_LEFT, pid)
-        actionRight = __gx_player_keymap(GXACTION_MOVE_RIGHT, pid)
-        actionUp = __gx_player_keymap(GXACTION_MOVE_UP, pid)
-        actionDown = __gx_player_keymap(GXACTION_MOVE_DOWN, pid)
-        actionJump = __gx_player_keymap(GXACTION_JUMP, pid)
-        actionJumpRight = __gx_player_keymap(GXACTION_JUMP_RIGHT, pid)
-        actionJumpLeft = __gx_player_keymap(GXACTION_JUMP_LEFT, pid)
+    '    Dim actionLeft As GXAction, actionRight As GXAction, actionUp As GXAction, actionDown As GXAction
+    '    Dim actionJump As GXAction, actionJumpRight As GXAction, actionJumpLeft As GXAction
+    '    actionLeft = __gx_player_keymap(GXACTION_MOVE_LEFT, pid)
+    '    actionRight = __gx_player_keymap(GXACTION_MOVE_RIGHT, pid)
+    '    actionUp = __gx_player_keymap(GXACTION_MOVE_UP, pid)
+    '    actionDown = __gx_player_keymap(GXACTION_MOVE_DOWN, pid)
+    '    actionJump = __gx_player_keymap(GXACTION_JUMP, pid)
+    '    actionJumpRight = __gx_player_keymap(GXACTION_JUMP_RIGHT, pid)
+    '    actionJumpLeft = __gx_player_keymap(GXACTION_JUMP_LEFT, pid)
 
-        If __GX_ActionTest(actionDown) Then
-            GXEntityAnimate player.eid, actionDown.animationSeq, actionDown.animationSpeed
-            If __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) Then
-                __gx_entities(player.eid).vy = player.walkSpeed
-            Else
-                If Not __gx_entities(player.eid).applyGravity Then __gx_entities(player.eid).vy = 0
-            End If
-            __gx_entities(player.eid).vx = 0
-            __GX_PlayerEvent pid, actionDown.type
+    '    If __GX_ActionTest(actionDown) Then
+    '        GXEntityAnimate player.eid, actionDown.animationSeq, actionDown.animationSpeed
+    '        If __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) Then
+    '            __gx_entities(player.eid).vy = player.walkSpeed
+    '        Else
+    '            If Not __gx_entities(player.eid).applyGravity Then __gx_entities(player.eid).vy = 0
+    '        End If
+    '        __gx_entities(player.eid).vx = 0
+    '        __GX_PlayerEvent pid, actionDown.type
 
-        ElseIf __GX_ActionTest(actionUp) Then
-            GXEntityAnimate player.eid, actionUp.animationSeq, actionUp.animationSpeed
-            If __GX_EntityTestMove(player.eid, 0, -1, tpos, centity) Then
-                __gx_entities(player.eid).vy = -player.walkSpeed
-            Else
-                If Not __gx_entities(player.eid).applyGravity Then __gx_entities(player.eid).vy = 0
-            End If
-            __gx_entities(player.eid).vx = 0
-            __GX_PlayerEvent pid, actionUp.type
+    '    ElseIf __GX_ActionTest(actionUp) Then
+    '        GXEntityAnimate player.eid, actionUp.animationSeq, actionUp.animationSpeed
+    '        If __GX_EntityTestMove(player.eid, 0, -1, tpos, centity) Then
+    '            __gx_entities(player.eid).vy = -player.walkSpeed
+    '        Else
+    '            If Not __gx_entities(player.eid).applyGravity Then __gx_entities(player.eid).vy = 0
+    '        End If
+    '        __gx_entities(player.eid).vx = 0
+    '        __GX_PlayerEvent pid, actionUp.type
 
-        ElseIf __GX_ActionTest(actionRight) Then
-            GXEntityAnimate player.eid, actionRight.animationSeq, actionRight.animationSpeed
-            If __GX_EntityTestMove(player.eid, 1, 0, tpos, centity) Then
-                __gx_entities(player.eid).vx = player.walkSpeed
-            Else
-                __gx_entities(player.eid).vx = 0
-            End If
-            If __gx_entities(player.eid).applyGravity = 0 Then __gx_entities(player.eid).vy = 0
-            __GX_PlayerEvent pid, actionRight.type
+    '    ElseIf __GX_ActionTest(actionRight) Then
+    '        GXEntityAnimate player.eid, actionRight.animationSeq, actionRight.animationSpeed
+    '        If __GX_EntityTestMove(player.eid, 1, 0, tpos, centity) Then
+    '            __gx_entities(player.eid).vx = player.walkSpeed
+    '        Else
+    '            __gx_entities(player.eid).vx = 0
+    '        End If
+    '        If __gx_entities(player.eid).applyGravity = 0 Then __gx_entities(player.eid).vy = 0
+    '        __GX_PlayerEvent pid, actionRight.type
 
-        ElseIf __GX_ActionTest(actionLeft) Then
-            GXEntityAnimate player.eid, actionLeft.animationSeq, actionLeft.animationSpeed
-            If __GX_EntityTestMove(player.eid, -1, 0, tpos, centity) Then
-                __gx_entities(player.eid).vx = -player.walkSpeed
-            Else
-                __gx_entities(player.eid).vx = 0
-            End If
-            If __gx_entities(player.eid).applyGravity = 0 Then __gx_entities(player.eid).vy = 0
-            __GX_PlayerEvent pid, actionLeft.type
+    '    ElseIf __GX_ActionTest(actionLeft) Then
+    '        GXEntityAnimate player.eid, actionLeft.animationSeq, actionLeft.animationSpeed
+    '        If __GX_EntityTestMove(player.eid, -1, 0, tpos, centity) Then
+    '            __gx_entities(player.eid).vx = -player.walkSpeed
+    '        Else
+    '            __gx_entities(player.eid).vx = 0
+    '        End If
+    '        If __gx_entities(player.eid).applyGravity = 0 Then __gx_entities(player.eid).vy = 0
+    '        __GX_PlayerEvent pid, actionLeft.type
 
-        Else
-            GXEntityAnimateStop player.eid
-            __gx_entities(player.eid).vx = 0
-            If __gx_entities(player.eid).applyGravity = 0 Then
-                __gx_entities(player.eid).vy = 0
-            End If
-        End If
+    '    Else
+    '        GXEntityAnimateStop player.eid
+    '        __gx_entities(player.eid).vx = 0
+    '        If __gx_entities(player.eid).applyGravity = 0 Then
+    '            __gx_entities(player.eid).vy = 0
+    '        End If
+    '    End If
 
-        If __gx_entities(player.eid).applyGravity = 1 Then
-            If __GX_ActionTest(actionJump) Or __GX_ActionTest(actionJumpLeft) Or __GX_ActionTest(actionJumpRight) Then
-                If __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 Then
-                    __gx_entities(player.eid).vy = -player.jumpSpeed
-                    __gx_entities(player.eid).jumping = 1
-                    __GX_PlayerEvent pid, GXACTION_JUMP
-                End If
-            End If
+    '    If __gx_entities(player.eid).applyGravity = 1 Then
+    '        If __GX_ActionTest(actionJump) Or __GX_ActionTest(actionJumpLeft) Or __GX_ActionTest(actionJumpRight) Then
+    '            If __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 Then
+    '                __gx_entities(player.eid).vy = -player.jumpSpeed
+    '                __gx_entities(player.eid).jumping = 1
+    '                __GX_PlayerEvent pid, GXACTION_JUMP
+    '            End If
+    '        End If
 
-            If __gx_entities(player.eid).jumping Then
-                If __gx_entities(player.eid).vx < 0 And actionJumpLeft.animationSeq Then GXEntityAnimate player.eid, actionJumpLeft.animationSeq, actionJumpLeft.animationSpeed
-                If __gx_entities(player.eid).vx > 0 And actionJumpRight.animationSeq Then GXEntityAnimate player.eid, actionJumpRight.animationSeq, actionJumpRight.animationSpeed
-            End If
-        End If
+    '        If __gx_entities(player.eid).jumping Then
+    '            If __gx_entities(player.eid).vx < 0 And actionJumpLeft.animationSeq Then GXEntityAnimate player.eid, actionJumpLeft.animationSeq, actionJumpLeft.animationSpeed
+    '            If __gx_entities(player.eid).vx > 0 And actionJumpRight.animationSeq Then GXEntityAnimate player.eid, actionJumpRight.animationSeq, actionJumpRight.animationSpeed
+    '        End If
+    '    End If
 
-    End Sub
+    'End Sub
 
-    Sub __GX_PlayerEvent (player As Integer, action As Integer)
-        Dim e As GXEvent
-        e.event = GXEVENT_PLAYER_ACTION
-        e.player = player
-        e.action = action
-        GXOnGameEvent e
-    End Sub
+    'Sub __GX_PlayerEvent (player As Integer, action As Integer)
+    '    Dim e As GXEvent
+    '    e.event = GXEVENT_PLAYER_ACTION
+    '    e.player = player
+    '    e.action = action
+    '    GXOnGameEvent e
+    'End Sub
 
 
     Sub GXDeviceInputDetect (di As GXDeviceInput)
@@ -2805,35 +2820,37 @@ $If GXBM = UNDEFINED Then
                 Next i
             End If
 
-            ' No device input found, as a workaround let's loop through the key map looking for a keydown
-            For i = UBound(__gx_keymap) To 1 Step -1
+            $If LINUX OR MAC Then
+                ' No device input found, as a workaround let's loop through the key map looking for a keydown
+                For i = UBound(__gx_keymap) To 1 Step -1
                 Dim keyIsDown As Integer, inputId As Integer
                 keyIsDown = GX_FALSE
                 If __gx_keymap(i).value <> 0 Then
-                    'If i > 29 Then
-                    '    Print i; __gx_keymap(i).value
-                    '    Dim x: Input x
-                    'End If
-                    If _KeyDown(__gx_keymap(i).value) Then
-                        keyIsDown = GX_TRUE
-                        inputId = i
-                    ElseIf __gx_keymap(i).shift <> 0 Then
-                        If _KeyDown(__gx_keymap(i).shift) Then
-                            keyIsDown = GX_TRUE
-                            inputId = i
-                        End If
-                    End If
+                'If i > 29 Then
+                '    Print i; __gx_keymap(i).value
+                '    Dim x: Input x
+                'End If
+                If _KeyDown(__gx_keymap(i).value) Then
+                keyIsDown = GX_TRUE
+                inputId = i
+                ElseIf __gx_keymap(i).shift <> 0 Then
+                If _KeyDown(__gx_keymap(i).shift) Then
+                keyIsDown = GX_TRUE
+                inputId = i
+                End If
+                End If
                 End If
                 If keyIsDown Then
-                    di.deviceId = GXDEVICE_KEYBOARD
-                    di.deviceType = __GX_DeviceTypeName(GXDEVICE_KEYBOARD)
-                    di.inputType = GXDEVICE_BUTTON
-                    di.inputId = inputId
-                    di.inputValue = GX_TRUE
-                    found = 1
-                    Exit Do
+                di.deviceId = GXDEVICE_KEYBOARD
+                di.deviceType = __GX_DeviceTypeName(GXDEVICE_KEYBOARD)
+                di.inputType = GXDEVICE_BUTTON
+                di.inputId = inputId
+                di.inputValue = GX_TRUE
+                found = 1
+                Exit Do
                 End If
-            Next i
+                Next i
+            $End If
         Loop Until found
 
         While _DeviceInput
@@ -2843,7 +2860,7 @@ $If GXBM = UNDEFINED Then
 
     End Sub
 
-    Function __GX_DeviceTypeName (deviceId)
+    Function __GX_DeviceTypeName% (deviceId)
         Dim dname As String
         dname = _Device$(deviceId)
 

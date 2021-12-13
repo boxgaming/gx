@@ -1,9 +1,14 @@
 Option _Explicit
 $ExeIcon:'./../../gx/resource/gx.ico'
 '$Include:'../../gx/gx.bi'
+Const RIGHT = 1
+Const LEFT = 2
+Const DOWN = 3
+Const UP = 4
+Const SPEED = 60
 
 GXSceneCreate 500, 282
-GXMapLoad "map/overworld.map"
+GXMapLoad "map/overworld.gxm"
 GXFullScreen GX_TRUE
 
 Dim flag As Integer
@@ -25,23 +30,13 @@ GXEntityAnimate coin, 1, 8
 GXEntityType coin, ETYPE_COIN
 GXEntityCollisionOffset coin, 4, 5, 4, 3
 
+Dim Shared player As Integer
+player = GXEntityCreate("img/character.png", 16, 20, 4)
+GXEntityPos player, GXSceneWidth / 2 - 8, GXSceneHeight / 2 - 10
+GXEntityCollisionOffset player, 3, 10, 3, 0
 
-Dim bob As Integer
-bob = GXEntityCreate("img/character.png", 16, 20, 4)
-GXEntityPos bob, GXSceneWidth / 2 - 8, GXSceneHeight / 2 - 10
-GXEntityCollisionOffset bob, 3, 10, 3, 0
-
-Dim player As Integer
-player = GXPlayerCreate(bob)
-GXPlayerMoveSpeed player, 90
-MapPlayerMoveAction player, GXACTION_MOVE_LEFT, GXKEY_A, 2, 10
-MapPlayerMoveAction player, GXACTION_MOVE_RIGHT, GXKEY_D, 1, 10
-MapPlayerMoveAction player, GXACTION_MOVE_UP, GXKEY_W, 4, 10
-MapPlayerMoveAction player, GXACTION_MOVE_DOWN, GXKEY_S, 3, 10
-
-GXSceneFollowEntity bob, GXSCENE_FOLLOW_ENTITY_CENTER
+GXSceneFollowEntity player, GXSCENE_FOLLOW_ENTITY_CENTER
 GXSceneConstrain GXSCENE_CONSTRAIN_TO_MAP
-
 
 Dim Shared movetilecount As Integer
 ReDim Shared movetiles(movetilecount) As Integer
@@ -65,6 +60,8 @@ Sub GXOnGameEvent (e As GXEvent)
                 toggleDebug = GX_FALSE
             End If
 
+            HandlePlayerControls
+
         Case GXEVENT_COLLISION_TILE
             If IsMoveTile(e) <> 1 Then e.collisionResult = 1
 
@@ -74,10 +71,33 @@ Sub GXOnGameEvent (e As GXEvent)
     End Select
 End Sub
 
-Sub MapPlayerMoveAction (pid As Integer, action As Integer, akey As Integer, animationSeq As Integer, animationSpeed As Integer)
-    GXPlayerActionKey pid, action, akey
-    GXPlayerActionAnimationSeq pid, action, animationSeq
-    GXPlayerActionAnimationSpeed pid, action, animationSpeed
+Sub HandlePlayerControls
+
+    If GXKeyDown(GXKEY_DOWN) Then
+        GXEntityVX player, 0
+        GXEntityVY player, SPEED
+        GXEntityAnimate player, DOWN, 10
+
+    ElseIf GXKeyDown(GXKEY_UP) Then
+        GXEntityVX player, 0
+        GXEntityVY player, -SPEED
+        GXEntityAnimate player, UP, 10
+
+    ElseIf GXKeyDown(GXKEY_RIGHT) Then
+        GXEntityVX player, SPEED
+        GXEntityVY player, 0
+        GXEntityAnimate player, RIGHT, 10
+
+    ElseIf GXKeyDown(GXKEY_LEFT) Then
+        GXEntityVX player, -SPEED
+        GXEntityVY player, 0
+        GXEntityAnimate player, LEFT, 10
+
+    Else
+        GXEntityVX player, 0
+        GXEntityVY player, 0
+        GXEntityAnimateStop player
+    End If
 End Sub
 
 Function IsMoveTile (e As GXEvent)

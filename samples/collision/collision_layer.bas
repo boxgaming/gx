@@ -1,4 +1,10 @@
+$ExeIcon:'./../../gx/resource/gx.ico'
 '$Include: '../../gx/gx.bi'
+Const RIGHT = 1
+Const LEFT = 2
+Const DOWN = 3
+Const UP = 4
+Const SPEED = 60
 Dim Shared toggleDebug
 
 GXSceneCreate 320, 200
@@ -12,18 +18,24 @@ GXMapLayerVisible 5, GX_FALSE
 CreatePlayer
 
 GXSceneStart
+System
 
 Sub GXOnGameEvent (e As GXEvent)
     Select Case e.event
         Case GXEVENT_UPDATE
             If GXKeyDown(GXKEY_ESC) Then GXSceneStop
             TestToggleDebug
+            HandlePlayerControls
 
         Case GXEVENT_COLLISION_TILE
             Dim tile As Integer
             tile = GXMapTile(e.collisionTileX, e.collisionTileY, 5)
             If tile > 0 Then e.collisionResult = 1
 
+        Case GXEVENT_DRAWSCREEN
+            If Not GXDebug Then
+                GXDrawText GXFONT_DEFAULT, 175, 1, "Press F1 to Toggle Debug" + Chr$(10) + "Press ESC to Quit"
+            End If
     End Select
 End Sub
 
@@ -36,14 +48,39 @@ Sub CreatePlayer
     GXEntityPos playerEntity, 100, 100
     GXEntityCollisionOffset playerEntity, 4, 12, 4, 0
     GXSceneFollowEntity playerEntity, GXSCENE_FOLLOW_ENTITY_CENTER
-
-    Dim player As Long
-    player = GXPlayerCreate(playerEntity)
-    GXPlayerMoveKey player, GXACTION_MOVE_LEFT, GXKEY_LEFT, 2, 10
-    GXPlayerMoveKey player, GXACTION_MOVE_RIGHT, GXKEY_RIGHT, 1, 10
-    GXPlayerMoveKey player, GXACTION_MOVE_UP, GXKEY_UP, 4, 10
-    GXPlayerMoveKey player, GXACTION_MOVE_DOWN, GXKEY_DOWN, 3, 10
 End Sub
+
+Sub HandlePlayerControls
+    Dim player As Integer
+    player = GX("player")
+
+    If GXKeyDown(GXKEY_DOWN) Then
+        GXEntityVX player, 0
+        GXEntityVY player, SPEED
+        GXEntityAnimate player, DOWN, 10
+
+    ElseIf GXKeyDown(GXKEY_UP) Then
+        GXEntityVX player, 0
+        GXEntityVY player, -SPEED
+        GXEntityAnimate player, UP, 10
+
+    ElseIf GXKeyDown(GXKEY_RIGHT) Then
+        GXEntityVX player, SPEED
+        GXEntityVY player, 0
+        GXEntityAnimate player, RIGHT, 10
+
+    ElseIf GXKeyDown(GXKEY_LEFT) Then
+        GXEntityVX player, -SPEED
+        GXEntityVY player, 0
+        GXEntityAnimate player, LEFT, 10
+
+    Else
+        GXEntityVX player, 0
+        GXEntityVY player, 0
+        GXEntityAnimateStop player
+    End If
+End Sub
+
 
 Sub TestToggleDebug
     ' Toggle debug mode when F1 key is pressed
@@ -57,4 +94,3 @@ End Sub
 
 
 '$Include: '../../gx/gx.bm'
-

@@ -4,9 +4,6 @@ GXSceneCreate 320, 200
 GXTilesetCreate "../overworld/img/overworld.png", 16, 16
 GXMapCreate 10, 10, 3
 
-'GXMapTileAdd 0, 0, 1
-'GXMapTileAdd 1, 0, 1
-'GXMapTileAdd 1, 0, 2
 GXMapTile 0, 0, 1, 1
 GXMapTile 1, 0, 2, 2
 GXMapTile 1, 0, 1, 1

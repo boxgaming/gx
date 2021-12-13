@@ -8,7 +8,7 @@ SUB __UI_LoadForm
     $RESIZE:ON
     DIM __UI_NewID AS LONG, __UI_RegisterResult AS LONG
 
-    __UI_NewID = __UI_NewControl(__UI_Type_Form, "MainForm", 851, 734, 0, 0, 0)
+    __UI_NewID = __UI_NewControl(__UI_Type_Form, "MainForm", 857, 738, 0, 0, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "GX Map Maker"
     Control(__UI_NewID).Font = SetFont("", 16)
@@ -39,7 +39,7 @@ SUB __UI_LoadForm
 
     __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "TilesetMenu", 72, 24, 96, 0, 0)
     __UI_RegisterResult = 0
-    SetCaption __UI_NewID, "Tileset"
+    SetCaption __UI_NewID, "&Tileset"
 
     __UI_NewID = __UI_NewControl(__UI_Type_Frame, "frmFile", 543, 224, 870, 37, 0)
     __UI_RegisterResult = 0
@@ -56,15 +56,19 @@ SUB __UI_LoadForm
     Control(__UI_NewID).Value = 10
     Control(__UI_NewID).BorderSize = 1
 
-    __UI_NewID = __UI_NewControl(__UI_Type_ContextMenu, "TileFrameMenu", 22, 22, 10, 702, __UI_GetID("frmTile"))
-    __UI_RegisterResult = 0
-
     __UI_NewID = __UI_NewControl(__UI_Type_Frame, "frmResizeMap", 540, 141, 871, 739, 0)
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Resize Map"
     Control(__UI_NewID).HasBorder = True
     Control(__UI_NewID).Value = 7
     Control(__UI_NewID).BorderSize = 1
+
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuBar, "HelpMenu", 48, 24, 168, 0, 0)
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "&Help"
+
+    __UI_NewID = __UI_NewControl(__UI_Type_ContextMenu, "TileFrameMenu", 22, 22, 10, 706, __UI_GetID("frmTile"))
+    __UI_RegisterResult = 0
 
     __UI_NewID = __UI_NewControl(__UI_Type_PictureBox, "Map", 543, 647, 2, 26, 0)
     __UI_RegisterResult = 0
@@ -561,6 +565,14 @@ SUB __UI_LoadForm
     __UI_RegisterResult = 0
     SetCaption __UI_NewID, "Resize Map"
 
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "HelpMenuView", 92, 22, 0, 4, __UI_GetID("HelpMenu"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "View -"
+
+    __UI_NewID = __UI_NewControl(__UI_Type_MenuItem, "HelpMenuAbout", 108, 22, 0, 33, __UI_GetID("HelpMenu"))
+    __UI_RegisterResult = 0
+    SetCaption __UI_NewID, "About..."
+
 END SUB
 
 SUB __UI_AssignIDs
@@ -572,8 +584,9 @@ SUB __UI_AssignIDs
     TilesetMenu = __UI_GetID("TilesetMenu")
     frmFile = __UI_GetID("frmFile")
     frmTile = __UI_GetID("frmTile")
-    TileFrameMenu = __UI_GetID("TileFrameMenu")
     frmResizeMap = __UI_GetID("frmResizeMap")
+    HelpMenu = __UI_GetID("HelpMenu")
+    TileFrameMenu = __UI_GetID("TileFrameMenu")
     Map = __UI_GetID("Map")
     FileMenuNew = __UI_GetID("FileMenuNew")
     Tiles = __UI_GetID("Tiles")
@@ -652,4 +665,6 @@ SUB __UI_AssignIDs
     btnResizeMap = __UI_GetID("btnResizeMap")
     btnResizeCancel = __UI_GetID("btnResizeCancel")
     MapMenuResize = __UI_GetID("MapMenuResize")
+    HelpMenuView = __UI_GetID("HelpMenuView")
+    HelpMenuAbout = __UI_GetID("HelpMenuAbout")
 END SUB

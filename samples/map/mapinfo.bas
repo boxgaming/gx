@@ -2,9 +2,6 @@ $Console:Only
 '$Include:'../../gx/gx.bi'
 _Dest _Console
 
-'GXSceneEmbedded GX_TRUE
-'GXSceneCreate 640, 480
-
 If Not _FileExists(Command$) Then
     Print "Specified file does not exists"
     System 0

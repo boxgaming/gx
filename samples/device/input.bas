@@ -23,15 +23,17 @@ PrintDeviceInput djump
 
 GXSleep 1
 
-'DIM test AS INTEGER
-'test = _deviceinput(di.deviceId)
-
 GXSceneStart
+System
 
 Sub GXOnGameEvent (e As GXEvent)
     Dim ldown As Integer
     Select Case e.event
+        Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_ESC) Then GXSceneStop
+
         Case GXEVENT_DRAWSCREEN
+            GXDrawText GXFONT_DEFAULT, 10, 10, "Press one or more mapped inputs:"
             If GXDeviceInputTest(dleft) Then
                 GXDrawText GXFONT_DEFAULT, 100, 100, "Left"
             End If

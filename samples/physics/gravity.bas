@@ -1,5 +1,7 @@
-Option _Explicit
+$ExeIcon:'./../../gx/resource/gx.ico'
 '$Include:'../../gx/gx.bi'
+Option _Explicit
+
 Const MAX_SPEED = 100
 Const ACCELERATION = 2
 Const JUMP_SPEED = -200
@@ -9,11 +11,10 @@ Const BLUE = _RGB32(100, 255, 255)
 Const LEFT = 1
 Const RIGHT = 2
 
-'GXHardwareAcceleration GX_TRUE
+'GXDebug GX_TRUE
 GXSceneCreate 320, 200
-GXSceneScale 4
+GXSceneScale 2
 GXMapLoad "./test.gxm"
-GXDebug GX_TRUE
 
 Dim Shared player As Long
 player = GXEntityCreate("../overworld/img/character.png", 16, 20, 4)
@@ -42,7 +43,7 @@ Dim i As Integer
 For i = 1 To 10
     bullets(i) = GXEntityCreate("../overworld/img/coin.png", 16, 16, 4)
     GXEntityType bullets(i), BULLET
-    GXEntityHide bullets(i)
+    GXEntityVisible bullets(i), GX_FALSE
     GXEntityCollisionOffset bullets(i), 3, 0, 3, 0
     GXEntityAnimate bullets(i), 1, 15
 Next i
@@ -50,10 +51,8 @@ Dim Shared shooting As Integer
 Dim Shared bidx
 bidx = 1
 
-
-'GXDebug GX_TRUE
-GXCustomDraw GXEVENT_DRAWMAP, GX_TRUE
 GXSceneStart
+System
 
 '$Include: '../../gx/gx.bm'
 Sub GXOnGameEvent (e As GXEvent)
@@ -75,13 +74,12 @@ Sub GXOnGameEvent (e As GXEvent)
             Dim i As Integer
             For i = 1 To 10
                 If GXEntityVX(bullets(i)) = 0 And GXEntityVY(bullets(i)) = 0 Then
-                    GXEntityHide bullets(i)
+                    GXEntityVisible bullets(i), GX_FALSE
                     GXEntityPos bullets(i), -100, -100
                 End If
             Next i
 
         Case GXEVENT_DRAWMAP
-            'DrawPlayer player, RED
             DrawPlatform floor
             DrawPlatform platform1
             DrawPlatform platform2
@@ -100,6 +98,9 @@ Sub GXOnGameEvent (e As GXEvent)
             Dim t As Integer
             t = GXMapTile(e.collisionTileX, e.collisionTileY, 1)
             If t > 0 Then e.collisionResult = GX_TRUE
+
+        Case GXEVENT_DRAWSCREEN
+            GXDrawText GXFONT_DEFAULT, 1, 1, "Move: WSAD" + GX_CRLF + "Jump: K" + GX_CRLF + "Fire: J"
 
     End Select
 End Sub
@@ -128,7 +129,7 @@ Sub Shoot
     GXEntityPos bullets(bidx), x, GXEntityY(player)
     GXEntityVY bullets(bidx), -10
     GXEntityVX bullets(bidx), vx
-    GXEntityShow bullets(bidx)
+    GXEntityVisible bullets(bidx), GX_TRUE
     GXEntityApplyGravity bullets(bidx), GX_TRUE
     bidx = bidx + 1
     If bidx > 10 Then bidx = 1

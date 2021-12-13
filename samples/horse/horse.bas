@@ -5,7 +5,6 @@ _Title "Horse Runner!"
 GXHardwareAcceleration GX_TRUE
 GXFrameRate 90
 GXSceneCreate 1280, 720
-'GXFrameRate 60
 GXMapLoad "map/horse.map"
 
 Dim bg, bg2
@@ -34,8 +33,6 @@ GXEntityVX GX("horse"), 700
 GXDebugFont GXFONT_DEFAULT_BLACK
 GXDebugTileBorderColor _RGB32(0, 0, 0)
 GXDebugEntityBorderColor _RGB32(0, 0, 0)
-
-GXCustomDraw GXEVENT_DRAWSCREEN, GX_TRUE
 
 GXSceneStart
 System 0
