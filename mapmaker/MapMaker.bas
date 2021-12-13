@@ -1313,12 +1313,12 @@ Function GetControlAtMousePos
 
     GetControlAtMousePos = 0
 
-    IF mx > Control(Map).Left AND mx < Control(Map).Left + Control(Map).Width AND _
-       my > Control(Map).Top AND my < Control(Map).Top + Control(Map).Height THEN
+IF mx > Control(Map).Left AND mx < Control(Map).Left + Control(Map).Width AND _
+my > Control(Map).Top AND my < Control(Map).Top + Control(Map).Height THEN
         GetControlAtMousePos = Map
 
-    elseIF mx > Control(Tiles).Left AND mx < Control(Tiles).Left + Control(Tiles).Width AND _
-           my > Control(Tiles).Top AND my < Control(Tiles).Top + Control(Tiles).Height THEN
+elseIF mx > Control(Tiles).Left AND mx < Control(Tiles).Left + Control(Tiles).Width AND _
+my > Control(Tiles).Top AND my < Control(Tiles).Top + Control(Tiles).Height THEN
         GetControlAtMousePos = Tiles
     End If
 End Function
@@ -1330,12 +1330,18 @@ Sub ShowHelp
     Dim stderr As String
     Dim url As String
     url = "https://github.com/boxgaming/gx/wiki/Map-Maker"
-    result = pipecom("cmd.exe /c " + Chr$(32) + "start " + url + Chr$(32), stdout, stderr)
+    $If WIN Then
+        result = pipecom("cmd.exe /c " + Chr$(32) + "start " + url + Chr$(32), stdout, stderr)
+    $ElseIf LINUX Then
+        result = pipecom("xdg-open " + url, stdout, stderr)
+    $ElseIf MAC Then
+        result = pipecom("open " + url, stdout, stderr)
+    $End If
 End Sub
 
 Sub ShowAbout
     Dim result
-    result = MessageBox("GX Map Maker" + GX_CRLF + "v0.2.0-alpha" + GX_CRLF + GX_CRLF + Chr$(169) + "2021 boxgaming", "About", MsgBox_OkOnly + MsgBox_Information)
+    result = MessageBox("GX Map Maker" + GX_LF + "v0.2.0-alpha" + GX_LF + GX_LF + Chr$(169) + "2021 boxgaming", "About", MsgBox_OkOnly + MsgBox_Information)
 End Sub
 
 ' General Dialog Methods
