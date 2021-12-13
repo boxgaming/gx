@@ -27,7 +27,6 @@ Dim Shared lastClick As Double '          - Used for capturing double-click even
 Dim Shared animationMode As Integer
 Dim Shared resizeMode As Integer
 ReDim Shared hiddenLayers(0) As Integer
-'Dim Shared resizing As Integer
 
 
 ': This program uses
@@ -223,12 +222,6 @@ Sub __UI_BeforeUpdateDisplay
     If gxloaded = False Then Exit Sub ' We're not ready yet, abort!
     If dialogMode = True Then Exit Sub ' Nothing to do here
 
-    If mapFilename <> "" Then
-        _Title "GX Map Maker - " + GXFS_GetFilename(mapFilename)
-    ElseIf mapLoaded Then
-        _Title "GX Map Maker - <New Map>"
-    End If
-
 
     Dim mc As Long
     mc = GetControlAtMousePos
@@ -284,21 +277,14 @@ Sub __UI_BeforeUpdateDisplay
 
     ' Adjust the current selection if selection sizing is in progress
     If tileSelSizing Then
-        'GetTilePosAt Tiles, _MOUSEX, _MOUSEY, tscale, tileSelEnd
         GetTilePosAt Tiles, _MouseX, _MouseY, tileSelEnd
     ElseIf mapSelSizing Then
-        'GetTilePosAt Map, _MOUSEX, _MOUSEY, scale, tileSelEnd
         GetTilePosAt Map, _MouseX, _MouseY, tileSelEnd
     End If
 
     ' If X or DEL key is pressed, delete the tiles in the current selection
     If GXKeyDown(GXKEY_DELETE) Or GXKeyDown(GXKEY_X) Then deleting = 1
     If Not (GXKeyDown(GXKEY_X) Or GXKeyDown(GXKEY_X)) And deleting Then DeleteTile: deleting = 0
-
-    'If resizing > 0 And GXFrame - resizing > 5 Then
-    '    resizing = 0
-    '    ResizeControls
-    'End If
 
     ' Draw the map
     GXSceneUpdate
@@ -408,7 +394,6 @@ Sub __UI_MouseDown (id As Long)
             ' start resizing the tileset selection cursor
             mapSelMode = False
             tileSelSizing = True
-            'GetTilePosAt Tiles, _MOUSEX, _MOUSEY, tscale, tileSelStart
             GetTilePosAt Tiles, _MouseX, _MouseY, tileSelStart
             tileSelEnd = tileSelStart
 
@@ -450,7 +435,6 @@ End Sub
 Sub __UI_FormResized
     ' The window has been resized so resize the child components accordingly
     ResizeControls
-    'resizing = GXFrame
 End Sub
 
 
@@ -537,14 +521,13 @@ Sub CreateMap
     ReDim hiddenLayers(layers) As Integer
 
     SetDialogMode False
-    mapLoaded = True
+    SetMapFilename ""
 
     RefreshLayerDropdown
     RefreshMapInfo
     OnTileSelection
     ResizeControls
     SetStatus "Map created."
-    '_TITLE "GX Map Maker - <New Map>"
 End Sub
 
 ' Load the map at the specified file location
@@ -553,7 +536,7 @@ Sub LoadMap (filename As String)
 
     EnableFileDialog False
     GXMapLoad filename
-    mapFilename = filename
+    SetMapFilename filename
     GXScenePos 0, 0
     tilesetPos.x = 0
     tilesetPos.y = 0
@@ -566,7 +549,6 @@ Sub LoadMap (filename As String)
     Control(TilesetMenuZoomIn).Disabled = False
     Control(TilesetMenuZoomOut).Disabled = True
     Control(TilesetMenuReplace).Disabled = False
-    mapLoaded = True
     scale = 1
     tscale = 1
 
@@ -592,7 +574,7 @@ Sub SaveMap (filename As String)
     saving = 1
     GXMapSave filename
     saving = 0
-    mapFilename = filename
+    SetMapFilename filename
     Control(FileMenuSave).Disabled = False
 
     Control(frmFile).Hidden = True
@@ -600,7 +582,6 @@ Sub SaveMap (filename As String)
     EnableFileDialog True
 
     SetStatus "Map saved."
-    '_TITLE "GX Map Maker - " + __GXFS_GetFilename(filename)
 End Sub
 
 Sub OnTileSelection
@@ -686,7 +667,6 @@ Sub ClearTileForm
 End Sub
 
 Sub OnChangeTileAnimate
-    'DIM r: r = MessageBox("animate change", "", MsgBox_OkOnly)
     If Control(tglTileAnimate).Value = False Then
         Control(lblTileAnimationSpeed).Disabled = False
         Control(txtTileAnimationSpeed).Disabled = False
@@ -750,7 +730,6 @@ Sub ReplaceTileset
     If tileWidth < 1 Then msgRes = MessageBox("Tile width must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): Exit Sub
     If tileHeight < 1 Then msgRes = MessageBox("Tile height must be at least 1 pixel.", "Invalid Option", MsgBox_OkOnly): Exit Sub
 
-    'GXTilesetCreate tilesetImage, tileWidth, tileHeight
     GXTilesetReplaceImage tilesetImage, tileWidth, tileHeight
     Control(frmReplaceTileset).Hidden = True
 
@@ -894,7 +873,6 @@ Sub PutTile ()
                 End If
             Else
                 ' calculate the tile id from the current selection position
-                'tile = tx + ty * GXTilesetColumns
                 tile = tx + tilesetPos.x + (ty + tilesetPos.y) * GXTilesetColumns + 1
             End If
             ' add the tile to the map at the next unpopulated layer
@@ -920,13 +898,11 @@ Sub PutTileIso ()
     'SetStatus "(" + STR$(tpos.x) + "," + STR$(tpos.y) + ")"
     sx = tpos.x
     y = tpos.y
-    'SetStatus "(" + STR$(tileSelStart.x) + "," + STR$(tileSelStart.y) + ")-(" + STR$(tileSelEnd.x) + "," + STR$(tileSelEnd.y) + ")"
 
     For ty = tileSelStart.y To tileSelEnd.y
         x = sx
         For tx = tileSelStart.x To tileSelEnd.x
             tile = tx + tilesetPos.x + (ty + tilesetPos.y) * GXTilesetColumns + 1
-            'SetStatus "(" + STR$(x) + "," + STR$(y) + ") " + STR$(tile)
             If SelectedEditLayer = 0 Then
                 GXMapTileAdd x, y, tile
             Else
@@ -970,7 +946,6 @@ End Sub
 Sub DeleteTileIso ()
     Dim x As Integer, y As Integer, sx As Integer
     Dim tx As Integer, ty As Integer
-    'DIM mtx AS INTEGER, mty AS INTEGER
     Dim tile As Integer
 
     Dim tpos As GXPosition
@@ -1003,7 +978,6 @@ Sub DrawCursor (id As Long)
     If id = Map Then
 
         ' Calculate the position of the map cursor
-        'GetTilePosAt id, _MOUSEX, _MOUSEY, scale, tpos
         GetTilePosAt id, _MouseX, _MouseY, tpos
         If Not GXMapIsometric Then
             cx = tpos.x * GXTilesetWidth
@@ -1022,7 +996,6 @@ Sub DrawCursor (id As Long)
         Else
             Dim columnOffset As Long
             If tpos.y Mod 2 = 1 Then
-                'columnOffset = GXTilesetWidth
                 columnOffset = 0
             Else
                 columnOffset = GXTilesetWidth / 2
@@ -1030,7 +1003,6 @@ Sub DrawCursor (id As Long)
 
             Dim rowOffset As Long
             rowOffset = (tpos.y + 1) * _Round(GXTilesetHeight - GXTilesetWidth / 4)
-            'rowOffset = (tpos.y) * (GXTilesetHeight - GXTilesetWidth / 4)
 
             Dim tx As Long: tx = tpos.x * GXTilesetWidth - columnOffset
             Dim ty As Long: ty = tpos.y * GXTilesetHeight - rowOffset
@@ -1051,7 +1023,6 @@ Sub DrawCursor (id As Long)
         End If
     Else 'id = Tileset
         ' Calculate the position of the tileset cursor
-        'GetTilePosAt id, _MOUSEX, _MOUSEY, tscale, tpos
         GetTilePosAt id, _MouseX, _MouseY, tpos
         cx = tpos.x * GXTilesetWidth * tscale
         cy = tpos.y * GXTilesetHeight * tscale
@@ -1066,7 +1037,6 @@ End Sub
 
 ' Get the tile position at the specified window coordinates
 Sub GetTilePosAt (id As Long, x As Integer, y As Integer, tpos As GXPosition)
-    'SUB GetTilePosAt (id AS LONG, x AS INTEGER, y AS INTEGER, scale AS INTEGER, tpos AS GXPosition)
     If id = Map Then
         If Not GXMapIsometric Then
             x = x / scale - Control(id).Left
@@ -1078,7 +1048,6 @@ Sub GetTilePosAt (id As Long, x As Integer, y As Integer, tpos As GXPosition)
             y = y / scale - Control(id).Top
 
             Dim tileWidthHalf As Integer: tileWidthHalf = GXTilesetWidth / 2
-            'DIM tileHeightHalf AS INTEGER: tileHeightHalf = GXTilesetHeight / 2
             Dim tileHeightHalf As Integer: tileHeightHalf = GXTilesetWidth / 2
             Dim sx As Long: sx = x / tileWidthHalf
 
@@ -1091,10 +1060,8 @@ Sub GetTilePosAt (id As Long, x As Integer, y As Integer, tpos As GXPosition)
 
             tpos.y = (2 * y) / tileHeightHalf
             tpos.x = (x - offset) / GXTilesetWidth
-            'IF sx MOD 2 - 1 THEN tpos.x = tpos.x - 1
         End If
 
-        'IF GXMapIsometric THEN GXMapTilePosAt x, y, tpos
     Else
         x = x - Control(id).Left
         y = y - Control(id).Top
@@ -1323,12 +1290,21 @@ my > Control(Tiles).Top AND my < Control(Tiles).Top + Control(Tiles).Height THEN
     End If
 End Function
 
+Sub SetMapFilename (filename As String)
+    mapFilename = filename
+    mapLoaded = true
+
+    If mapFilename <> "" Then
+        _Title "GX Map Maker - " + GXFS_GetFilename(mapFilename)
+    Else
+        _Title "GX Map Maker - <New Map>"
+    End If
+End Sub
 
 Sub ShowHelp
     Dim url As String
     url = "https://github.com/boxgaming/gx/wiki/Map-Maker"
     $If WIN Then
-        'Shell _DontWait _Hide "cmd.exe /c " + Chr$(32) + "start " + url + Chr$(32)
         Shell _DontWait _Hide "start " + url
     $ElseIf LINUX Then
         Shell _DontWait _Hide "xdg-open " + url
