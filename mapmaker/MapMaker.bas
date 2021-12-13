@@ -1325,17 +1325,15 @@ End Function
 
 
 Sub ShowHelp
-    Dim result As Integer
-    Dim stdout As String
-    Dim stderr As String
     Dim url As String
     url = "https://github.com/boxgaming/gx/wiki/Map-Maker"
     $If WIN Then
-        result = pipecom("cmd.exe /c " + Chr$(32) + "start " + url + Chr$(32), stdout, stderr)
+        'Shell _DontWait _Hide "cmd.exe /c " + Chr$(32) + "start " + url + Chr$(32)
+        Shell _DontWait _Hide "start " + url
     $ElseIf LINUX Then
-        result = pipecom("xdg-open " + url + " &", stdout, stderr)
+        Shell _DontWait _Hide "xdg-open " + url
     $ElseIf MAC Then
-        result = pipecom("open " + url + " &", stdout, stderr)
+        Shell _DontWait _Hide "open " + url
     $End If
 End Sub
 
