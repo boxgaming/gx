@@ -1333,9 +1333,9 @@ Sub ShowHelp
     $If WIN Then
         result = pipecom("cmd.exe /c " + Chr$(32) + "start " + url + Chr$(32), stdout, stderr)
     $ElseIf LINUX Then
-        result = pipecom("xdg-open " + url, stdout, stderr)
+        result = pipecom("xdg-open " + url + " &", stdout, stderr)
     $ElseIf MAC Then
-        result = pipecom("open " + url, stdout, stderr)
+        result = pipecom("open " + url + " &", stdout, stderr)
     $End If
 End Sub
 
