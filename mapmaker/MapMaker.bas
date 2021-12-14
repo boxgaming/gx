@@ -276,10 +276,12 @@ Sub __UI_BeforeUpdateDisplay
     End If
 
     ' Adjust the current selection if selection sizing is in progress
-    If tileSelSizing Then
-        GetTilePosAt Tiles, _MouseX, _MouseY, tileSelEnd
-    ElseIf mapSelSizing Then
-        GetTilePosAt Map, _MouseX, _MouseY, tileSelEnd
+    If Not GXMapIsometric Then
+        If tileSelSizing Then
+            GetTilePosAt Tiles, _MouseX, _MouseY, tileSelEnd
+        ElseIf mapSelSizing Then
+            GetTilePosAt Map, _MouseX, _MouseY, tileSelEnd
+        End If
     End If
 
     ' If X or DEL key is pressed, delete the tiles in the current selection
@@ -974,6 +976,8 @@ Sub DrawCursor (id As Long)
     Dim cx As Integer, cy As Integer
     Dim endx As Integer, endy As Integer
     Dim tpos As GXPosition
+    Dim ccolor As _Unsigned Long: ccolor = _RGB(255, 255, 255)
+    Dim cstyle As Integer: cstyle = &B1010101010101010
 
     If id = Map Then
 
@@ -992,7 +996,7 @@ Sub DrawCursor (id As Long)
                 endy = cy + GXTilesetHeight - 1
             End If
             ' Draw the cursor
-            Line (cx, cy)-(endx, endy), _RGB(255, 255, 255), B , &B1010101010101010
+            Line (cx, cy)-(endx, endy), ccolor, B , cstyle
         Else
             Dim columnOffset As Long
             If tpos.y Mod 2 = 1 Then
@@ -1007,20 +1011,30 @@ Sub DrawCursor (id As Long)
             Dim tx As Long: tx = tpos.x * GXTilesetWidth - columnOffset
             Dim ty As Long: ty = tpos.y * GXTilesetHeight - rowOffset
 
-            Line (tx, ty)-(tx + GXTilesetWidth, ty + GXTilesetHeight), _RGB32(200, 200, 200), B
-
             Dim topY As Long: topY = ty + (GXTilesetHeight - GXTilesetWidth / 2)
             Dim midY As Long: midY = ty + (GXTilesetHeight - GXTilesetWidth / 4)
             Dim midX As Long: midX = tx + GXTilesetWidth / 2
             Dim rightX As Long: rightX = tx + GXTilesetWidth
             Dim bottomY As Long: bottomY = ty + GXTilesetHeight
+            Dim halfWidth As Long: halfWidth = GXTilesetWidth / 2
 
-            Line (tx, midY)-(midX, topY), _RGB32(255, 255, 255)
-            Line (midX, topY)-(rightX, midY), _RGB(255, 255, 255)
-            Line (rightX, midY)-(midX, bottomY), _RGB(255, 255, 255)
-            Line (midX, bottomY)-(tx, midY), _RGB(255, 255, 255)
+            ccolor = _RGB(200, 200, 200)
 
+            Line (tx, midY - halfWidth)-(tx, midY), ccolor, , cstyle
+            Line (rightX, midY - halfWidth)-(rightX, midY), ccolor, , cstyle
+            Line (midX, topY - halfWidth)-(midX, bottomY), ccolor, , cstyle
+
+            Line (tx, midY - halfWidth)-(midX, topY - halfWidth), ccolor, , cstyle
+            Line (midX, topY - halfWidth)-(rightX, midY - halfWidth), ccolor, , cstyle
+            Line (rightX, midY - halfWidth)-(midX, bottomY - halfWidth), ccolor, , cstyle
+            Line (midX, bottomY - halfWidth)-(tx, midY - halfWidth), ccolor, , cstyle
+
+            Line (tx, midY)-(midX, topY), ccolor
+            Line (midX, topY)-(rightX, midY), ccolor
+            Line (rightX, midY)-(midX, bottomY), ccolor
+            Line (midX, bottomY)-(tx, midY), ccolor
         End If
+
     Else 'id = Tileset
         ' Calculate the position of the tileset cursor
         GetTilePosAt id, _MouseX, _MouseY, tpos
@@ -1292,7 +1306,7 @@ End Function
 
 Sub SetMapFilename (filename As String)
     mapFilename = filename
-    mapLoaded = true
+    mapLoaded = True
 
     If mapFilename <> "" Then
         _Title "GX Map Maker - " + GXFS_GetFilename(mapFilename)
