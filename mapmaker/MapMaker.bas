@@ -1320,12 +1320,10 @@ Sub ShowHelp
     url = "https://github.com/boxgaming/gx/wiki/Map-Maker"
     $If WIN Then
         Shell _DontWait _Hide "start " + url
-    $End If
-    $If LINUX Then
-        Shell _DontWait _Hide "xdg-open " + url
-    $End If
-    $If MAC Then
+    $ElseIf MAC Then
         Shell _DontWait _Hide "open " + url
+    $ElseIf LINUX Then
+        Shell _DontWait _Hide "xdg-open " + url
     $End If
 End Sub
 
