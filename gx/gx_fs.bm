@@ -1,3 +1,6 @@
+' GX - A BASIC Game Engine for QB64
+' 2021 boxgaming - https://github.com/boxgaming/gx
+'
 $If GXFS = UNDEFINED Then
     '$Include: 'gx_str.bm'
     '$Include: 'include/pipecom.bm'

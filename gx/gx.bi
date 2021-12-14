@@ -1,3 +1,6 @@
+' GX - A BASIC Game Engine for QB64
+' 2021 boxgaming - https://github.com/boxgaming/gx
+'
 $If GXBI = UNDEFINED Then
     'OPTION _EXPLICIT
 
