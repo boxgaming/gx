@@ -50,7 +50,7 @@ End Sub
 
 Sub ConvertSource
     Print "Converting QB64 to Javascript..."
-    Shell "qb2js " + Chr$(32) + gameFullpath + Chr$(32) + " > " + Chr$(32) + outputDir + GXFS_PathSeparator + "game.js" + Chr$(32)
+    Shell "." + GXFS_PathSeparator + "qb2js " + Chr$(32) + gameFullpath + Chr$(32) + " > " + Chr$(32) + outputDir + GXFS_PathSeparator + "game.js" + Chr$(32)
 End Sub
 
 Sub CopyImages
@@ -90,7 +90,7 @@ Sub ConvertMaps
             Dim mapDestPath As String
             mapFullPath = mapDir + GXFS_PathSeparator + mapFiles(i)
             mapDestPath = mapDestDir + GXFS_PathSeparator + mapFiles(i)
-            Shell "map2web " + Chr$(32) + mapFullPath + Chr$(32) + " " + Chr$(32) + mapDestPath + Chr$(32)
+            Shell "." + GXFS_PathSeparator + "map2web " + Chr$(32) + mapFullPath + Chr$(32) + " " + Chr$(32) + mapDestPath + Chr$(32)
         Next i
     End If
 End Sub
