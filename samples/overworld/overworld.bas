@@ -8,8 +8,8 @@ Const UP = 4
 Const SPEED = 60
 
 GXSceneCreate 500, 282
+GXSceneScale 2
 GXMapLoad "map/overworld.gxm"
-GXFullScreen GX_TRUE
 
 Dim flag As Integer
 flag = GXEntityCreate("img/flag.png", 32, 64, 5)
@@ -38,8 +38,7 @@ GXEntityCollisionOffset player, 3, 10, 3, 0
 GXSceneFollowEntity player, GXSCENE_FOLLOW_ENTITY_CENTER
 GXSceneConstrain GXSCENE_CONSTRAIN_TO_MAP
 
-Dim Shared movetilecount As Integer
-ReDim Shared movetiles(movetilecount) As Integer
+Dim Shared movetiles(24) As Integer
 SetMoveTiles
 
 GXSceneStart
@@ -105,7 +104,7 @@ Function IsMoveTile (e As GXEvent)
     tile = GXMapTile(e.collisionTileX, e.collisionTileY, 1)
     IsMoveTile = 0
     Dim i As Integer
-    For i = 1 To movetilecount
+    For i = 1 To UBound(movetiles)
         If tile = movetiles(i) Then
             IsMoveTile = 1
             Exit For
@@ -114,8 +113,6 @@ Function IsMoveTile (e As GXEvent)
 End Function
 
 Sub SetMoveTiles
-    movetilecount = 24
-    ReDim movetiles(movetilecount) As Integer
     movetiles(1) = 1
     movetiles(2) = 445
     movetiles(3) = 446

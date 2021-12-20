@@ -44,9 +44,9 @@ $If GXFS = UNDEFINED Then
 
     Function GXFS_IsDriveLetter (path As String)
         If Len(path) = 2 And Right$(path, 1) = ":" Then
-            GXFS_IsDriveLetter = GX_TRUE
+            GXFS_IsDriveLetter = -1 'GX_TRUE
         Else
-            GXFS_IsDriveLetter = GX_FALSE
+            GXFS_IsDriveLetter = 0 'GX_FALSE
         End If
     End Function
 

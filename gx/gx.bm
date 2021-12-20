@@ -127,7 +127,6 @@ $If GXBM = UNDEFINED Then
         newent.width = ewidth
         If _FileExists(imageFilename) Then
             newent.image = __GX_ImageLoad(imageFilename)
-            'Print "newent.image: ", newent.image
         Else
             newent.image = __gx_img_blank
         End If
@@ -567,15 +566,12 @@ $If GXBM = UNDEFINED Then
         Dim w As Long, h As Long, x As Long, y As Long
 
         If __gx_bg(bi).mode = GXBG_STRETCH Then
-            'Print __gx_bg(bi).image, __gx_scene.image
-            'Dim a: Input a
             _PutImage , __gx_bg(bi).image, __gx_scene.image
 
         ElseIf __gx_bg(bi).mode = GXBG_SCROLL Then
             factor = GXSceneWidth / GXSceneHeight
             h = _Height(__gx_bg(bi).image)
             w = h * factor
-            'x = gx_bg(bi).xpos
             xfactor = GXSceneX / (GXMapColumns * GXTilesetWidth)
             x = xfactor * (_Width(__gx_bg(bi).image) - w)
             _PutImage , __gx_bg(bi).image, __gx_scene.image, (x, 0)-(x + w, h)
@@ -840,7 +836,6 @@ $If GXBM = UNDEFINED Then
         'Call out to any custom screen drawing
         __GX_CustomDrawEvent GXEVENT_DRAWBG
 
-        'Print "before draw map"
         ' Draw the map tiles
         GXMapDraw
         If GXDebug Then __GX_DebugMapTile
@@ -848,7 +843,6 @@ $If GXBM = UNDEFINED Then
         'Call out to any custom screen drawing
         __GX_CustomDrawEvent GXEVENT_DRAWMAP
 
-        ' "before draw entities"
         ' Draw the entities
         Dim e As GXEntity
         For ei = 1 To __gx_entity_count
@@ -867,7 +861,6 @@ $If GXBM = UNDEFINED Then
             End If
         Next ei
 
-        ' "before screen entities"
         ' Draw the screen entities which should appear on top of the other game entities
         ' and have a fixed position
         For ei2 = 1 To __gx_entity_count
@@ -2033,7 +2026,7 @@ $If GXBM = UNDEFINED Then
         ' Save the tileset image meta-data
         Print #1, __JSL("width"); __gx_tileset.width; ","
         Print #1, __JSL("height"); __gx_tileset.height; ","
-        Print #1, __JSL("image"); Chr$(34) + tilesetFilename + Chr$(34)
+        Print #1, __JSL("image"); Chr$(34) + "map/" + GXFS_GetFilename(tilesetFilename) + Chr$(34)
 
         ' Save the tileset image data
         Dim tsize As Long

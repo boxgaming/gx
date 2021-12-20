@@ -1,5 +1,6 @@
 Option _Explicit
 $Console:Only
+$ExeIcon:'./../gx/resource/gx.ico'
 '$include: '../gx/gx.bi'
 
 ReDim args(0) As String

@@ -5,7 +5,8 @@ Const LEFT = 2
 Const DOWN = 3
 Const UP = 4
 Const SPEED = 60
-Dim Shared toggleDebug
+Dim Shared toggleDebug As Integer
+Dim Shared player As Integer
 
 GXSceneCreate 320, 200
 GXSceneScale 3
@@ -34,25 +35,21 @@ Sub GXOnGameEvent (e As GXEvent)
 
         Case GXEVENT_DRAWSCREEN
             If Not GXDebug Then
-                GXDrawText GXFONT_DEFAULT, 175, 1, "Press F1 to Toggle Debug" + Chr$(10) + "Press ESC to Quit"
+                GXDrawText GXFONT_DEFAULT, 175, 1, "Press D to Toggle Debug" + Chr$(10) + "Press ESC to Quit"
             End If
     End Select
 End Sub
 
 Sub CreatePlayer
-    GXEntityCreate "../overworld/img/character.png", 16, 20, 4, "player"
-    Dim playerEntity As Long
-    playerEntity = GX("player")
+    player = GXEntityCreate("../overworld/img/character.png", 16, 20, 4)
 
-    GXEntityAnimate playerEntity, 3, 0
-    GXEntityPos playerEntity, 100, 100
-    GXEntityCollisionOffset playerEntity, 4, 12, 4, 0
-    GXSceneFollowEntity playerEntity, GXSCENE_FOLLOW_ENTITY_CENTER
+    GXEntityAnimate player, 3, 0
+    GXEntityPos player, 100, 100
+    GXEntityCollisionOffset player, 4, 12, 4, 0
+    GXSceneFollowEntity player, GXSCENE_FOLLOW_ENTITY_CENTER
 End Sub
 
 Sub HandlePlayerControls
-    Dim player As Integer
-    player = GX("player")
 
     If GXKeyDown(GXKEY_DOWN) Then
         GXEntityVX player, 0
@@ -84,8 +81,8 @@ End Sub
 
 Sub TestToggleDebug
     ' Toggle debug mode when F1 key is pressed
-    If GXKeyDown(GXKEY_F1) Then toggleDebug = GX_TRUE
-    If Not GXKeyDown(GXKEY_F1) And toggleDebug Then
+    If GXKeyDown(GXKEY_D) Then toggleDebug = GX_TRUE
+    If Not GXKeyDown(GXKEY_D) And toggleDebug Then
         GXDebug Not GXDebug
         GXMapLayerVisible 5, GXDebug
         toggleDebug = GX_FALSE

@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <style>
+            body { 
+                background-color: #333; 
+            }
+            #gx-container {
+                text-align: center; 
+            }
+            #gx-footer {
+                margin: 0 auto;
+                background-color: #666;
+                display: flex;
+                justify-content: space-between;
+            }
+            #gx-link, #gx-fullscreen { 
+                display: inline-block; 
+                margin: 1px }
+            #gx-canvas {
+                border: 1px solid #222; 
+                background-color: #000;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="gx-container"></div>
+        <div id="gx-footer">
+            <div id="gx-link"><a href="https://github.com/boxgaming/gx" target="_blank" title="Powered by GX"><img src="gx-logo.png"></a></div>    
+            <div id="gx-fullscreen"><img src="fullscreen.png"/ title="Full Screen Mode" onclick="GX.fullScreen(true)"></div>
+        </div>
+    </body>
+    <script language="javascript" src="gx.js"></script>
+    <script language="javascript" src="qb64.js"></script>
+    <script language="javascript" src="game.js"></script>
+</html>

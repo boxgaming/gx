@@ -1,5 +1,6 @@
 Option _Explicit
 $Console:Only
+$ExeIcon:'./../gx/resource/gx.ico'
 
 Const False = 0
 Const True = Not False
@@ -27,13 +28,6 @@ Type QBType
     args As String
 End Type
 
-'Type TypeVariable
-'    typeId As Integer
-'    type As String
-'    name As String
-'    uname As String
-'End Type
-
 Type Variable
     type As String
     name As String
@@ -50,10 +44,11 @@ ReDim Shared types(0) As QBType
 ReDim Shared typeVars(0) As Variable
 ReDim Shared globalVars(0) As Variable
 ReDim Shared localVars(0) As Variable
+Dim Shared currentMethod As String
 
-Print "/*"
+'Print "/*"
 ReadLines Command$
-Print "*/"
+'Print "*/"
 FindMethods
 InitGX
 InitQB64Methods
@@ -82,7 +77,6 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
     totalIndent = 1
     Dim caseCount As Integer
     For i = firstLine To lastLine
-        'Print GXSTR_LPad(_Trim$(Str$(i)), "0", 4) + ": " + lines(i)
         indent = 0
         tempIndent = 0
         Dim l As String
@@ -197,7 +191,6 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 End If
             End If
 
-            'Print GXSTR_LPad(js, " ", indent)
             If (indent < 0) Then totalIndent = totalIndent + indent
             Print GXSTR_LPad("", " ", (totalIndent + tempIndent) * 3) + js
             If (indent > 0) Then totalIndent = totalIndent + indent
@@ -317,7 +310,6 @@ Function FindTypeId (typeName As String)
 End Function
 
 Function ConvertExpression$ (ex As String)
-    'Print "////// ConvertExp: [ " + ex + " ]"
     Dim c As String
     Dim js As String: js = ""
     Dim word As String: word = ""
@@ -348,8 +340,20 @@ Function ConvertExpression$ (ex As String)
                 If FindVariable(word, var, False) Then
                     js = js + " " + var.jsname
                 Else
-                    'Print "////// ??? [ " + word + " ]"
-                    js = js + " " + word
+                    ' TODO: Need a more sophisticated way to determine whether
+                    '       the return value is being assigned in the method.
+                    '       Currently, this does not support recursive calls.
+                    'Print " /* " + word + " */ "
+                    If FindMethod(word, m) Then
+                        If m.name <> currentMethod Then
+                            js = js + " " + m.jsname + "()"
+                        Else
+                            js = js + " " + word
+                        End If
+                    Else
+                        js = js + " " + word
+                    End If
+
                 End If
             End If
             If c = "," Then js = js + ","
@@ -380,7 +384,7 @@ Function ConvertExpression$ (ex As String)
                 End If
             Wend
 
-            ' Determine whethere the current word is a function or array variable
+            ' Determine whether the current word is a function or array variable
             If FindVariable(word, var, True) Then
                 js = js + var.jsname + "[" + ConvertExpression(ex2) + "]"
 
@@ -389,8 +393,6 @@ Function ConvertExpression$ (ex As String)
             Else
                 ' nested condition
                 js = js + "(" + ConvertExpression(ex2) + ")"
-                'Print "HEY!!!! - " + ex2
-                'System
             End If
             word = ""
 
@@ -429,7 +431,7 @@ Function FindMethod (mname As String, m As Method)
     Dim found As Integer: found = False
     Dim i As Integer
     For i = 1 To UBound(methods)
-        If methods(i).uname = UCase$(mname) Then
+        If methods(i).uname = _Trim$(UCase$(mname)) Then
             found = True
             m = methods(i)
             Exit For
@@ -440,14 +442,13 @@ End Function
 
 Sub ConvertMethods ()
     Print ""
-    'Dim js As String
     Dim i As Integer
     For i = 1 To UBound(methods)
         If (methods(i).line <> 0) Then
             Dim lastLine As Integer
             lastLine = methods(i + 1).line - 1
             If lastLine < 0 Then lastLine = UBound(lines)
-            'Print methods(i).type + " " + methods(i).name + " " + Str$(methods(i).line) + "-" + Str$(lastLine) + " [" + Str$(methods(i).argc) + "]"
+
             ' TODO: figure out how to make needed functions have the async modifier
             Print "function " + methods(i).jsname + "(";
             If methods(i).argc > 0 Then
@@ -468,6 +469,8 @@ Sub ConvertMethods ()
             If methods(i).type = "FUNCTION" Then
                 Print "var " + methods(i).name + " = null;"
             End If
+            currentMethod = methods(i).name
+
             ConvertLines methods(i).line + 1, lastLine - 1, methods(i).name
             If methods(i).type = "FUNCTION" Then
                 Print "return " + methods(i).name + ";"
@@ -485,11 +488,6 @@ Sub ReadLines (filename As String)
         Line Input #1, fline
         If Not _Trim$(fline) = "" Then ' remove all blank lines
 
-            'Dim a: a = _InStrRev(fline, " _")
-            'If a <> 0 Then
-            '    Print Str$(a) + ":" + Str$(Len(fline)): Input a
-            'End If
-            'While _InStrRev(fline, " _") = Len(fline) - 1
             While EndsWith(fline, " _")
                 Dim nextLine As String
                 Line Input #1, nextLine
@@ -644,7 +642,7 @@ Sub AddLine (fline As String)
     c = GXSTR_Split(fline, " ", parts())
 
     If UCase$(parts(1)) = "IF" Then
-        Print "'''' IT'S AN IF!"
+        'Print "'''' IT'S AN IF!"
         Dim thenIndex As Integer
         thenIndex = 0
         Dim i As Integer
@@ -668,7 +666,7 @@ Sub AddLine (fline As String)
 End Sub
 
 Sub __AddLine (fline As String)
-    Print fline
+    'Print fline
     Dim lcount: lcount = UBound(lines) + 1
     ReDim _Preserve lines(lcount) As String
     lines(lcount) = fline
@@ -928,7 +926,7 @@ Sub InitGX
     AddGXConst "GXKEY_PERIOD"
     AddGXConst "GXKEY_SLASH"
     AddGXConst "GXKEY_RSHIFT"
-    AddGXConst "GXKEY_NUMPAD_ASTERISK"
+    AddGXConst "GXKEY_NUMPAD_MULTIPLY"
     AddGXConst "GXKEY_SPACEBAR"
     AddGXConst "GXKEY_CAPSLOCK"
     AddGXConst "GXKEY_F1"
@@ -959,7 +957,7 @@ Sub InitGX
     AddGXConst "GXKEY_F12"
     AddGXConst "GXKEY_NUMPAD_ENTER"
     AddGXConst "GXKEY_RCTRL"
-    AddGXConst "GXKEY_NUMPAD_SLASH"
+    AddGXConst "GXKEY_NUMPAD_DIVIDE"
     AddGXConst "GXKEY_NUMLOCK"
     AddGXConst "GXKEY_HOME"
     AddGXConst "GXKEY_UP"
@@ -1018,8 +1016,7 @@ Sub InitGX
     AddGXMethod "FUNCTION", "GXScreenEntityCreate"
     AddGXMethod "FUNCTION", "GXEntityCreate"
     AddGXMethod "SUB", "GXEntityCreate"
-    AddGXMethod "SUB", "GXEntityHide"
-    AddGXMethod "SUB", "GXEntityShow"
+    AddGXMethod "SUB", "GXEntityVisible"
     AddGXMethod "SUB", "GXEntityMove"
     AddGXMethod "SUB", "GXEntityPos"
     AddGXMethod "SUB", "GXEntityVX"
@@ -1044,23 +1041,6 @@ Sub InitGX
     AddGXMethod "FUNCTION", "GXEntityCollisionOffsetTop"
     AddGXMethod "FUNCTION", "GXEntityCollisionOffsetRight"
     AddGXMethod "FUNCTION", "GXEntityCollisionOffsetBottom"
-    AddGXMethod "FUNCTION", "GXPlayerCreate"
-    AddGXMethod "SUB", "GXPlayerMoveSpeed"
-    AddGXMethod "SUB", "GXPlayerJumpSpeed"
-    AddGXMethod "SUB", "GXPlayerActionKey"
-    AddGXMethod "FUNCTION", "GXPlayerActionKey"
-    AddGXMethod "SUB", "GXPlayerActionDisabled"
-    AddGXMethod "FUNCTION", "GXPlayerActionDisabled"
-    AddGXMethod "SUB", "GXPlayerActionInput"
-    AddGXMethod "SUB", "GXPlayerMoveKey"
-    AddGXMethod "SUB", "GXPlayerMoveInput"
-    AddGXMethod "FUNCTION", "GXDeviceInputTest"
-    AddGXMethod "SUB", "GXPlayerActionAnimationSeq"
-    AddGXMethod "FUNCTION", "GXPlayerActionAnimationSeq"
-    AddGXMethod "SUB", "GXPlayerActionAnimationMode"
-    AddGXMethod "FUNCTION", "GXPlayerActionAnimationMode"
-    AddGXMethod "SUB", "GXPlayerActionAnimationSpeed"
-    AddGXMethod "FUNCTION", "GXPlayerActionAnimationSpeed"
     AddGXMethod "SUB", "GXFullScreen"
     AddGXMethod "FUNCTION", "GXFullScreen"
     AddGXMethod "FUNCTION", "GXBackgroundAdd"
@@ -1166,6 +1146,7 @@ End Sub
 
 Sub InitQB64Methods
     AddQB64Method "SUB", "_Title"
+    AddQB64Method "FUNCTION", "Chr$"
     AddQB64Method "FUNCTION", "UBound"
 End Sub
 
