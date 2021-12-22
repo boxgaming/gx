@@ -59,13 +59,8 @@ Print ""
 ConvertLines 1, MainEnd, ""
 ConvertMethods
 Print "}"
-Print "init();"
-
-'PrintMethods
-'PrintTypes
 
 System
-
 
 Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As String)
     Dim typeMode As Integer: typeMode = False
@@ -83,9 +78,8 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
         l = _Trim$(lines(i))
         ReDim parts(0) As String
         Dim c As Integer
-        c = GXSTR_Split(l, " ", parts())
+        c = SLSplit(l, parts())
 
-        'Dim currType As QBType
         Dim currType As Integer
 
         Dim js As String
@@ -97,8 +91,6 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
             If first = "END" Then
                 Dim second As String: second = UCase$(parts(2))
                 If second = "TYPE" Then
-                    'Print "********************** TYPE END *********************************"
-                    'AddType currType
                     typeMode = False
                 End If
             Else
@@ -163,7 +155,6 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 js = "return;"
 
             ElseIf first = "TYPE" Then
-                'Print "********************** TYPE START *********************************"
                 typeMode = True
                 Dim qbtype As QBType
                 qbtype.line = i
@@ -316,88 +307,100 @@ Function ConvertExpression$ (ex As String)
     Dim var As Variable
     Dim m As Method
 
+    Dim stringLiteral As Integer
     Dim i As Integer: i = 1
     While i <= Len(ex)
         c = Mid$(ex, i, 1)
-        If c = " " Or c = "," Or i = Len(ex) Then
-            If i = Len(ex) Then word = word + c
-            Dim uword As String: uword = UCase$(word)
-            If uword = "NOT" Then
-                js = js + "!"
-            ElseIf uword = "AND" Then
-                js = js + " && "
-            ElseIf uword = "OR" Then
-                js = js + " || "
-            ElseIf uword = "MOD" Then
-                js = js + " % "
-            ElseIf word = "=" Then
-                js = js + " == "
-            ElseIf word = "<>" Then
-                js = js + " != "
-            ElseIf word = ">" Or word = ">=" Or word = "<" Or word = "<=" Then
-                js = js + " " + word + " "
-            Else
-                If FindVariable(word, var, False) Then
-                    js = js + " " + var.jsname
+
+        If c = Chr$(34) Then
+            js = js + c
+            stringLiteral = Not stringLiteral
+
+        ElseIf stringLiteral Then
+            js = js + c
+
+        Else
+            If c = " " Or c = "," Or i = Len(ex) Then
+                If i = Len(ex) Then word = word + c
+                Dim uword As String: uword = UCase$(word)
+                If uword = "NOT" Then
+                    js = js + "!"
+                ElseIf uword = "AND" Then
+                    js = js + " && "
+                ElseIf uword = "OR" Then
+                    js = js + " || "
+                ElseIf uword = "MOD" Then
+                    js = js + " % "
+                ElseIf word = "=" Then
+                    js = js + " == "
+                ElseIf word = "<>" Then
+                    js = js + " != "
+                ElseIf word = ">" Or word = ">=" Or word = "<" Or word = "<=" Then
+                    js = js + " " + word + " "
                 Else
-                    ' TODO: Need a more sophisticated way to determine whether
-                    '       the return value is being assigned in the method.
-                    '       Currently, this does not support recursive calls.
-                    'Print " /* " + word + " */ "
-                    If FindMethod(word, m) Then
-                        If m.name <> currentMethod Then
-                            js = js + " " + m.jsname + "()"
+                    'Print "/* " + word + " */"
+                    If FindVariable(word, var, False) Then
+                        js = js + " " + var.jsname
+                    Else
+                        ' TODO: Need a more sophisticated way to determine whether
+                        '       the return value is being assigned in the method.
+                        '       Currently, this does not support recursive calls.
+                        'Print " /* " + word + " */ "
+                        If FindMethod(word, m) Then
+                            If m.name <> currentMethod Then
+                                js = js + " " + m.jsname + "()"
+                            Else
+                                js = js + " " + word
+                            End If
                         Else
                             js = js + " " + word
                         End If
-                    Else
-                        js = js + " " + word
-                    End If
 
-                End If
-            End If
-            If c = "," Then js = js + ","
-            word = ""
-
-        ElseIf c = "(" Then
-            ' Find the end of the group
-            Dim done As Integer: done = False
-            Dim pcount As Integer: pcount = 0
-            Dim c2 As String
-            Dim ex2 As String: ex2 = ""
-            i = i + 1
-            While Not done And i <= Len(ex)
-                c2 = Mid$(ex, i, 1)
-                If c2 = "(" Then
-                    pcount = pcount + 1
-                ElseIf c2 = ")" Then
-                    If pcount = 0 Then
-                        done = True
-                    Else
-                        pcount = pcount - 1
                     End If
                 End If
+                If c = "," Then js = js + ","
+                word = ""
 
-                If Not done Then
-                    ex2 = ex2 + c2
-                    i = i + 1
+            ElseIf c = "(" Then
+                ' Find the end of the group
+                Dim done As Integer: done = False
+                Dim pcount As Integer: pcount = 0
+                Dim c2 As String
+                Dim ex2 As String: ex2 = ""
+                i = i + 1
+                While Not done And i <= Len(ex)
+                    c2 = Mid$(ex, i, 1)
+                    If c2 = "(" Then
+                        pcount = pcount + 1
+                    ElseIf c2 = ")" Then
+                        If pcount = 0 Then
+                            done = True
+                        Else
+                            pcount = pcount - 1
+                        End If
+                    End If
+
+                    If Not done Then
+                        ex2 = ex2 + c2
+                        i = i + 1
+                    End If
+                Wend
+
+                ' Determine whether the current word is a function or array variable
+                If FindVariable(word, var, True) Then
+                    js = js + var.jsname + "[" + ConvertExpression(ex2) + "]"
+
+                ElseIf FindMethod(word, m) Then
+                    js = js + m.jsname + "(" + ConvertExpression(ex2) + ")"
+                Else
+                    ' nested condition
+                    js = js + "(" + ConvertExpression(ex2) + ")"
                 End If
-            Wend
+                word = ""
 
-            ' Determine whether the current word is a function or array variable
-            If FindVariable(word, var, True) Then
-                js = js + var.jsname + "[" + ConvertExpression(ex2) + "]"
-
-            ElseIf FindMethod(word, m) Then
-                js = js + m.jsname + "(" + ConvertExpression(ex2) + ")"
             Else
-                ' nested condition
-                js = js + "(" + ConvertExpression(ex2) + ")"
+                word = word + c
             End If
-            word = ""
-
-        Else
-            word = word + c
         End If
         i = i + 1
     Wend
@@ -407,8 +410,10 @@ End Function
 Function FindVariable (varname As String, var As Variable, isArray As Integer)
     Dim found As Integer: found = False
     Dim i As Integer
+    Dim fvarname As String
+    fvarname = _Trim$(UCase$(RemoveSuffix(varname)))
     For i = 1 To UBound(localVars)
-        If localVars(i).isArray = isArray And UCase$(localVars(i).name) = UCase$(varname) Then
+        If localVars(i).isArray = isArray And UCase$(localVars(i).name) = fvarname Then
             found = True
             var = localVars(i)
             Exit For
@@ -416,7 +421,7 @@ Function FindVariable (varname As String, var As Variable, isArray As Integer)
     Next i
     If Not found Then
         For i = 1 To UBound(globalVars)
-            If globalVars(i).isArray = isArray And UCase$(globalVars(i).name) = UCase$(varname) Then
+            If globalVars(i).isArray = isArray And UCase$(globalVars(i).name) = fvarname Then
                 found = True
                 var = globalVars(i)
                 Exit For
@@ -431,7 +436,7 @@ Function FindMethod (mname As String, m As Method)
     Dim found As Integer: found = False
     Dim i As Integer
     For i = 1 To UBound(methods)
-        If methods(i).uname = _Trim$(UCase$(mname)) Then
+        If methods(i).uname = _Trim$(UCase$(RemoveSuffix(mname))) Then
             found = True
             m = methods(i)
             Exit For
@@ -450,7 +455,9 @@ Sub ConvertMethods ()
             If lastLine < 0 Then lastLine = UBound(lines)
 
             ' TODO: figure out how to make needed functions have the async modifier
-            Print "function " + methods(i).jsname + "(";
+            Dim asyncModifier As String
+            If methods(i).type = "SUB" Then asyncModifier = "async " Else asyncModifier = ""
+            Print asyncModifier + "function " + methods(i).jsname + "(";
             If methods(i).argc > 0 Then
                 ReDim args(0) As String
                 Dim c As Integer
@@ -467,13 +474,13 @@ Sub ConvertMethods ()
             End If
             Print ") {"
             If methods(i).type = "FUNCTION" Then
-                Print "var " + methods(i).name + " = null;"
+                Print "var " + RemoveSuffix(methods(i).name) + " = null;"
             End If
             currentMethod = methods(i).name
 
             ConvertLines methods(i).line + 1, lastLine - 1, methods(i).name
             If methods(i).type = "FUNCTION" Then
-                Print "return " + methods(i).name + ";"
+                Print "return " + RemoveSuffix(methods(i).name) + ";"
             End If
             Print "}"
         End If
@@ -498,11 +505,20 @@ Sub ReadLines (filename As String)
             quoteDepth = 0
             Dim i As Integer
             For i = 1 To Len(fline)
-                If quoteDepth = 0 And Mid$(fline, i, 1) = "'" Then
+                Dim c As String
+                c = Mid$(fline, i, 1)
+                If c = Chr$(34) Then
+                    If quoteDepth = 0 Then
+                        quoteDepth = 1
+                    Else
+                        quoteDepth = 0
+                    End If
+                End If
+                If quoteDepth = 0 And c = "'" Then
                     fline = Left$(fline, i - 1)
                     Exit For
                 End If
-                If quoteDepth = 0 And Mid$(fline, i, 1) = ":" Then
+                If quoteDepth = 0 And c = ":" Then
                     AddLine Left$(fline, i - 1)
                     fline = Right$(fline, Len(fline) - i)
                 End If
@@ -570,6 +586,56 @@ Sub FindMethods
     Next i
 End Sub
 
+' String literal aware split
+Function SLSplit (sourceString As String, results() As String)
+    Dim cstr As String, p As Long, curpos As Long, arrpos As Long, dpos As Long
+
+    cstr = _Trim$(sourceString)
+
+    ' remove all excess space not inside a string literal
+    Dim lastChar As String
+    Dim quoteMode As Integer
+    Dim result As String
+    Dim count As Integer
+    Dim i As Integer
+    For i = 1 To Len(cstr)
+        Dim c As String
+        c = Mid$(cstr, i, 1)
+
+        If c = Chr$(34) Then
+            quoteMode = Not quoteMode
+            result = result + c
+
+        ElseIf c = " " Then
+            If quoteMode Then
+                result = result + c
+
+            ElseIf lastChar = " " Then
+                ' extra space, move along
+
+            Else
+                count = UBound(results) + 1
+                ReDim _Preserve results(count) As String
+                results(count) = result
+                result = ""
+            End If
+        Else
+            result = result + c
+        End If
+
+        lastChar = c
+    Next i
+
+    ' add the leftover last segment
+    If result <> "" Then
+        count = UBound(results) + 1
+        ReDim _Preserve results(count) As String
+        results(count) = result
+    End If
+
+    SLSplit = UBound(results)
+End Function
+
 
 Sub PrintMethods
     Print ""
@@ -608,7 +674,7 @@ Sub AddMethod (m As Method, prefix As String)
     If m.type = "FUNCTION" Then
         m.returnType = DataTypeFromName(m.name)
     End If
-    m.uname = UCase$(m.name)
+    m.uname = UCase$(RemoveSuffix(m.name))
     m.jsname = MethodJS(m, prefix)
     methods(mcount) = m
 End Sub
@@ -620,7 +686,7 @@ Sub AddGXMethod (mtype As String, mname As String)
     m.type = mtype
     m.name = mname
     m.uname = UCase$(m.name)
-    m.jsname = GXMethodJS(mname)
+    m.jsname = GXMethodJS(RemoveSuffix(mname))
     If mtype = "FUNCTION" Then
         m.returnType = DataTypeFromName(mname)
     End If
@@ -690,7 +756,10 @@ Sub AddGXConst (vname As String)
     ElseIf vname = "GX_FALSE" Then
         v.jsname = "false"
     Else
-        v.jsname = "GX." + Mid$(vname, 3, Len(vname) - 2)
+        Dim jsname As String
+        jsname = Mid$(vname, 3, Len(vname) - 2)
+        If Left$(jsname, 1) = "_" Then jsname = Right$(jsname, Len(jsname) - 1)
+        v.jsname = "GX." + jsname
     End If
     v.isConst = True
     AddVariable v, globalVars()
@@ -727,6 +796,29 @@ Sub AddType (t As QBType)
     types(tcount) = t
 End Sub
 
+Sub AddGXType (tname As String, args As String)
+    Dim t As QBType
+    t.name = tname
+    't.argc = argc
+    't.args = args
+    AddType t
+    Dim typeId As Integer
+    typeId = UBound(types)
+    Dim count As Integer
+    ReDim pairs(0) As String
+    count = GXSTR_Split(args, ",", pairs())
+    Dim i As Integer
+    For i = 1 To UBound(pairs)
+        ReDim nv(0) As String
+        count = GXSTR_Split(pairs(i), ":", nv())
+        Dim tvar As Variable
+        tvar.typeId = typeId
+        tvar.name = nv(1)
+        tvar.type = UCase$(nv(2))
+        AddVariable tvar, typeVars()
+    Next i
+End Sub
+
 Function MainEnd
     If UBound(methods) = 0 Then
         MainEnd = UBound(lines)
@@ -735,6 +827,21 @@ Function MainEnd
     End If
 End Function
 
+Function RemoveSuffix$ (vname As String)
+    Dim i As Integer
+    Dim done As Integer
+    Dim c As String
+    i = Len(vname)
+    While Not done
+        c = Mid$(vname, i, 1)
+        If Not c = "`" And Not c = "%" And Not c = "&" And Not c = "$" And Not c = "~" And Not c = "!" Then
+            done = True
+        Else
+            i = i - 1
+        End If
+    Wend
+    RemoveSuffix = Left$(vname, i)
+End Function
 
 Function DataTypeFromName$ (vname As String)
     Dim dt As String
@@ -829,12 +936,20 @@ End Function
 
 Function GXMethodJS$ (mname As String)
     Dim jsname As String
-    jsname = "GX." + LCase$(Mid$(mname, 3, 1))
+    Dim startIdx As Integer
+    If InStr(mname, "GXSTR") = 1 Then
+        jsname = "GXSTR."
+        startIdx = 7
+    Else
+        jsname = "GX."
+        startIdx = 3
+    End If
+    jsname = jsname + LCase$(Mid$(mname, startIdx, 1))
 
     Dim i As Integer
     Dim c As String
     Dim a As Integer
-    For i = 4 To Len(mname)
+    For i = startIdx + 1 To Len(mname)
         c = Mid$(mname, i, 1)
         a = Asc(c)
         ' uppercase, lowercase, numbers, - and .
@@ -853,6 +968,10 @@ Function GXMethodJS$ (mname As String)
 End Function
 
 Sub InitGX
+    AddGXType "GXPOSITION", "x:LONG,y:LONG"
+    AddGXType "GXDEVICEINPUT", "deviceId:INTEGER,deviceType:INTEGER,inputType:INTEGER,inputId:INTEGER,inputValue:INTEGER"
+
+
     AddGXConst "GX_FALSE"
     AddGXConst "GX_TRUE"
     AddGXConst "GXEVENT_INIT"
@@ -999,8 +1118,8 @@ Sub InitGX
     AddGXConst "GXTYPE_FONT"
 
     AddGXMethod "SUB", "GXSleep"
-    AddGXMethod "FUNCTION", "GXMouseX%"
-    AddGXMethod "FUNCTION", "GXMouseY%"
+    AddGXMethod "FUNCTION", "GXMouseX"
+    AddGXMethod "FUNCTION", "GXMouseY"
     AddGXMethod "FUNCTION", "GXSoundLoad"
     AddGXMethod "SUB", "GXSoundPlay"
     AddGXMethod "SUB", "GXSoundRepeat"
@@ -1106,7 +1225,7 @@ Sub InitGX
     AddGXMethod "FUNCTION", "GXTilesetHeight"
     AddGXMethod "FUNCTION", "GXTilesetColumns"
     AddGXMethod "FUNCTION", "GXTilesetRows"
-    AddGXMethod "FUNCTION", "GXTilesetFilename$"
+    AddGXMethod "FUNCTION", "GXTilesetFilename"
     AddGXMethod "FUNCTION", "GXTilesetImage"
     AddGXMethod "SUB", "GXTilesetAnimationCreate"
     AddGXMethod "SUB", "GXTilesetAnimationAdd"
@@ -1118,36 +1237,52 @@ Sub InitGX
     AddGXMethod "SUB", "GXFontCreate"
     AddGXMethod "FUNCTION", "GXFontWidth"
     AddGXMethod "FUNCTION", "GXFontHeight"
-    AddGXMethod "FUNCTION", "GXFontCharSpacing%"
+    AddGXMethod "FUNCTION", "GXFontCharSpacing"
     AddGXMethod "SUB", "GXFontCharSpacing"
-    AddGXMethod "FUNCTION", "GXFontLineSpacing%"
+    AddGXMethod "FUNCTION", "GXFontLineSpacing"
     AddGXMethod "SUB", "GXFontLineSpacing"
     AddGXMethod "SUB", "GXDrawText"
     AddGXMethod "FUNCTION", "GXDebug"
     AddGXMethod "SUB", "GXDebug"
     AddGXMethod "FUNCTION", "GXDebugScreenEntities"
     AddGXMethod "SUB", "GXDebugScreenEntities"
-    AddGXMethod "FUNCTION", "GXDebugFont%"
+    AddGXMethod "FUNCTION", "GXDebugFont"
     AddGXMethod "SUB", "GXDebugFont"
-    AddGXMethod "FUNCTION", "GXDebugTileBorderColor~&"
+    AddGXMethod "FUNCTION", "GXDebugTileBorderColor"
     AddGXMethod "SUB", "GXDebugTileBorderColor"
-    AddGXMethod "FUNCTION", "GXDebugEntityBorderColor~&"
+    AddGXMethod "FUNCTION", "GXDebugEntityBorderColor"
     AddGXMethod "SUB", "GXDebugEntityBorderColor"
-    AddGXMethod "FUNCTION", "GXDebugEntityCollisionColor~&"
+    AddGXMethod "FUNCTION", "GXDebugEntityCollisionColor"
     AddGXMethod "SUB", "GXDebugEntityCollisionColor"
     AddGXMethod "SUB", "GXKeyInput"
     AddGXMethod "FUNCTION", "GXKeyDown"
     AddGXMethod "SUB", "GXDeviceInputDetect"
-    AddGXMethod "FUNCTION", "GXDeviceName$"
-    AddGXMethod "FUNCTION", "GXDeviceTypeName$"
-    AddGXMethod "FUNCTION", "GXInputTypeName$"
-    AddGXMethod "FUNCTION", "GXKeyButtonName$"
+    AddGXMethod "FUNCTION", "GXDeviceInputTest"
+    AddGXMethod "FUNCTION", "GXDeviceName"
+    AddGXMethod "FUNCTION", "GXDeviceTypeName"
+    AddGXMethod "FUNCTION", "GXInputTypeName"
+    AddGXMethod "FUNCTION", "GXKeyButtonName"
+
+    ' Supporting Libraries
+    AddGXConst "GX_CR"
+    AddGXConst "GX_LF"
+    AddGXConst "GX_CRLF"
+
+    AddGXMethod "FUNCTION", "GXSTR_LPad"
+    AddGXMethod "FUNCTION", "GXSTR_RPad"
+    AddGXMethod "FUNCTION", "GXSTR_Replace"
+    AddGXMethod "FUNCTION", "GXSTR_Split"
 End Sub
 
 Sub InitQB64Methods
+    AddQB64Method "FUNCTION", "_Round"
     AddQB64Method "SUB", "_Title"
+    AddQB64Method "FUNCTION", "_Trim"
     AddQB64Method "FUNCTION", "Chr$"
+    AddQB64Method "FUNCTION", "Left$"
+    AddQB64Method "FUNCTION", "Str$"
     AddQB64Method "FUNCTION", "UBound"
+    AddQB64Method "FUNCTION", "UCase$"
 End Sub
 
 '$include: '../gx/gx_str.bm'

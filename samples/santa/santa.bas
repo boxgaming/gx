@@ -53,18 +53,18 @@ Dim Shared startFrame As _Unsigned Long
 Dim Shared fpress As Integer
 Dim Shared controls(4) As GXDeviceInput
 
-_Title "Santa - Solo Mission"
+_Title "Sleighless!"
 
 GXHardwareAcceleration GX_TRUE
 GXFrameRate 60
 GXSceneCreate 512, 288
 GXSceneScale 2
+Init
 GXSceneStart
 System
 
 Sub GXOnGameEvent (e As GXEvent)
     Select Case e.event
-        Case GXEVENT_INIT: OnInit
         Case GXEVENT_UPDATE: OnUpdate
         Case GXEVENT_DRAWSCREEN: OnDrawScreen
         Case GXEVENT_COLLISION_ENTITY: OnTestCollisionEntity e
@@ -72,7 +72,7 @@ Sub GXOnGameEvent (e As GXEvent)
     End Select
 End Sub
 
-Sub OnInit
+Sub Init
     ' Initialize the background
     Dim bgid As Integer: bgid = GXBackgroundAdd("img/bg.png", GXBG_SCROLL)
     GXMapLoad "map/level1.gxm"
@@ -150,7 +150,7 @@ Sub OnInit
     sndLose = GXSoundLoad("snd/lose.mp3")
 
     ' Initialize the game font
-    gameFont = GXFontCreate("img/font.png", 8, 8, "0123456789ABCDEF" + GX_CRLF + _
+    gameFont = GXFontCreate("img/font.png", 8, 9, "0123456789ABCDEF" + GX_CRLF + _
                                                   "GHIJKLMNOPQRSTUV" + GX_CRLF + _
                                                   "WXYZ©>-x'!/")
     GXFontLineSpacing gameFont, 2
@@ -249,7 +249,7 @@ Sub OnUpdate
     Next i
 
     ' Calculate the number of seconds remaining in the game
-    timeRemaining = MAX_TIME - ((GXFrame - startFrame) / GXFrameRate)
+    timeRemaining = _Round(MAX_TIME - ((GXFrame - startFrame) / GXFrameRate))
 End Sub
 
 Sub DetectControlInput
@@ -314,12 +314,12 @@ Sub OnDrawScreen
            " IT'S UP TO YOU ALONE NOW TO SAVE CHRISTMAS!"
 
         GXDrawtext gameFont, 75, 135, _
-           "      LEFT  -  " + FormatInput(LEFT) + "   RIGHT -  " + FormatInput(RIGHT) + GX_CRLF + GX_CRLF + _
-           "      SHOOT -  " + FormatInput(FIRE) + "   JUMP  -  " + FormatInput(JUMP) + GX_CRLF + GX_CRLF + _
-           "         FULLSCREEN       -  F" + GX_CRLF + GX_CRLF + _
-           "         CHANGE CONTROLS  -  C" + GX_CRLF + GX_CRLF + _
-           "         QUIT             -  ESC" + GX_CRLF + GX_CRLF + GX_CRLF + GX_CRLF + _
-           "          PRESS ENTER TO PLAY!"
+           "         LEFT  -  " + FormatInput(LEFT) + "   RIGHT -  " + FormatInput(RIGHT) + GX_CRLF + GX_CRLF + _
+           "         SHOOT -  " + FormatInput(FIRE) + "   JUMP  -  " + FormatInput(JUMP) + GX_CRLF + GX_CRLF + _
+           "             FULLSCREEN  -  F" + GX_CRLF + GX_CRLF + _
+           "             QUIT        -  ESC" + GX_CRLF + GX_CRLF + GX_CRLF + GX_CRLF + _
+           "            PRESS ENTER TO PLAY!"
+        ' "           CHANGE CONTROLS  -  C" + GX_CRLF + GX_CRLF + _
 
         ' Draw the control selector if in selection mode
         If controlMode > 0 Then

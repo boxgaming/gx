@@ -29,7 +29,8 @@ MakeOutputDir
 ConvertSource
 ' TODO: create a more generic asset conversion method that
 '       does not depend on the project folder structure
-CopyImages
+CopyFolder "img", "images"
+CopyFolder "snd", "sounds"
 ConvertMaps
 CopyWebFramework
 
@@ -53,21 +54,20 @@ Sub ConvertSource
     Shell "." + GXFS_PathSeparator + "qb2js " + Chr$(32) + gameFullpath + Chr$(32) + " > " + Chr$(32) + outputDir + GXFS_PathSeparator + "game.js" + Chr$(32)
 End Sub
 
-Sub CopyImages
-    Print "Copying images..."
-    Dim imgDir As String
-    imgDir = gameDir + GXFS_PathSeparator + "img"
-    If _DirExists(imgDir) Then
-        Dim imgDestDir As String
-        imgDestDir = outputDir + GXFS_PathSeparator + "img"
-        MkDir imgDestDir
+Sub CopyFolder (fname As String, description As String)
+    Print "Copying " + description + "..."
+    Dim srcDir As String
+    srcDir = gameDir + GXFS_PathSeparator + fname
+    If _DirExists(srcDir) Then
+        Dim destDir As String
+        destDir = outputDir + GXFS_PathSeparator + fname
+        MkDir destDir
 
         $If WIN Then
-            Shell "copy " + Chr$(32) + imgDir + GXFS_PathSeparator + "*" + Chr$(32) + " " + Chr$(32) + imgDestDir + Chr$(32)
+            Shell "copy " + Chr$(32) + srcDir + GXFS_PathSeparator + "*" + Chr$(32) + " " + Chr$(32) + destDir + Chr$(32)
         $Else
-            Shell "cp " + Chr$(32) + imgDir + GXFS_PathSeparator + "*" + Chr$(32) + " " + Chr$(32) + imgDestDir + Chr$(32)
+            Shell "cp " + Chr$(32) + srcDir + GXFS_PathSeparator + "*" + Chr$(32) + " " + Chr$(32) + destDir + Chr$(32)
         $End If
-
     End If
 End Sub
 

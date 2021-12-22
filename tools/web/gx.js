@@ -22,6 +22,9 @@ var GX = new function() {
         enabled: false,
         font: 1 // GX.FONT_DEFAULT
     };
+    var _sounds = [];
+    var _sound_muted = false;
+
     // javascript specific
     var _onGameEvent = null;
     var _pressedKeys = {};
@@ -157,12 +160,6 @@ var GX = new function() {
     function _sceneUpdate() {
         _scene.frame++;
 
-        // Capture mouse events when not embedded
-        //If Not GXSceneEmbedded Then
-        //    Dim mi As Long
-        //    mi = _MouseInput
-        //End If
-
         // Call custom game update logic
         _customEvent(GX.EVENT_UPDATE);
 
@@ -217,12 +214,6 @@ var GX = new function() {
             }
             GX.scenePos(sx, sy);
         }
-
-        //If Not GXSceneEmbedded Then
-        //    While _MouseInput
-        //        ' Flush mouse event buffer
-        //    Wend
-        //End If
     }
 
     // Start the game loop.
@@ -479,6 +470,50 @@ var GX = new function() {
         _bg.length = 0;
     }
 
+
+    // Sound Methods
+    // ----------------------------------------------------------------------------
+    function _soundLoad (filename) {
+        var a = new Audio(filename);
+        _sounds.push(a);
+        return _sounds.length;
+    }
+
+    function _soundPlay (sid) {
+        if (!GX.soundMuted()) {
+            _sounds[sid-1].loop = false;
+            _sounds[sid-1].play();
+        }
+    }
+
+    function _soundRepeat (sid) {
+        if (!GX.soundMuted()) {
+            _sounds[sid-1].loop = true;
+            _sounds[sid-1].play();
+        }
+    }
+
+    function _soundVolume (sid, v) {
+        _sounds[sid-1].volume = v / 100;
+    }
+
+    function _soundPause (sid) {
+        _sounds[sid-1].pause();
+    }
+
+    function _soundStop (sid) {
+        _sounds[sid-1].pause();
+        // TODO: reset playback position to beginning
+    }
+
+    function _soundMuted (muted) {
+        if (muted != undefined) {
+            _sound_muted = muted;
+            // TODO: loop through list of loaded sounds so they can all be muted / unmuted
+        }
+        return _sound_muted;
+    }
+    
 
     // Entity Functions
     // -----------------------------------------------------------------------------
@@ -1584,6 +1619,7 @@ var GX = new function() {
     }
 
     function _drawText (fid, sx, sy, s) {
+        //alert(fid);
         var x = sx;
         var y = sy;
         var font = _fonts[fid-1];
@@ -1634,6 +1670,340 @@ var GX = new function() {
         _fontMapChars(fid, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789~`!@#$%^&*()_-+={}[]|\\,./<>?:;\"'");
         GX.fontLineSpacing(fid, 1);
     }
+
+    // Input Device Methods
+    // -----------------------------------------------------------------
+    function _deviceInputTest(di) {
+        if (di.deviceType = GX.DEVICE_KEYBOARD) {
+            if (di.inputType = GX.DEVICE_BUTTON) {
+                return GX.keyDown(di.inputId);
+            }
+        }
+        return false;
+    }
+/*
+    Function GXDeviceInputTest% (di As GXDeviceInput)
+        Dim dcount As Integer
+        dcount = _Devices
+
+        If di.deviceId < 1 Or di.deviceId > dcount Then
+            GXDeviceInputTest = GX_FALSE
+            Exit Function
+        End If
+
+        Dim result As Integer
+        Dim dactive As Integer
+        dactive = _DeviceInput(di.deviceId)
+
+        If di.inputType = GXDEVICE_BUTTON Then
+            $If WIN Then
+                If _Button(di.inputId) = di.inputValue Then
+                    result = GX_TRUE
+                End If
+            $Else
+                If di.deviceType = GXDEVICE_KEYBOARD Then
+                result = __GX_DeviceKeyDown(di.inputId)
+                Else
+                If _Button(di.inputId) = di.inputValue Then
+                result = GX_TRUE
+                End If
+                End If
+            $End If
+
+        ElseIf di.inputType = GXDEVICE_AXIS Then
+            If _Axis(di.inputId) = di.inputValue Then
+                result = GX_TRUE
+            End If
+        End If
+
+        GXDeviceInputTest = result
+    End Function
+
+    $If LINUX OR MAC Then
+        Function __GX_DeviceKeyDown% (inputId As Integer)
+        Dim k As KeyEntry
+        k = __gx_keymap(inputId)
+
+        Dim result As Integer
+        result = GX_FALSE
+        If _KeyDown(k.value) Then
+        result = GX_TRUE
+        ElseIf k.shift <> 0 Then
+        If _KeyDown(k.shift) Then result = GX_TRUE
+        End If
+
+        __GX_DeviceKeyDown = result
+        End Function
+    $End If
+*/
+    function _keyInput (k, di) {
+        di.deviceId = GX.DEVICE_KEYBOARD;
+        di.deviceType = GX.DEVICE_KEYBOARD;
+        di.inputType = GX.DEVICE_BUTTON;
+        di.inputId = k;
+        di.inputValue = -1;
+    }
+/*
+    Function GXKeyDown% (k As Long)
+        Dim di As GXDeviceInput
+        GXKeyInput k, di
+        GXKeyDown = GXDeviceInputTest(di)
+    End Function
+
+        Sub GXDeviceInputDetect (di As GXDeviceInput)
+        Dim found As Integer
+        Dim dcount As Integer
+        dcount = _Devices
+
+        While _DeviceInput
+            ' Flush the input buffer
+        Wend
+
+        Do
+            _Limit 90
+            Dim x As Integer
+            x = _DeviceInput
+            If x Then
+                Dim i As Integer
+                For i = 1 To _LastButton(x)
+                    If _Button(i) Then
+                        di.deviceId = x
+                        di.deviceType = __GX_DeviceTypeName(x)
+                        di.inputType = GXDEVICE_BUTTON
+                        di.inputId = i
+                        di.inputValue = _Button(i)
+                        found = 1
+                        Exit Do
+                    End If
+                Next i
+
+                For i = 1 To _LastAxis(x)
+                    If _Axis(i) And Abs(_Axis(i)) = 1 Then
+                        di.deviceId = x
+                        di.deviceType = __GX_DeviceTypeName(x)
+                        di.inputType = GXDEVICE_AXIS
+                        di.inputId = i
+                        di.inputValue = _Axis(i)
+                        found = 1
+                        Exit Do
+                    End If
+                Next i
+
+                For i = 1 To _LastWheel(x)
+                    If _Wheel(i) Then
+                        di.deviceId = x
+                        di.deviceType = __GX_DeviceTypeName(x)
+                        di.inputType = GXDEVICE_WHEEL
+                        di.inputId = i
+                        di.inputValue = _Wheel(i)
+                        found = 1
+                        Exit Do
+                    End If
+                Next i
+            End If
+
+            $If LINUX OR MAC Then
+                ' No device input found, as a workaround let's loop through the key map looking for a keydown
+                For i = UBound(__gx_keymap) To 1 Step -1
+                Dim keyIsDown As Integer, inputId As Integer
+                keyIsDown = GX_FALSE
+                If __gx_keymap(i).value <> 0 Then
+                'If i > 29 Then
+                '    Print i; __gx_keymap(i).value
+                '    Dim x: Input x
+                'End If
+                If _KeyDown(__gx_keymap(i).value) Then
+                keyIsDown = GX_TRUE
+                inputId = i
+                ElseIf __gx_keymap(i).shift <> 0 Then
+                If _KeyDown(__gx_keymap(i).shift) Then
+                keyIsDown = GX_TRUE
+                inputId = i
+                End If
+                End If
+                End If
+                If keyIsDown Then
+                di.deviceId = GXDEVICE_KEYBOARD
+                di.deviceType = __GX_DeviceTypeName(GXDEVICE_KEYBOARD)
+                di.inputType = GXDEVICE_BUTTON
+                di.inputId = inputId
+                di.inputValue = GX_TRUE
+                found = 1
+                Exit Do
+                End If
+                Next i
+            $End If
+        Loop Until found
+
+        While _DeviceInput
+            '    Flush the device input buffer
+        Wend
+        _KeyClear
+
+    End Sub
+
+    Function __GX_DeviceTypeName% (deviceId)
+        Dim dname As String
+        dname = _Device$(deviceId)
+
+        If InStr(dname, "[KEYBOARD]") Then
+            __GX_DeviceTypeName = GXDEVICE_KEYBOARD
+        ElseIf InStr(dname, "[MOUSE]") Then
+            __GX_DeviceTypeName = GXDEVICE_MOUSE
+        ElseIf InStr(dname, "[CONTROLLER]") Then
+            __GX_DeviceTypeName = GXDEVICE_CONTROLLER
+        End If
+    End Function
+
+    Function GXDeviceName$ (deviceId As Integer)
+        Dim nstart As Integer, nend As Integer
+        Dim dname As String
+        dname = _Device$(deviceId)
+        If InStr(dname, "[CONTROLLER]") Then
+            nstart = InStr(dname, "[NAME]")
+            If nstart = 0 Then
+                dname = "Controller"
+            Else
+                nstart = nstart + 7
+                nend = InStr(nstart, dname, "]]")
+                dname = _Trim$(Mid$(dname, nstart, nend - nstart))
+            End If
+        ElseIf InStr(dname, "[MOUSE]") Then
+            dname = "Mouse"
+        ElseIf InStr(dname, "[KEYBOARD]") Then
+            dname = "Keyboard"
+        End If
+        GXDeviceName = dname
+    End Function
+
+    Function GXDeviceTypeName$ (dtype As Integer)
+        Dim dtypename As String
+        Select Case dtype
+            Case GXDEVICE_KEYBOARD: dtypename = "KEYBOARD"
+            Case GXDEVICE_MOUSE: dtypename = "MOUSE"
+            Case GXDEVICE_CONTROLLER: dtypename = "CONTROLLER"
+        End Select
+        GXDeviceTypeName = dtypename
+    End Function
+
+    Function GXInputTypeName$ (itype As Integer)
+        Dim itypename As String
+        Select Case itype
+            Case GXDEVICE_BUTTON: itypename = "BUTTON"
+            Case GXDEVICE_AXIS: itypename = "AXIS"
+            Case GXDEVICE_WHEEL: itypename = "WHEEL"
+        End Select
+        GXInputTypeName = itypename
+    End Function
+*/
+    function _keyButtonName (inputId ) {
+        var k;
+        switch (inputId) {
+            case GX.KEY_ESC: k = "Esc"; break;
+            case GX.KEY_1: k = "1"; break;
+            case GX.KEY_2: k = "2"; break;
+            case GX.KEY_3: k = "3"; break;
+            case GX.KEY_4: k = "4"; break;
+            case GX.KEY_5: k = "5"; break;
+            case GX.KEY_6: k = "6"; break;
+            case GX.KEY_7: k = "7"; break;
+            case GX.KEY_8: k = "8"; break;
+            case GX.KEY_9: k = "9"; break;
+            case GX.KEY_0: k = "0"; break;
+            case GX.KEY_DASH: k = "-"; break;
+            case GX.KEY_EQUALS: k = "="; break;
+            case GX.KEY_BACKSPACE: k = "Bksp"; break;
+            case GX.KEY_TAB: k = "Tab"; break;
+            case GX.KEY_Q: k = "Q"; break;
+            case GX.KEY_W: k = "W"; break;
+            case GX.KEY_E: k = "E"; break;
+            case GX.KEY_R: k = "R"; break;
+            case GX.KEY_T: k = "T"; break;
+            case GX.KEY_Y: k = "Y"; break;
+            case GX.KEY_U: k = "U"; break;
+            case GX.KEY_I: k = "I"; break;
+            case GX.KEY_O: k = "O"; break;
+            case GX.KEY_P: k = "P"; break;
+            case GX.KEY_LBRACKET: k = "["; break;
+            case GX.KEY_RBRACKET: k = "]"; break;
+            case GX.KEY_ENTER: k = "Enter"; break;
+            case GX.KEY_LCTRL: k = "LCtrl"; break;
+            case GX.KEY_A: k = "A"; break;
+            case GX.KEY_S: k = "S"; break;
+            case GX.KEY_D: k = "D"; break;
+            case GX.KEY_F: k = "F"; break;
+            case GX.KEY_G: k = "G"; break;
+            case GX.KEY_H: k = "H"; break;
+            case GX.KEY_J: k = "J"; break;
+            case GX.KEY_K: k = "K"; break;
+            case GX.KEY_L: k = "L"; break;
+            case GX.KEY_SEMICOLON: k = ";"; break;
+            case GX.KEY_QUOTE: k = "'"; break;
+            case GX.KEY_BACKQUOTE: k = "`"; break;
+            case GX.KEY_LSHIFT: k = "LShift"; break;
+            case GX.KEY_BACKSLASH: k = "\\"; break;
+            case GX.KEY_Z: k = "Z"; break;
+            case GX.KEY_X: k = "X"; break;
+            case GX.KEY_C: k = "C"; break;
+            case GX.KEY_V: k = "V"; break;
+            case GX.KEY_B: k = "B"; break;
+            case GX.KEY_N: k = "N"; break;
+            case GX.KEY_M: k = "M"; break;
+            case GX.KEY_COMMA: k = ","; break;
+            case GX.KEY_PERIOD: k = "."; break;
+            case GX.KEY_SLASH: k = "/"; break;
+            case GX.KEY_RSHIFT: k = "RShift"; break;
+            case GX.KEY_NUMPAD_MULTIPLY: k = "NPad *"; break;
+            case GX.KEY_SPACEBAR: k = "Space"; break;
+            case GX.KEY_CAPSLOCK: k = "CapsLk"; break;
+            case GX.KEY_F1: k = "F1"; break;
+            case GX.KEY_F2: k = "F2"; break;
+            case GX.KEY_F3: k = "F3"; break;
+            case GX.KEY_F4: k = "F4"; break;
+            case GX.KEY_F5: k = "F5"; break;
+            case GX.KEY_F6: k = "F6"; break;
+            case GX.KEY_F7: k = "F7"; break;
+            case GX.KEY_F8: k = "F8"; break;
+            case GX.KEY_F9: k = "F9"; break;
+            case GX.KEY_PAUSE: k = "Pause"; break;
+            case GX.KEY_SCRLK: k = "ScrLk"; break;
+            case GX.KEY_NUMPAD_7: k = "NPad 7"; break;
+            case GX.KEY_NUMPAD_8: k = "NPad 8"; break;
+            case GX.KEY_NUMPAD_9: k = "NPad 9"; break;
+            case GX.KEY_NUMPAD_MINUS: k = "-"; break;
+            case GX.KEY_NUMPAD_4: k = "NPad 4"; break;
+            case GX.KEY_NUMPAD_5: k = "NPad 5"; break;
+            case GX.KEY_NUMPAD_6: k = "NPad 6"; break;
+            case GX.KEY_NUMPAD_PLUS: k = "+"; break;
+            case GX.KEY_NUMPAD_1: k = "NPad 1"; break;
+            case GX.KEY_NUMPAD_2: k = "NPad 2"; break;
+            case GX.KEY_NUMPAD_3: k = "NPad 3"; break;
+            case GX.KEY_NUMPAD_0: k = "NPad 0"; break;
+            case GX.KEY_NUMPAD_PERIOD: k = "NPad ."; break;
+            case GX.KEY_F11: k = "F11"; break;
+            case GX.KEY_F12: k = "F12"; break;
+            case GX.KEY_NUMPAD_ENTER: k = "NPad Enter"; break;
+            case GX.KEY_RCTRL: k = "RCtrl"; break;
+            case GX.KEY_NUMPAD_DIVIDE: k = "NPad /"; break;
+            case GX.KEY_NUMLOCK: k = "NumLk"; break;
+            case GX.KEY_HOME: k = "Home"; break;
+            case GX.KEY_UP: k = "Up"; break;
+            case GX.KEY_PAGEUP: k = "PgUp"; break;
+            case GX.KEY_LEFT: k = "Left"; break;
+            case GX.KEY_RIGHT: k = "Right"; break;
+            case GX.KEY_END: k = "End"; break;
+            case GX.KEY_DOWN: k = "Down"; break;
+            case GX.KEY_PAGEDOWN: k = "PgDn"; break;
+            case GX.KEY_INSERT: k = "Ins"; break;
+            case GX.KEY_DELETE: k = "Del"; break;
+            case GX.KEY_LWIN: k = "LWin"; break;
+            case GX.KEY_RWIN: k = "RWin"; break;
+            case GX.KEY_MENU: k = "Menu"; break;
+        }
+        return k;
+    }
+
+
 
     // Debugging Methods
     // --------------------------------------------------------------------------
@@ -1775,6 +2145,14 @@ var GX = new function() {
     this.backgroundHeight = _backgroundHeight;
     this.backgroundClear = _backgroundClear;
 
+    this.soundLoad = _soundLoad;
+    this.soundPlay = _soundPlay;
+    this.soundRepeat = _soundRepeat;
+    this.soundPause = _soundPause;
+    this.soundStop = _soundStop;
+    this.soundVolumne = _soundVolume;
+    this.soundMuted = _soundMuted;
+
     this.entityCreate = _entityCreate;
     this.screenEntityCreate = _screenEntityCreate;
     this.entityAnimate = _entityAnimate;
@@ -1827,6 +2205,10 @@ var GX = new function() {
     this.fontLineSpacing = _fontLineSpacing;
     this.fontWidth = _fontWidth;
     this.drawText = _drawText;
+
+    this.deviceInputTest = _deviceInputTest;
+    this.keyInput = _keyInput;
+    this.keyButtonName = _keyButtonName;
 
     this.debug = _debug;
     this.debugFont = _debugFont;
@@ -1995,4 +2377,19 @@ var GX = new function() {
 
     this.TYPE_ENTITY = 1;
     this.TYPE_FONT = 2;
+
+    this.CR = "\r";
+    this.LF = "\n";
+    this.CRLF = "\r\n"
+};
+
+// Consider moving these to separate optional js files
+var GXSTR = new function() {
+    this.lPad = function(str, padChar, padLength) {
+        return String(str).padStart(padLength, padChar);
+    }
+    
+    this.rPad = function(str, padChar, padLength) {
+        return String(str).padEnd(padLength, padChar);
+    }
 };
