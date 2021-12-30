@@ -31,6 +31,7 @@ ConvertSource
 '       does not depend on the project folder structure
 CopyFolder "img", "images"
 CopyFolder "snd", "sounds"
+'CopyFolder "qb64", "qb64"
 ConvertMaps
 CopyWebFramework
 
@@ -100,9 +101,9 @@ Sub CopyWebFramework
     Dim webDir As String
     webDir = _CWD$ + GXFS_PathSeparator + "web"
     $If WIN Then
-        Shell "copy " + Chr$(32) + webDir + GXFS_PathSeparator + "*" + Chr$(32) + " " + Chr$(32) + outputDir + Chr$(32)
+        Shell "xcopy /E " + Chr$(32) + webDir + Chr$(32) + " " + Chr$(32) + outputDir + Chr$(32)
     $Else
-        Shell "cp " + Chr$(32) + webDir + GXFS_PathSeparator + "*" + Chr$(32) + " " + Chr$(32) + outputDir + Chr$(32)
+        Shell "cp -R " + Chr$(32) + webDir + Chr$(32) + " " + Chr$(32) + outputDir + Chr$(32)
     $End If
 
     ' Copy the default font images

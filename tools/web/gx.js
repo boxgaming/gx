@@ -40,13 +40,15 @@ var GX = new function() {
     // Scene Functions
     // -----------------------------------------------------------------
     function _sceneCreate(width, height) {
-		_canvas = document.createElement("canvas");
-        _canvas.id = "gx-canvas";
+        _canvas = document.getElementById("gx-canvas");
+        if (!_canvas) {
+		    _canvas = document.createElement("canvas");
+            _canvas.id = "gx-canvas";
+            document.getElementById("gx-container").appendChild(_canvas);
+        }
         _canvas.width = width;
         _canvas.height = height;
         _ctx = _canvas.getContext("2d");
-
-        document.getElementById("gx-container").appendChild(_canvas);
 
         var footer = document.getElementById("gx-footer");
         footer.style.width = width;
@@ -159,6 +161,7 @@ var GX = new function() {
     
     function _sceneUpdate() {
         _scene.frame++;
+        if (_map_loading) { return; }
 
         // Call custom game update logic
         _customEvent(GX.EVENT_UPDATE);
@@ -708,6 +711,7 @@ var GX = new function() {
     }
 
     async function _mapLoad(filename) {
+        _map_loading = true;
         var data = await _getJSON(filename);
         GX.tilesetCreate(data.tileset.image, data.tileset.width, data.tileset.height);
         GX.mapCreate(data.columns, data.rows, data.layers.length);
@@ -718,6 +722,7 @@ var GX = new function() {
                 }
             }
         }
+        _map_loading = false;
     }
 
     function _getJSON(url) {
@@ -1750,7 +1755,7 @@ var GX = new function() {
         GXKeyDown = GXDeviceInputTest(di)
     End Function
 
-        Sub GXDeviceInputDetect (di As GXDeviceInput)
+    Sub GXDeviceInputDetect (di As GXDeviceInput)
         Dim found As Integer
         Dim dcount As Integer
         dcount = _Devices
@@ -2116,6 +2121,7 @@ var GX = new function() {
         GX.drawText(GX.debugFont(), GX.sceneWidth() - (frameRate.length + 4) * 6 - 1, 9, "FPS:" + frameRate);
     }
 
+    this.ctx = function() { return _ctx; };
 
     this.frame = _frame;
     this.frameRate = _frameRate;

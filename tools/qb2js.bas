@@ -45,16 +45,24 @@ ReDim Shared typeVars(0) As Variable
 ReDim Shared globalVars(0) As Variable
 ReDim Shared localVars(0) As Variable
 Dim Shared currentMethod As String
+Dim Shared programMethods As Integer
 
 'Print "/*"
 ReadLines Command$
 'Print "*/"
 FindMethods
+programMethods = UBound(methods)
 InitGX
 InitQB64Methods
 
 Print "async function init() {"
-Print "    GX.registerGameEvents(sub_GXOnGameEvent);"
+Dim mtest As Method
+If FindMethod("GXOnGameEvent", mtest, "SUB") Then
+    Print "    GX.registerGameEvents(sub_GXOnGameEvent);"
+Else
+    Print "    GX.registerGameEvents(function(e){});"
+    Print "    QB64.sub_Screen(0);"
+End If
 Print ""
 ConvertLines 1, MainEnd, ""
 ConvertMethods
@@ -102,10 +110,10 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
             End If
         Else
             If first = "CONST" Then
-                js = "const " + parts(2) + " = " + parts(4) + ";"
+                js = "const " + parts(2) + " = " + ConvertExpression(Join(parts(), 4, -1, " ")) + ";"
                 AddConst parts(2)
 
-            ElseIf first = "DIM" Or first = "REDIM" Then
+            ElseIf first = "DIM" Or first = "REDIM" Or first = "STATIC" Then
                 js = DeclareVar(parts())
 
 
@@ -142,11 +150,27 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 js = "} else {"
                 tempIndent = -1
 
-            ElseIf first = "END" Or first = "NEXT" Then
-                If first = "END" And UCase$(parts(2)) = "SELECT" Then js = "break;"
+            ElseIf first = "NEXT" Then
                 js = js + "}"
                 indent = -1
 
+            ElseIf first = "END" Then
+                If UCase$(parts(2)) = "SELECT" Then js = "break;"
+                js = js + "}"
+                indent = -1
+
+            ElseIf first = "DO" Then
+                js = "do {"
+                indent = 1
+
+            ElseIf first = "LOOP" Then
+                js = "} while (("
+                If UCase$(parts(2)) = "UNTIL" Then js = "} while (!("
+                js = js + ConvertExpression(Join(parts(), 3, UBound(parts), " ")) + "))"
+                indent = -1
+
+            ElseIf first = "_CONTINUE" Then
+                js = "continue;"
 
             ElseIf UCase$(l) = "EXIT FUNCTION" Then
                 js = "return " + functionName + ";"
@@ -168,15 +192,17 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     'This is a variable assignment
                     js = ConvertExpression(parts(1)) + " = " + ConvertExpression(Join(parts(), 3, -1, " ")) + ";"
                 Else
-                    If FindMethod(parts(1), m) Then
-                        js = m.jsname + "(" + ConvertExpression(Join(parts(), 2, -1, " ")) + ");"
+                    If FindMethod(parts(1), m, "SUB") Then
+                        'js = m.jsname + "(" + ConvertExpression(Join(parts(), 2, -1, " ")) + ");"
+                        js = m.jsname + "(" + ConvertSub(m, Join(parts(), 2, -1, " ")) + ");"
                     Else
                         js = "// " + l
                     End If
                 End If
             Else
-                If FindMethod(parts(1), m) Then
-                    js = m.jsname + "(" + ConvertExpression(Join(parts(), 2, -1, " ")) + ");"
+                If FindMethod(parts(1), m, "SUB") Then
+                    'js = m.jsname + "(" + ConvertExpression(Join(parts(), 2, -1, " ")) + ");"
+                    js = m.jsname + "(" + ConvertSub(m, Join(parts(), 2, -1, " ")) + ");"
                 Else
                     js = "// " + l
                 End If
@@ -191,6 +217,127 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
     Next i
 
 End Sub
+
+Function ConvertSub$ (m As Method, args As String)
+    ' This actually converts the parameters passed to the sub
+    Dim js As String
+
+    ' Handle special cases for methods which take ranges and optional parameters
+    If m.name = "Line" Then
+        js = ConvertLine(args)
+
+    ElseIf m.name = "_PrintString" Then
+        js = ConvertPrintString(args)
+
+    Else
+        js = ConvertExpression(args)
+    End If
+
+    ConvertSub = js
+End Function
+
+Function ConvertLine$ (args As String)
+    ' TODO: This does not yet handle dash patterns
+    Dim firstParam As String
+    Dim theRest As String
+    Dim idx As Integer
+    Dim sstep As String
+    Dim estep As String
+    sstep = "false"
+    estep = "false"
+
+    idx = FindParamChar(args, ",")
+    If idx = -1 Then
+        firstParam = args
+        theRest = ""
+    Else
+        firstParam = Left$(args, idx - 1)
+        theRest = Right$(args, Len(args) - idx)
+    End If
+
+    idx = FindParamChar(firstParam, "-")
+    Dim startCord As String
+    Dim endCord As String
+    If idx = -1 Then
+        endCord = firstParam
+    Else
+        startCord = Left$(firstParam, idx - 1)
+        endCord = Right$(firstParam, Len(firstParam) - idx)
+    End If
+
+    If UCase$(_Trim$(Left$(startCord, 4))) = "STEP" Then
+        sstep = "true"
+    End If
+    If UCase$(_Trim$(Left$(endCord, 4))) = "STEP" Then
+        estep = "true"
+    End If
+
+    idx = InStr(startCord, "(")
+    startCord = Right$(startCord, Len(startCord) - idx)
+    idx = _InStrRev(startCord, ")")
+    startCord = Left$(startCord, idx - 1)
+    startCord = ConvertExpression(startCord)
+    If (_Trim$(startCord) = "") Then startCord = "undefined, undefined"
+
+    idx = InStr(endCord, "(")
+    endCord = Right$(endCord, Len(endCord) - idx)
+    idx = _InStrRev(endCord, ")")
+    endCord = Left$(endCord, idx - 1)
+    endCord = ConvertExpression(endCord)
+
+    theRest = ConvertExpression(theRest)
+    theRest = GXSTR_Replace(theRest, " BF", " " + Chr$(34) + "BF" + Chr$(34))
+    theRest = GXSTR_Replace(theRest, " B", " " + Chr$(34) + "B" + Chr$(34))
+
+    ConvertLine = sstep + ", " + startCord + ", " + estep + ", " + endCord + "," + theRest
+End Function
+
+Function ConvertPrintString$ (args As String)
+    Dim firstParam As String
+    Dim theRest As String
+    Dim idx As Integer
+
+    idx = FindParamChar(args, ",")
+    If idx = -1 Then
+        firstParam = args
+        theRest = ""
+    Else
+        firstParam = Left$(args, idx - 1)
+        theRest = Right$(args, Len(args) - idx)
+    End If
+
+    idx = InStr(firstParam, "(")
+    firstParam = Right$(firstParam, Len(firstParam) - idx)
+    idx = _InStrRev(firstParam, ")")
+    firstParam = Left$(firstParam, idx - 1)
+
+    ConvertPrintString = ConvertExpression(firstParam) + ", " + ConvertExpression(theRest)
+End Function
+
+Function FindParamChar (s As String, char As String)
+    Dim idx As Integer
+    idx = -1
+
+    Dim c As String
+    Dim quote As Integer
+    Dim paren As Integer
+    Dim i As Integer
+    For i = 1 To Len(s)
+        c = Mid$(s, i, 1)
+        If c = Chr$(34) Then
+            quote = Not quote
+        ElseIf Not quote And c = "(" Then
+            paren = paren + 1
+        ElseIf Not quote And c = ")" Then
+            paren = paren - 1
+        ElseIf Not quote And paren = 0 And c = char Then
+            idx = i
+            Exit For
+        End If
+    Next i
+
+    FindParamChar = idx
+End Function
 
 Function DeclareVar$ (parts() As String)
 
@@ -346,7 +493,7 @@ Function ConvertExpression$ (ex As String)
                         '       the return value is being assigned in the method.
                         '       Currently, this does not support recursive calls.
                         'Print " /* " + word + " */ "
-                        If FindMethod(word, m) Then
+                        If FindMethod(word, m, "FUNCTION") Then
                             If m.name <> currentMethod Then
                                 js = js + " " + m.jsname + "()"
                             Else
@@ -390,7 +537,7 @@ Function ConvertExpression$ (ex As String)
                 If FindVariable(word, var, True) Then
                     js = js + var.jsname + "[" + ConvertExpression(ex2) + "]"
 
-                ElseIf FindMethod(word, m) Then
+                ElseIf FindMethod(word, m, "FUNCTION") Then
                     js = js + m.jsname + "(" + ConvertExpression(ex2) + ")"
                 Else
                     ' nested condition
@@ -432,11 +579,11 @@ Function FindVariable (varname As String, var As Variable, isArray As Integer)
     FindVariable = found
 End Function
 
-Function FindMethod (mname As String, m As Method)
+Function FindMethod (mname As String, m As Method, t As String)
     Dim found As Integer: found = False
     Dim i As Integer
     For i = 1 To UBound(methods)
-        If methods(i).uname = _Trim$(UCase$(RemoveSuffix(mname))) Then
+        If methods(i).uname = _Trim$(UCase$(RemoveSuffix(mname))) And methods(i).type = t Then
             found = True
             m = methods(i)
             Exit For
@@ -591,6 +738,8 @@ Function SLSplit (sourceString As String, results() As String)
     Dim cstr As String, p As Long, curpos As Long, arrpos As Long, dpos As Long
 
     cstr = _Trim$(sourceString)
+
+    ReDim results(0) As String
 
     ' remove all excess space not inside a string literal
     Dim lastChar As String
@@ -820,7 +969,7 @@ Sub AddGXType (tname As String, args As String)
 End Sub
 
 Function MainEnd
-    If UBound(methods) = 0 Then
+    If programMethods = 0 Then
         MainEnd = UBound(lines)
     Else
         MainEnd = methods(1).line - 1
@@ -930,6 +1079,10 @@ Function MethodJS$ (m As Method, prefix As String)
             jsname = jsname + c
         End If
     Next i
+
+    If m.name = "_Limit" Then
+        jsname = "await " + jsname
+    End If
 
     MethodJS = jsname
 End Function
@@ -1275,14 +1428,36 @@ Sub InitGX
 End Sub
 
 Sub InitQB64Methods
+    AddQB64Method "FUNCTION", "_NewImage"
+    AddQB64Method "FUNCTION", "_RGB"
+    AddQB64Method "FUNCTION", "_RGB32"
     AddQB64Method "FUNCTION", "_Round"
     AddQB64Method "SUB", "_Title"
     AddQB64Method "FUNCTION", "_Trim"
     AddQB64Method "FUNCTION", "Chr$"
     AddQB64Method "FUNCTION", "Left$"
+    AddQB64Method "SUB", "Line"
+    AddQB64Method "FUNCTION", "Right$"
+    AddQB64Method "SUB", "Screen"
     AddQB64Method "FUNCTION", "Str$"
     AddQB64Method "FUNCTION", "UBound"
     AddQB64Method "FUNCTION", "UCase$"
+
+    AddQB64Method "FUNCTION", "Rnd"
+    AddQB64Method "FUNCTION", "_Width"
+    AddQB64Method "FUNCTION", "_Height"
+    AddQB64Method "FUNCTION", "_Pi"
+    AddQB64Method "FUNCTION", "Sin"
+    AddQB64Method "FUNCTION", "Cos"
+    AddQB64Method "FUNCTION", "_FontWidth"
+    AddQB64Method "FUNCTION", "_PrintWidth"
+    AddQB64Method "SUB", "Color"
+    AddQB64Method "SUB", "_PrintString"
+    AddQB64Method "FUNCTION", "Abs"
+    AddQB64Method "FUNCTION", "Mid$"
+    AddQB64Method "SUB", "_Limit"
+    AddQB64Method "FUNCTION", "_KeyHit"
+    AddQB64Method "FUNCTION", "Len"
 End Sub
 
 '$include: '../gx/gx_str.bm'
