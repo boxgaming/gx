@@ -4,6 +4,8 @@ var QB64 = new function() {
     var _lastX = 0;
     var _lastY = 0;
     var _fntDefault = null;
+    var _locX = 0;
+    var _locY = 0;
 
     this.initArray = function(a, size, obj) {
         for (var i=0; i <= size; i++) {
@@ -11,8 +13,12 @@ var QB64 = new function() {
         }
     };
 
+    this.sub__Delay = async function(seconds) {
+        await GX.sleep(seconds*1000);
+    };
+
     this.func__FontHeight = function(fnt) {
-        return GX.fontHeight(_fntDefault);
+        return GX.fontHeight(_fntDefault) + GX.fontLineSpacing(_fntDefault);
     };
 
     this.func__FontWidth = function(fnt) {
@@ -20,23 +26,21 @@ var QB64 = new function() {
     };
 
     this.func__Height = function(img) {
-        // TODO: implement corresponding logic when an image handle is supplied
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return GX.sceneHeight();
     };
 
     this.func__KeyHit = function() {
         // TODO: actual implementation
+        //       this is here just to support rendering loops that are using _KeyHit as the exit criteria
         return 0;
-    }
+    };
 
     this.sub__Limit = async function(fps) {
-        // TODO: sleeeeep
-        await _sleep(50);
-    }
-
-    function _sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
+        // TODO: limit based on frame rate
+        //       need to incorporate time elapsed from last loop invocation
+        await GX.sleep(50);
+    };
 
     this.func__NewImage = function(iwidth, iheight) {
         return {
@@ -119,7 +123,7 @@ var QB64 = new function() {
     };
 
     this.func__Width = function(img) {
-        // TODO: implement corresponding logic when an image handle is supplied
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return GX.sceneWidth();
     };
 
@@ -182,34 +186,77 @@ var QB64 = new function() {
         _lastY = ey;
 
         var ctx = GX.ctx();
-        //ctx.globalAlpha = color.a;
 
         if (style == "B") {
             ctx.strokeStyle = color.rgba();
-            //ctx.strokeStyle = color;
             ctx.beginPath();
             ctx.strokeRect(sx, sy, ex-sx, ey-sy)
         } 
         else if (style == "BF") {
             ctx.fillStyle = color.rgba();
-            //ctx.globalCompositeOperation = "source-over";
             ctx.beginPath();
             ctx.fillRect(sx, sy, ex-sx, ey-sy)
         } 
         else {
             ctx.strokeStyle = color.rgba();
-            //ctx.globalCompositeOperation = "source-over";
             ctx.beginPath();
             ctx.moveTo(sx, sy);
             ctx.lineTo(ex, ey);
             ctx.stroke();
         }
+    };
 
-        //ctx.globalAlpha = 1;
+    this.sub_Locate = function(row, col) {
+        // TODO: implement cursor positioning/display
+        if (row && row > 0 && row < 26) {
+            _locY = row-1;
+        }
+        if (col && col > 0 && col < 81) {
+            _locX = col-1;
+        }
     };
 
     this.func_Mid = function(value, n, len) {
         return String(value).substring(n-1, n+len-1);
+    };
+
+    this.sub_Print = async function(str) {
+        if (str == undefined || str == null) {
+            str = "";
+        }
+        var ctx = GX.ctx();
+        var lines = String(str).split("\n");
+        for (var i=0; i < lines.length; i++) {
+            var x = _locX*QB64.func__FontWidth();
+            var y = -1;
+
+            // scroll the screen
+            if (_locY < 25) {
+                y = _locY*QB64.func__FontHeight();
+                _locY = _locY + 1;
+            }
+            else {
+                var img = new Image();
+                img.src = GX.canvas().toDataURL("image/png");
+                while (!img.complete) {
+                    await GX.sleep(10);
+                }
+                ctx.beginPath();
+                ctx.fillStyle = _bgColor.rgba();
+                ctx.fillRect(0, 0, QB64.func__Width(), QB64.func__Height());
+                ctx.drawImage(img, 0, -QB64.func__FontHeight());
+
+                y = (_locY-1)*QB64.func__FontHeight();
+            }
+
+            // TODO: check the background opacity mode
+            // Draw the text background
+            ctx.beginPath();
+            ctx.fillStyle = _bgColor.rgba();
+            ctx.fillRect(x, y, QB64.func__FontWidth() * lines[0].length, QB64.func__FontHeight());
+
+            GX.drawText(_fntDefault, x, y, lines[i]);
+        }
     };
 
     this.func_Right = function(value, n) {
@@ -222,39 +269,46 @@ var QB64 = new function() {
         return Math.random();
     }
 
-    this.sub_Screen = function(mode) {
-        if (mode < 2 || mode == 7 || mode == 13) {
+    this.sub_Screen = async function(mode) {
+        if (mode == 0) {
+            GX.sceneCreate(640, 400);
+            GX.fontLineSpacing(_fntDefault, 2);
+        }
+        else if (mode < 2 || mode == 7 || mode == 13) {
             GX.sceneCreate(320, 200);
+            GX.fontLineSpacing(_fntDefault, 0);
         }
         else if (mode == 8) {
             GX.sceneCreate(640, 200);
+            GX.fontLineSpacing(_fntDefault, 0);
         }
         else if (mode == 9 || mode == 10) {
             GX.sceneCreate(640, 350);
+            GX.fontLineSpacing(_fntDefault, 0);
         }
         else if (mode == 11 || mode == 12) {
             GX.sceneCreate(640, 480);
+            GX.fontLineSpacing(_fntDefault, 0);
         }
         else if (mode.width != undefined) {
             GX.sceneCreate(mode.width, mode.height);
+            GX.fontLineSpacing(_fntDefault, 2);
         }
 
         // initialize the graphics
         _fgColor = this.func__RGB(255, 255, 255); 
         _bgColor = this.func__RGB(0, 0, 0);
 
-        // initialize the fonts
-        if (!_fntDefault) {
-            _fntDefault = GX.fontCreate("./qb64/font.png", 8, 14,
-                "`1234567890-=~!@#$%^&*()_+\n" + 
-                "qwertyuiop[]\\QWERTYUIOP{}|\n" + 
-                "asdfghjkl;'ASDFGHJKL:\"\n" + 
-                "zxcvbnm,./ZXCVBNM<>?");    
-        }
     };
 
     this.func_Sin = function(value) {
         return Math.sin(value);
+    };
+
+    this.sub_Sleep = async function(seconds) {
+        // TODO: need to incorporate early exit with keypress
+        //       and limit to whole seconds
+        await GX.sleep(seconds*1000);
     };
 
     this.func_Str = function(value) {
@@ -268,4 +322,18 @@ var QB64 = new function() {
     this.func_UCase = function(value) {
         return String(value).toUpperCase();
     };
+
+    function _init() {
+        // initialize the fonts
+        if (!_fntDefault) {
+            _fntDefault = GX.fontCreate("./qb64/font.png", 8, 14,
+                "`1234567890-=~!@#$%^&*()_+\n" + 
+                "qwertyuiop[]\\QWERTYUIOP{}|\n" + 
+                "asdfghjkl;'ASDFGHJKL:\"\n" + 
+                "zxcvbnm,./ZXCVBNM<>?");    
+        }
+
+    };
+
+    _init();
 }

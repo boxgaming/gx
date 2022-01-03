@@ -58,10 +58,13 @@ InitQB64Methods
 Print "async function init() {"
 Dim mtest As Method
 If FindMethod("GXOnGameEvent", mtest, "SUB") Then
-    Print "    GX.registerGameEvents(sub_GXOnGameEvent);"
+    Print "    await GX.registerGameEvents(sub_GXOnGameEvent);"
+    'Print "    while (!GX.resourcesLoaded()) { await QB64.sub__Delay(.1); }"
 Else
-    Print "    GX.registerGameEvents(function(e){});"
+    'Print "    while (!GX.resourcesLoaded()) { await QB64.sub__Delay(.1); }"
+    Print "    await GX.registerGameEvents(function(e){});"
     Print "    QB64.sub_Screen(0);"
+    Print
 End If
 Print ""
 ConvertLines 1, MainEnd, ""
@@ -935,7 +938,7 @@ End Sub
 Sub AddVariable (var As Variable, vlist() As Variable)
     Dim vcount: vcount = UBound(vlist) + 1
     ReDim _Preserve vlist(vcount) As Variable
-    If var.jsname = "" Then var.jsname = var.name
+    If var.jsname = "" Then var.jsname = RemoveSuffix(var.name)
     vlist(vcount) = var
 End Sub
 
@@ -1080,7 +1083,7 @@ Function MethodJS$ (m As Method, prefix As String)
         End If
     Next i
 
-    If m.name = "_Limit" Then
+    If m.name = "_Limit" Or m.name = "_Delay" Or m.name = "Sleep" Then
         jsname = "await " + jsname
     End If
 
@@ -1428,36 +1431,41 @@ Sub InitGX
 End Sub
 
 Sub InitQB64Methods
+    AddQB64Method "SUB", "_Delay"
+    AddQB64Method "FUNCTION", "_FontWidth"
+    AddQB64Method "FUNCTION", "_Height"
+    AddQB64Method "SUB", "_Limit"
+    AddQB64Method "FUNCTION", "_KeyHit"
     AddQB64Method "FUNCTION", "_NewImage"
+    AddQB64Method "FUNCTION", "_Pi"
+    AddQB64Method "SUB", "_PrintString"
+    AddQB64Method "FUNCTION", "_PrintWidth"
     AddQB64Method "FUNCTION", "_RGB"
     AddQB64Method "FUNCTION", "_RGB32"
     AddQB64Method "FUNCTION", "_Round"
     AddQB64Method "SUB", "_Title"
     AddQB64Method "FUNCTION", "_Trim"
+    AddQB64Method "FUNCTION", "_Width"
+
+    AddQB64Method "FUNCTION", "Abs"
     AddQB64Method "FUNCTION", "Chr$"
+    AddQB64Method "SUB", "Color"
+    AddQB64Method "FUNCTION", "Cos"
     AddQB64Method "FUNCTION", "Left$"
+    AddQB64Method "FUNCTION", "Len"
     AddQB64Method "SUB", "Line"
+    AddQB64Method "SUB", "Locate"
+    AddQB64Method "FUNCTION", "Mid$"
+    AddQB64Method "SUB", "Print"
     AddQB64Method "FUNCTION", "Right$"
+    AddQB64Method "FUNCTION", "Rnd"
     AddQB64Method "SUB", "Screen"
+    AddQB64Method "FUNCTION", "Sin"
+    AddQB64Method "SUB", "Sleep"
     AddQB64Method "FUNCTION", "Str$"
     AddQB64Method "FUNCTION", "UBound"
     AddQB64Method "FUNCTION", "UCase$"
 
-    AddQB64Method "FUNCTION", "Rnd"
-    AddQB64Method "FUNCTION", "_Width"
-    AddQB64Method "FUNCTION", "_Height"
-    AddQB64Method "FUNCTION", "_Pi"
-    AddQB64Method "FUNCTION", "Sin"
-    AddQB64Method "FUNCTION", "Cos"
-    AddQB64Method "FUNCTION", "_FontWidth"
-    AddQB64Method "FUNCTION", "_PrintWidth"
-    AddQB64Method "SUB", "Color"
-    AddQB64Method "SUB", "_PrintString"
-    AddQB64Method "FUNCTION", "Abs"
-    AddQB64Method "FUNCTION", "Mid$"
-    AddQB64Method "SUB", "_Limit"
-    AddQB64Method "FUNCTION", "_KeyHit"
-    AddQB64Method "FUNCTION", "Len"
 End Sub
 
 '$include: '../gx/gx_str.bm'

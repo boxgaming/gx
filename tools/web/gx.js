@@ -29,8 +29,13 @@ var GX = new function() {
     var _onGameEvent = null;
     var _pressedKeys = {};
 
-    function _registerGameEvents(fnEventCallback) {
+    async function _registerGameEvents(fnEventCallback) {
         _onGameEvent = fnEventCallback;
+
+        // wait for all of the resources to load
+        while (!GX.resourcesLoaded()) {
+            await _sleep(100);
+        }
     }
 
     function __newFont() {
@@ -61,10 +66,6 @@ var GX = new function() {
         _scene.followMode = GX.SCENE_FOLLOW_NONE;
         _scene.followEntity = null;
         _scene.constrainMode = GX.SCENE_CONSTRAIN_NONE;
-
-        // init
-        _fontCreateDefault(GX.FONT_DEFAULT);
-        _fontCreateDefault(GX.FONT_DEFAULT_BLACK);
 
         _customEvent(GX.EVENT_INIT);
     }
@@ -240,12 +241,19 @@ var GX = new function() {
         _sceneLoad();
     }
 
-    function _sceneLoad() {
+    function _resourcesLoaded() {
         for (var i=0; i < _images.length; i++) {
             if (!_images[i].complete) {
-                setTimeout(_sceneLoad, 50);
-                return;
+                return false;
             }
+        }
+        return true;
+    }
+
+    function _sceneLoad() {
+        if (!_resourcesLoaded()) {
+            setTimeout(_sceneLoad, 50);
+            return;
         }
         window.requestAnimationFrame(_sceneLoop);
     }
@@ -2121,7 +2129,18 @@ var GX = new function() {
         GX.drawText(GX.debugFont(), GX.sceneWidth() - (frameRate.length + 4) * 6 - 1, 9, "FPS:" + frameRate);
     }
 
+    function _sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    };
+
+    function _init() {
+        // init
+        _fontCreateDefault(GX.FONT_DEFAULT);
+        _fontCreateDefault(GX.FONT_DEFAULT_BLACK);
+    }
+
     this.ctx = function() { return _ctx; };
+    this.canvas = function() { return _canvas; };
 
     this.frame = _frame;
     this.frameRate = _frameRate;
@@ -2224,8 +2243,12 @@ var GX = new function() {
 
     this.fullScreen = _fullScreen;
     this.keyDown = _keyDown;
+
+    this.init = _init;
+    this.sleep = _sleep;
     this.registerGameEvents = _registerGameEvents;
-    
+    this.resourcesLoaded = _resourcesLoaded;
+
     // constants
     this.TRUE = true;
     this.FALSE = false;
@@ -2399,3 +2422,5 @@ var GXSTR = new function() {
         return String(str).padEnd(padLength, padChar);
     }
 };
+
+GX.init();

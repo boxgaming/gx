@@ -53,6 +53,11 @@ End Sub
 Sub ConvertSource
     Print "Converting QB64 to Javascript..."
     Shell "." + GXFS_PathSeparator + "qb2js " + Chr$(32) + gameFullpath + Chr$(32) + " > " + Chr$(32) + outputDir + GXFS_PathSeparator + "game.js" + Chr$(32)
+    $If WIN Then
+        Shell "copy " + Chr$(32) + gameFullpath + Chr$(32) + " " + Chr$(32) + outputDir + GXFS_PathSeparator + "game.bas" + Chr$(32)
+    $Else
+        Shell "cp " + Chr$(32) + gameFullpath + Chr$(32) + " " + Chr$(32) + outputDir + GXFS_PathSeparator + "game.bas" + Chr$(32)
+    $End If
 End Sub
 
 Sub CopyFolder (fname As String, description As String)

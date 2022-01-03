@@ -22,6 +22,7 @@ Const HTTP_10 = 1
 Const HTTP_11 = 11
 Const HTTP_GET = 1
 Const HTTP_HEAD = 2
+Const HTTP_POST = 3
 Type connection_t
     handle As Long
     read_buf As String
@@ -153,6 +154,32 @@ Sub http_do_head (c)
     Put #Connections(c).handle, , s$
 End Sub
 
+Sub http_do_post (c)
+    Print "POST"
+    Print Connections(c).request_uri
+    Dim path As String
+    path = Right$(Connections(c).request_uri, Len(Connections(c).request_uri) - 1)
+    Dim idx As Integer
+    idx = _InStrRev(path, "/")
+    path = Left$(path, idx)
+
+    Dim basFile As String
+    basFile = path + "game.bas"
+    Dim jsFile As String
+    jsFile = path + "game.js"
+
+    If _FileExists(basFile) Then Kill basFile
+    Dim fh
+    fh = FreeFile
+    Open basFile For Binary As #fh
+    Put #fh, , Connections(c).read_buf
+    Close #fh
+
+    Shell "qb2js " + basFile + " > " + jsFile
+
+    close_connection c
+End Sub
+
 Sub close_connection (c)
     Close #Connections(c).handle
     Connections(c).handle = 0
@@ -262,6 +289,8 @@ Sub process_request (c)
                 Select Case Connections(c).method
                     Case HTTP_GET
                         http_do_get c
+                    Case HTTP_POST
+                        http_do_post c
                     Case HTTP_HEAD
                         http_do_head c
                 End Select
@@ -286,6 +315,8 @@ Sub process_start_line (c, l As String)
             Connections(c).method = HTTP_GET
         Case "HEAD"
             Connections(c).method = HTTP_HEAD
+        Case "POST"
+            Connections(c).method = HTTP_POST
         Case Else
             http_error 501, "Not Implemented", c
     End Select
