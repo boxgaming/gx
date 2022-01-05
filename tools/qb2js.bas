@@ -47,9 +47,7 @@ ReDim Shared localVars(0) As Variable
 Dim Shared currentMethod As String
 Dim Shared programMethods As Integer
 
-'Print "/*"
 ReadLines Command$
-'Print "*/"
 FindMethods
 programMethods = UBound(methods)
 InitGX
@@ -59,9 +57,7 @@ Print "async function init() {"
 Dim mtest As Method
 If FindMethod("GXOnGameEvent", mtest, "SUB") Then
     Print "    await GX.registerGameEvents(sub_GXOnGameEvent);"
-    'Print "    while (!GX.resourcesLoaded()) { await QB64.sub__Delay(.1); }"
 Else
-    'Print "    while (!GX.resourcesLoaded()) { await QB64.sub__Delay(.1); }"
     Print "    await GX.registerGameEvents(function(e){});"
     Print "    QB64.sub_Screen(0);"
     Print
@@ -121,13 +117,17 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
 
             ElseIf first = "SELECT" Then
-                js = "switch (" + parts(3) + ") {"
+                js = "switch (" + ConvertExpression(Join(parts(), 3, -1, " ")) + ") {"
                 indent = 1
                 caseCount = 0
 
             ElseIf first = "CASE" Then
                 If caseCount > 0 Then js = "break;" + GX_LF
-                js = js + "case " + ConvertExpression(parts(2)) + ":"
+                If UCase$(parts(2)) = "ELSE" Then
+                    js = js + "default:"
+                Else
+                    js = js + "case " + ConvertExpression(parts(2)) + ":"
+                End If
                 caseCount = caseCount + 1
 
             ElseIf first = "FOR" Then
@@ -158,6 +158,7 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 indent = -1
 
             ElseIf first = "END" Then
+
                 If UCase$(parts(2)) = "SELECT" Then js = "break;"
                 js = js + "}"
                 indent = -1
@@ -194,18 +195,17 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 If parts(2) = "=" Then
                     'This is a variable assignment
                     js = ConvertExpression(parts(1)) + " = " + ConvertExpression(Join(parts(), 3, -1, " ")) + ";"
+
                 Else
                     If FindMethod(parts(1), m, "SUB") Then
-                        'js = m.jsname + "(" + ConvertExpression(Join(parts(), 2, -1, " ")) + ");"
-                        js = m.jsname + "(" + ConvertSub(m, Join(parts(), 2, -1, " ")) + ");"
+                        js = ConvertSub(m, Join(parts(), 2, -1, " "))
                     Else
                         js = "// " + l
                     End If
                 End If
             Else
                 If FindMethod(parts(1), m, "SUB") Then
-                    'js = m.jsname + "(" + ConvertExpression(Join(parts(), 2, -1, " ")) + ");"
-                    js = m.jsname + "(" + ConvertSub(m, Join(parts(), 2, -1, " ")) + ");"
+                    js = ConvertSub(m, Join(parts(), 2, -1, " "))
                 Else
                     js = "// " + l
                 End If
@@ -227,13 +227,16 @@ Function ConvertSub$ (m As Method, args As String)
 
     ' Handle special cases for methods which take ranges and optional parameters
     If m.name = "Line" Then
-        js = ConvertLine(args)
+        js = m.jsname + "(" + ConvertLine(args) + ");"
 
     ElseIf m.name = "_PrintString" Then
-        js = ConvertPrintString(args)
+        js = m.jsname + "(" + ConvertPrintString(args) + ");"
+
+    ElseIf m.name = "Input" Then
+        js = ConvertInput(m, args)
 
     Else
-        js = ConvertExpression(args)
+        js = m.jsname + "(" + ConvertExpression(args) + ");"
     End If
 
     ConvertSub = js
@@ -315,6 +318,16 @@ Function ConvertPrintString$ (args As String)
     firstParam = Left$(firstParam, idx - 1)
 
     ConvertPrintString = ConvertExpression(firstParam) + ", " + ConvertExpression(theRest)
+End Function
+
+Function ConvertInput$ (m As Method, args As String)
+    Dim js As String
+    Dim vname As String
+    vname = "___i" + _Trim$(Str$(_Round(Rnd * 10000000)))
+    js = "var " + vname + " = new Array(1);" + GX_CRLF
+    js = js + m.jsname + "(" + vname + ");" + GX_CRLF
+    js = js + ConvertExpression(args) + " = " + vname + "[0];"
+    ConvertInput = js
 End Function
 
 Function FindParamChar (s As String, char As String)
@@ -508,7 +521,7 @@ Function ConvertExpression$ (ex As String)
 
                     End If
                 End If
-                If c = "," Then js = js + ","
+                If c = "," And Not i = Len(ex) Then js = js + ","
                 word = ""
 
             ElseIf c = "(" Then
@@ -1083,7 +1096,7 @@ Function MethodJS$ (m As Method, prefix As String)
         End If
     Next i
 
-    If m.name = "_Limit" Or m.name = "_Delay" Or m.name = "Sleep" Then
+    If m.name = "_Limit" Or m.name = "_Delay" Or m.name = "Sleep" Or m.name = "Input" Then
         jsname = "await " + jsname
     End If
 
@@ -1449,8 +1462,10 @@ Sub InitQB64Methods
 
     AddQB64Method "FUNCTION", "Abs"
     AddQB64Method "FUNCTION", "Chr$"
+    AddQB64Method "SUB", "Cls"
     AddQB64Method "SUB", "Color"
     AddQB64Method "FUNCTION", "Cos"
+    AddQB64Method "SUB", "Input"
     AddQB64Method "FUNCTION", "Left$"
     AddQB64Method "FUNCTION", "Len"
     AddQB64Method "SUB", "Line"

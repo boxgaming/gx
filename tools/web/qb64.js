@@ -6,6 +6,8 @@ var QB64 = new function() {
     var _fntDefault = null;
     var _locX = 0;
     var _locY = 0;
+    var _lastKey = null;
+    var _inputMode = false;
 
     this.initArray = function(a, size, obj) {
         for (var i=0; i <= size; i++) {
@@ -137,6 +139,14 @@ var QB64 = new function() {
         return String.fromCharCode(charCode);
     };
 
+    this.sub_Cls = function() {
+        // TODO: parameter variants
+        var ctx = GX.ctx();
+        ctx.beginPath();
+        ctx.fillStyle = _bgColor.rgba();
+        ctx.fillRect(0, 0, QB64.func__Width() , QB64.func__Height());
+    };
+
     this.sub_Color = function(fg, bg) {
         if (fg != undefined) {
             _fgColor = fg;
@@ -149,6 +159,41 @@ var QB64 = new function() {
     this.func_Cos = function(value) {
         return Math.cos(value);
     };
+
+    this.sub_Input = async function(values) {
+        _lastKey = null;
+        var str = "";
+        _inputMode = true;
+        QB64.sub__PrintString(_locX * QB64.func__FontWidth(), _locY * QB64.func__FontHeight(), "? ");
+        _locX += 2;
+        while (_lastKey != "Enter") {
+
+            if (_lastKey == "Backspace" && str.length > 0) {
+                _locX--;
+                
+                var ctx = GX.ctx();
+                ctx.beginPath();
+                ctx.fillStyle = _bgColor.rgba();
+                ctx.fillRect(_locX * QB64.func__FontWidth(), _locY * QB64.func__FontHeight(), QB64.func__FontWidth() , QB64.func__FontHeight());
+                str = str.substring(0, str.length-1);
+            }
+
+            else if (_lastKey && _lastKey.length < 2) {
+                QB64.sub__PrintString(_locX * QB64.func__FontWidth(), _locY * QB64.func__FontHeight(), _lastKey);
+                _locX++;
+                str += _lastKey;
+            }
+
+            _lastKey = null;
+            await GX.sleep(10);
+        }
+        _locY++;
+        _locX = 0;
+
+        // TODO: implement multiple input field return when comma-separated list of variables is supplied
+        values[0] = str;
+        _inputMode = false;
+    }
 
     this.func_Left = function(value, n) {
         return String(value).substring(0, n);
@@ -257,6 +302,7 @@ var QB64 = new function() {
 
             GX.drawText(_fntDefault, x, y, lines[i]);
         }
+        _locX = 0;
     };
 
     this.func_Right = function(value, n) {
@@ -332,6 +378,13 @@ var QB64 = new function() {
                 "asdfghjkl;'ASDFGHJKL:\"\n" + 
                 "zxcvbnm,./ZXCVBNM<>?");    
         }
+
+        addEventListener("keydown", function(event) { 
+            if (_inputMode) {
+                event.preventDefault();
+            }
+            _lastKey = event.key;
+        });
 
     };
 
