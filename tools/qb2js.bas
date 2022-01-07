@@ -78,6 +78,8 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
     Dim totalIndent As Integer
     totalIndent = 1
     Dim caseCount As Integer
+    Dim loopMode(10) As Integer ' TODO: only supports 10 levels of do/loop nesting
+    Dim loopLevel As Integer
     For i = firstLine To lastLine
         indent = 0
         tempIndent = 0
@@ -132,8 +134,38 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
             ElseIf first = "FOR" Then
                 Dim fstep As String: fstep = "1"
-                If UBound(parts) = 8 Then fstep = parts(8)
-                js = "for (" + parts(2) + "=" + parts(4) + "; " + parts(2) + " <= " + ConvertExpression(parts(6)) + "; " + parts(2) + "=" + parts(2) + "+" + fstep + ") {"
+                Dim eqIdx As Integer
+                Dim toIdx As Integer
+                Dim stepIdx As Integer
+                Dim fcond As String: fcond = " <= "
+                stepIdx = 0
+                Dim fi As Integer
+                For fi = 2 To UBound(parts)
+                    Dim fword As String
+                    fword = UCase$(parts(fi))
+                    If fword = "=" Then
+                        eqIdx = fi
+                    ElseIf fword = "TO" Then
+                        toIdx = fi
+                    ElseIf fword = "STEP" Then
+                        stepIdx = fi
+                        fstep = ConvertExpression(Join(parts(), fi + 1, -1, " "))
+                    End If
+                Next fi
+                Dim fvar As String
+                fvar = ConvertExpression(Join(parts(), 2, eqIdx - 1, " "))
+                Dim sval As String
+                sval = ConvertExpression(Join(parts(), eqIdx + 1, toIdx - 1, " "))
+                Dim uval As String
+                uval = ConvertExpression(Join(parts(), toIdx + 1, stepIdx - 1, " "))
+
+                If Val(fstep) < 0 Then fcond = " >= "
+
+                js = "for (" + fvar + "=" + sval + "; " + fvar + fcond + uval + "; " + fvar + "=" + fvar + " + " + fstep + ") {"
+
+
+                'If UBound(parts) = 8 Then fstep = parts(8)
+                'js = "for (" + parts(2) + "=" + parts(4) + "; " + parts(2) + " <= " + ConvertExpression(parts(6)) + "; " + parts(2) + "=" + parts(2) + "+" + fstep + ") {"
                 indent = 1
 
             ElseIf first = "IF" Then
@@ -164,13 +196,33 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 indent = -1
 
             ElseIf first = "DO" Then
-                js = "do {"
+                loopLevel = loopLevel + 1
+                If UBound(parts) > 1 Then
+                    If UCase$(parts(2)) = "WHILE" Then
+                        js = "while (" + ConvertExpression(Join(parts(), 3, -1, " ")) + ") {"
+                    Else
+                        js = "while (!(" + ConvertExpression(Join(parts(), 3, -1, " ")) + ")) {"
+                    End If
+                    loopMode(loopLevel) = 1
+                Else
+                    js = "do {"
+                    loopMode(loopLevel) = 2
+                End If
                 indent = 1
 
             ElseIf first = "LOOP" Then
-                js = "} while (("
-                If UCase$(parts(2)) = "UNTIL" Then js = "} while (!("
-                js = js + ConvertExpression(Join(parts(), 3, UBound(parts), " ")) + "))"
+                If loopMode(loopLevel) = 1 Then
+                    js = "}"
+                Else
+                    js = "} while (("
+                    If UBound(parts) < 2 Then
+                        js = js + "1));"
+                    Else
+                        If UCase$(parts(2)) = "UNTIL" Then js = "} while (!("
+                        js = js + ConvertExpression(Join(parts(), 3, UBound(parts), " ")) + "))"
+                    End If
+                End If
+                loopLevel = loopLevel - 1
                 indent = -1
 
             ElseIf first = "_CONTINUE" Then
@@ -182,6 +234,9 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
             ElseIf UCase$(l) = "EXIT SUB" Then
                 js = "return;"
 
+            ElseIf first = "EXIT" Then
+                js = "break;"
+
             ElseIf first = "TYPE" Then
                 typeMode = True
                 Dim qbtype As QBType
@@ -192,9 +247,17 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
 
             ElseIf c > 2 Then
-                If parts(2) = "=" Then
+                Dim assignment As Integer
+                assignment = 0
+                Dim j As Integer
+                For j = 1 To UBound(parts)
+                    If parts(j) = "=" Then assignment = j
+                Next j
+
+                'If parts(2) = "=" Then
+                If assignment > 0 Then
                     'This is a variable assignment
-                    js = ConvertExpression(parts(1)) + " = " + ConvertExpression(Join(parts(), 3, -1, " ")) + ";"
+                    js = RemoveSuffix(ConvertExpression(Join(parts(), 1, assignment - 1, " "))) + " = " + ConvertExpression(Join(parts(), assignment + 1, -1, " ")) + ";"
 
                 Else
                     If FindMethod(parts(1), m, "SUB") Then
@@ -225,8 +288,22 @@ Function ConvertSub$ (m As Method, args As String)
     ' This actually converts the parameters passed to the sub
     Dim js As String
 
-    ' Handle special cases for methods which take ranges and optional parameters
+    ' Let's handle the weirdo Line Input command which has a space
     If m.name = "Line" Then
+        Dim parts(0) As String
+        Dim plen As Integer
+        plen = SLSplit(args, parts())
+        If plen > 0 Then
+            If UCase$(parts(1)) = "INPUT" Then
+                m.name = "Line Input"
+                m.jsname = "sub_LineInput"
+                args = Join(parts(), 2, -1, " ")
+            End If
+        End If
+    End If
+
+    ' Handle special cases for methods which take ranges and optional parameters
+    If m.name = "Line" Or m.name = "LineInput" Then
         js = m.jsname + "(" + ConvertLine(args) + ");"
 
     ElseIf m.name = "_PrintString" Then
@@ -362,24 +439,33 @@ Function DeclareVar$ (parts() As String)
     Dim vtypeIndex As Integer: vtypeIndex = 4
     Dim isGlobal As Integer: isGlobal = False
     Dim isArray As Integer: isArray = False
-    Dim arraySize As Integer: arraySize = -1
+    'Dim arraySize As Integer: arraySize = -1
+    Dim arraySize As String
     Dim pstart As Integer
+    Dim asIdx As Integer
+    asIdx = -1
+    Dim i As Integer
+    For i = 1 To UBound(parts)
+        If UCase$(parts(i)) = "AS" Then asIdx = i
+    Next i
+
 
     If UCase$(parts(2)) = "SHARED" Then
         isGlobal = True
-        vname = parts(3)
+        vname = Join(parts(), 3, asIdx - 1, " ")
         vtype = ""
         vtypeIndex = 5
     Else
-        vname = parts(2)
+        vname = Join(parts(), 2, asIdx - 1, " ")
         vtype = ""
     End If
 
     ' TODO: this logic cannot handle multi-dimensional arrays
+    '       I think it can now, this comment can probably go away
     pstart = InStr(vname, "(")
     If pstart > 0 Then
         isArray = True
-        arraySize = Val(Mid$(vname, pstart + 1, Len(vname) - pstart - 1))
+        arraySize = ConvertExpression(Mid$(vname, pstart + 1, Len(vname) - pstart - 2))
         vname = Left$(vname, pstart - 1)
     End If
 
@@ -396,7 +482,7 @@ Function DeclareVar$ (parts() As String)
     var.name = vname
     var.type = vtype
     var.isArray = isArray
-    var.arraySize = arraySize
+    'var.arraySize = arraySize
     If isGlobal Then
         AddVariable var, globalVars()
     Else
@@ -412,8 +498,8 @@ Function DeclareVar$ (parts() As String)
         ' TODO: if this is a REDIM, make sure we are not declaring the variable twice
         '       if this is an array with _PRESERVE specified, then enlarge or shrink the existing array
         js = "var " + var.name + " = [];" 'new Array(" + Str$(var.arraySize + 1) + ");"
-        If var.arraySize > 0 Then
-            js = js + " QB64.initArray(" + var.name + ", " + Str$(var.arraySize) + ", " + InitTypeValue(var.type) + ");"
+        If arraySize <> "" Then
+            js = js + " QB64.initArray(" + var.name + ", [" + arraySize + "], " + InitTypeValue(var.type) + ");"
 
             '    js = js + ".fill(" + InitTypeValue(var.type) + ")"
         End If
@@ -498,6 +584,8 @@ Function ConvertExpression$ (ex As String)
                     js = js + " == "
                 ElseIf word = "<>" Then
                     js = js + " != "
+                ElseIf word = "^" Then
+                    js = js + " ** "
                 ElseIf word = ">" Or word = ">=" Or word = "<" Or word = "<=" Then
                     js = js + " " + word + " "
                 Else
@@ -530,12 +618,16 @@ Function ConvertExpression$ (ex As String)
                 Dim pcount As Integer: pcount = 0
                 Dim c2 As String
                 Dim ex2 As String: ex2 = ""
+                Dim stringLiteral2 As Integer
+                stringLiteral2 = False
                 i = i + 1
                 While Not done And i <= Len(ex)
                     c2 = Mid$(ex, i, 1)
-                    If c2 = "(" Then
+                    If c2 = Chr$(34) Then
+                        stringLiteral2 = Not stringLiteral2
+                    ElseIf Not stringLiteral2 And c2 = "(" Then
                         pcount = pcount + 1
-                    ElseIf c2 = ")" Then
+                    ElseIf Not stringLiteral2 And c2 = ")" Then
                         If pcount = 0 Then
                             done = True
                         Else
@@ -551,7 +643,7 @@ Function ConvertExpression$ (ex As String)
 
                 ' Determine whether the current word is a function or array variable
                 If FindVariable(word, var, True) Then
-                    js = js + var.jsname + "[" + ConvertExpression(ex2) + "]"
+                    js = js + var.jsname + "[" + GXSTR_Replace(ConvertExpression(ex2), ",", "][") + "]"
 
                 ElseIf FindMethod(word, m, "FUNCTION") Then
                     js = js + m.jsname + "(" + ConvertExpression(ex2) + ")"
@@ -618,7 +710,9 @@ Sub ConvertMethods ()
             If lastLine < 0 Then lastLine = UBound(lines)
 
             ' TODO: figure out how to make needed functions have the async modifier
+            '       at the moment just applying it to all subs
             Dim asyncModifier As String
+            'asyncModifier = "async "
             If methods(i).type = "SUB" Then asyncModifier = "async " Else asyncModifier = ""
             Print asyncModifier + "function " + methods(i).jsname + "(";
             If methods(i).argc > 0 Then
@@ -770,6 +864,12 @@ Function SLSplit (sourceString As String, results() As String)
         If c = Chr$(34) Then
             quoteMode = Not quoteMode
             result = result + c
+
+            ' This is not the most intuitive place for this...
+            ' If we find a string then escape any backslashes
+            If Not quoteMode Then
+                result = GXSTR_Replace(result, "\", "\\")
+            End If
 
         ElseIf c = " " Then
             If quoteMode Then
@@ -996,13 +1096,14 @@ Function RemoveSuffix$ (vname As String)
     Dim i As Integer
     Dim done As Integer
     Dim c As String
+    vname = _Trim$(vname)
     i = Len(vname)
     While Not done
         c = Mid$(vname, i, 1)
-        If Not c = "`" And Not c = "%" And Not c = "&" And Not c = "$" And Not c = "~" And Not c = "!" Then
-            done = True
-        Else
+        If c = "`" Or c = "%" Or c = "&" Or c = "$" Or c = "~" Or c = "!" Then
             i = i - 1
+        Else
+            done = True
         End If
     Wend
     RemoveSuffix = Left$(vname, i)
@@ -1096,7 +1197,7 @@ Function MethodJS$ (m As Method, prefix As String)
         End If
     Next i
 
-    If m.name = "_Limit" Or m.name = "_Delay" Or m.name = "Sleep" Or m.name = "Input" Then
+    If m.name = "_Limit" Or m.name = "_Delay" Or m.name = "Sleep" Or m.name = "Input" Or m.name = "Print" Then
         jsname = "await " + jsname
     End If
 
@@ -1461,26 +1562,37 @@ Sub InitQB64Methods
     AddQB64Method "FUNCTION", "_Width"
 
     AddQB64Method "FUNCTION", "Abs"
+    AddQB64Method "FUNCTION", "Asc"
+    AddQB64Method "FUNCTION", "Atn"
     AddQB64Method "FUNCTION", "Chr$"
     AddQB64Method "SUB", "Cls"
     AddQB64Method "SUB", "Color"
     AddQB64Method "FUNCTION", "Cos"
+    AddQB64Method "FUNCTION", "Fix"
     AddQB64Method "SUB", "Input"
+    AddQB64Method "FUNCTION", "InStr"
+    AddQB64Method "FUNCTION", "Int"
     AddQB64Method "FUNCTION", "Left$"
+    AddQB64Method "FUNCTION", "LCase$"
     AddQB64Method "FUNCTION", "Len"
     AddQB64Method "SUB", "Line"
     AddQB64Method "SUB", "Locate"
+    AddQB64Method "FUNCTION", "LTrim$"
     AddQB64Method "FUNCTION", "Mid$"
     AddQB64Method "SUB", "Print"
     AddQB64Method "FUNCTION", "Right$"
+    AddQB64Method "FUNCTION", "RTrim$"
     AddQB64Method "FUNCTION", "Rnd"
     AddQB64Method "SUB", "Screen"
+    AddQB64Method "FUNCTION", "Sgn"
     AddQB64Method "FUNCTION", "Sin"
     AddQB64Method "SUB", "Sleep"
+    AddQB64Method "FUNCTION", "Sqr"
     AddQB64Method "FUNCTION", "Str$"
+    AddQB64Method "FUNCTION", "Tan"
     AddQB64Method "FUNCTION", "UBound"
     AddQB64Method "FUNCTION", "UCase$"
-
+    AddQB64Method "FUNCTION", "Val"
 End Sub
 
 '$include: '../gx/gx_str.bm'

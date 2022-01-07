@@ -9,9 +9,17 @@ var QB64 = new function() {
     var _lastKey = null;
     var _inputMode = false;
 
-    this.initArray = function(a, size, obj) {
-        for (var i=0; i <= size; i++) {
-            a.push(JSON.parse(JSON.stringify(obj)));
+    this.initArray = function(a, dimensions, obj, index) {
+        if (index == undefined) { index = 0; }
+        a.length = dimensions[index]+1;
+        for (var i=0; i < a.length; i++) {
+            if (index < dimensions.length-1) {
+                a[i] = [];
+                this.initArray(a[i], dimensions, obj, index+1);
+            }
+            else {
+                a[i] = JSON.parse(JSON.stringify(obj));
+            }
         }
     };
 
@@ -130,6 +138,14 @@ var QB64 = new function() {
     };
 
 
+    this.func_Asc = function(value, pos) {
+        if (pos == undefined) {
+            pos = 0;
+        }
+        else { pos--; }
+
+        return String(value).charCodeAt(pos);
+    }
 
     this.func_Abs = function(value) {
         return Math.abs(value);
@@ -160,10 +176,33 @@ var QB64 = new function() {
         return Math.cos(value);
     };
 
+    this.func_Fix = function(value) {
+        if (value >=0) {
+            return Math.floor(value);
+        }
+        else {
+            return Math.floor(Math.abs(value)) * -1;
+        }
+    };
+
+    function _textColumns() {
+        return Math.floor(QB64.func__Width() / QB64.func__FontWidth());
+    }
+
+    function _textRows() {
+        return Math.floor(QB64.func__Height() / QB64.func__FontHeight());
+    }
+
     this.sub_Input = async function(values) {
         _lastKey = null;
         var str = "";
         _inputMode = true;
+
+        //if (_locY >= 24) {
+        if (_locY > _textRows()-1) {
+                await _printScroll();
+            _locY = _textRows()-1;
+        }
         QB64.sub__PrintString(_locX * QB64.func__FontWidth(), _locY * QB64.func__FontHeight(), "? ");
         _locX += 2;
         while (_lastKey != "Enter") {
@@ -194,6 +233,30 @@ var QB64 = new function() {
         values[0] = str;
         _inputMode = false;
     }
+
+    this.func_InStr = function(arg1, arg2, arg3) {
+        var startIndex = 0;
+        var strSource = "";
+        var strSearch = "";
+        if (arg3 != undefined) {
+            startIndex = arg1-1;
+            strSource = String(arg2);
+            strSearch = String(arg3);
+        }
+        else {
+            strSource = String(arg1);
+            strSearch = String(arg2);
+        }
+        return strSource.indexOf(strSearch, startIndex)+1;
+    };
+
+    this.func_Int = function(value) {
+        return Math.floor(value);
+    };
+
+    this.func_LCase = function(value) {
+        return String(value).toLowerCase();
+    };
 
     this.func_Left = function(value, n) {
         return String(value).substring(0, n);
@@ -251,6 +314,10 @@ var QB64 = new function() {
         }
     };
 
+    this.sub_LineInput = async function(values) {
+        await QB64.sub_Input(values);
+    }
+
     this.sub_Locate = function(row, col) {
         // TODO: implement cursor positioning/display
         if (row && row > 0 && row < 26) {
@@ -260,6 +327,10 @@ var QB64 = new function() {
             _locX = col-1;
         }
     };
+
+    this.func_LTrim = function(value) {
+        return String(value).trimStart();
+    }
 
     this.func_Mid = function(value, n, len) {
         return String(value).substring(n-1, n+len-1);
@@ -276,20 +347,13 @@ var QB64 = new function() {
             var y = -1;
 
             // scroll the screen
-            if (_locY < 25) {
+            //if (_locY < 25) {
+            if (_locY < _textRows()) {
                 y = _locY*QB64.func__FontHeight();
                 _locY = _locY + 1;
             }
             else {
-                var img = new Image();
-                img.src = GX.canvas().toDataURL("image/png");
-                while (!img.complete) {
-                    await GX.sleep(10);
-                }
-                ctx.beginPath();
-                ctx.fillStyle = _bgColor.rgba();
-                ctx.fillRect(0, 0, QB64.func__Width(), QB64.func__Height());
-                ctx.drawImage(img, 0, -QB64.func__FontHeight());
+                await _printScroll();
 
                 y = (_locY-1)*QB64.func__FontHeight();
             }
@@ -305,10 +369,27 @@ var QB64 = new function() {
         _locX = 0;
     };
 
+    async function _printScroll() {
+        var img = new Image();
+        img.src = GX.canvas().toDataURL("image/png");
+        while (!img.complete) {
+            await GX.sleep(10);
+        }
+        var ctx = GX.ctx();
+        ctx.beginPath();
+        ctx.fillStyle = _bgColor.rgba();
+        ctx.fillRect(0, 0, QB64.func__Width(), QB64.func__Height());
+        ctx.drawImage(img, 0, -QB64.func__FontHeight());
+    }
+
     this.func_Right = function(value, n) {
         var s = String(value);
         return s.substring(s.length-n, s.length);
     };
+
+    this.func_RTrim = function(value) {
+        return String(value).trimEnd();
+    }
 
     this.func_Rnd = function(n) {
         // TODO: implement modifier parameter
@@ -347,6 +428,18 @@ var QB64 = new function() {
 
     };
 
+    this.func_Sgn = function(value) {
+        if (value > 0) {
+            return 1;
+        }
+        else if (value < 0) {
+            return -1;
+        }
+        else {
+            return 0;
+        }
+    };
+
     this.func_Sin = function(value) {
         return Math.sin(value);
     };
@@ -357,8 +450,20 @@ var QB64 = new function() {
         await GX.sleep(seconds*1000);
     };
 
+    this.func_Sqr = function(value) {
+        return Math.sqrt(value);
+    };
+
     this.func_Str = function(value) {
         return String(value);
+    };
+
+    this.func_Tan = function(value) {
+        return Math.tan(value);
+    };
+
+    this.func_Atn = function(value) {
+        return Math.atan(value);
     };
 
     this.func_UBound = function(a) {
@@ -368,6 +473,11 @@ var QB64 = new function() {
     this.func_UCase = function(value) {
         return String(value).toUpperCase();
     };
+
+    this.func_Val = function(value) {
+        return Number(value);
+    };
+
 
     function _init() {
         // initialize the fonts
