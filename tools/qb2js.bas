@@ -251,7 +251,10 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 assignment = 0
                 Dim j As Integer
                 For j = 1 To UBound(parts)
-                    If parts(j) = "=" Then assignment = j
+                    If parts(j) = "=" Then
+                        assignment = j
+                        Exit For
+                    End If
                 Next j
 
                 'If parts(2) = "=" Then
@@ -443,7 +446,7 @@ Function DeclareVar$ (parts() As String)
     Dim arraySize As String
     Dim pstart As Integer
     Dim asIdx As Integer
-    asIdx = -1
+    asIdx = 0
     Dim i As Integer
     For i = 1 To UBound(parts)
         If UCase$(parts(i)) = "AS" Then asIdx = i
@@ -472,6 +475,7 @@ Function DeclareVar$ (parts() As String)
     If UBound(parts) = vtypeIndex Then
         vtype = UCase$(parts(vtypeIndex))
     Else
+        Print "// DataTypeFromName(" + vname + ")"
         vtype = DataTypeFromName(vname)
     End If
 
@@ -479,7 +483,7 @@ Function DeclareVar$ (parts() As String)
     '       the variable has already been defined, this is particulary important
     '       for handling REDIM _PRESERVE scenarios
     Dim var As Variable
-    var.name = vname
+    var.name = RemoveSuffix(vname)
     var.type = vtype
     var.isArray = isArray
     'var.arraySize = arraySize
@@ -1111,7 +1115,9 @@ End Function
 
 Function DataTypeFromName$ (vname As String)
     Dim dt As String
-    If EndsWith(vname, "`") Then
+    If EndsWith(vname, "$") Then
+        dt = "STRING"
+    ElseIf EndsWith(vname, "`") Then
         dt = "_BIT"
     ElseIf EndsWith(vname, "%%") Then
         dt = "_BYTE"
@@ -1145,7 +1151,7 @@ Function DataTypeFromName$ (vname As String)
 End Function
 
 Function EndsWith (s As String, finds As String)
-    If _InStrRev(s, finds) = Len(s) - 1 Then
+    If _InStrRev(s, finds) = Len(s) - (Len(finds) - 1) Then
         EndsWith = True
     Else
         EndsWith = False
