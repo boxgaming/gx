@@ -159,7 +159,8 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 Dim uval As String
                 uval = ConvertExpression(Join(parts(), toIdx + 1, stepIdx - 1, " "))
 
-                If Val(fstep) < 0 Then fcond = " >= "
+                'If Val(fstep) < 0 Then fcond = " >= "
+                If Left$(_Trim$(fstep), 1) = "-" Then fcond = " >= "
 
                 js = "for (" + fvar + "=" + sval + "; " + fvar + fcond + uval + "; " + fvar + "=" + fvar + " + " + fstep + ") {"
 
