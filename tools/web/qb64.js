@@ -198,7 +198,6 @@ var QB64 = new function() {
         var str = "";
         _inputMode = true;
 
-        //if (_locY >= 24) {
         if (_locY > _textRows()-1) {
                 await _printScroll();
             _locY = _textRows()-1;
@@ -320,10 +319,10 @@ var QB64 = new function() {
 
     this.sub_Locate = function(row, col) {
         // TODO: implement cursor positioning/display
-        if (row && row > 0 && row < 26) {
+        if (row && row > 0 && row < _textRows()) {
             _locY = row-1;
         }
-        if (col && col > 0 && col < 81) {
+        if (col && col > 0 && col < _textColumns()) {
             _locX = col-1;
         }
     };
@@ -347,7 +346,6 @@ var QB64 = new function() {
             var y = -1;
 
             // scroll the screen
-            //if (_locY < 25) {
             if (_locY < _textRows()) {
                 y = _locY*QB64.func__FontHeight();
                 _locY = _locY + 1;
@@ -425,19 +423,12 @@ var QB64 = new function() {
         // initialize the graphics
         _fgColor = this.func__RGB(255, 255, 255); 
         _bgColor = this.func__RGB(0, 0, 0);
-
     };
 
     this.func_Sgn = function(value) {
-        if (value > 0) {
-            return 1;
-        }
-        else if (value < 0) {
-            return -1;
-        }
-        else {
-            return 0;
-        }
+        if (value > 0) { return 1; }
+        else if (value < 0) { return -1; }
+        else { return 0; }
     };
 
     this.func_Sin = function(value) {
