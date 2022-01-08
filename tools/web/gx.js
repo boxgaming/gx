@@ -937,7 +937,7 @@ var GX = new function() {
     }
 
     function _mapTile (col, row, layer, tile) {
-        if (col < 0 || col >= GX.mapColumns() || row < 0 || row >= GX.mapRows() || layer > GX.mapLayers()) { return; }
+        if (col < 0 || col >= GX.mapColumns() || row < 0 || row >= GX.mapRows() || layer > GX.mapLayers()) { return 0; }
         var mpos = row * GX.mapColumns() + col;
         if (tile >= 0) {
             if (col >= 0 && col <= GX.mapColumns() && row >= 0 && row < GX.mapRows()) {

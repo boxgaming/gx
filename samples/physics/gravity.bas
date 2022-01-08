@@ -14,10 +14,10 @@ Const RIGHT = 2
 'GXDebug GX_TRUE
 GXSceneCreate 320, 200
 GXSceneScale 2
-GXMapLoad "./test.gxm"
+GXMapLoad "map/test.gxm"
 
 Dim Shared player As Long
-player = GXEntityCreate("../overworld/img/character.png", 16, 20, 4)
+player = GXEntityCreate("img/character.png", 16, 20, 4)
 GXEntityPos player, 20, 0
 GXEntityCollisionOffset player, 3, 10, 3, 0
 GXEntityApplyGravity player, GX_TRUE
@@ -41,7 +41,7 @@ GXEntityPos floor, 0, 192
 ReDim Shared bullets(10) As Long
 Dim i As Integer
 For i = 1 To 10
-    bullets(i) = GXEntityCreate("../overworld/img/coin.png", 16, 16, 4)
+    bullets(i) = GXEntityCreate("img/coin.png", 16, 16, 4)
     GXEntityType bullets(i), BULLET
     GXEntityVisible bullets(i), GX_FALSE
     GXEntityCollisionOffset bullets(i), 3, 0, 3, 0
