@@ -24,6 +24,10 @@ var GX = new function() {
     };
     var _sounds = [];
     var _sound_muted = false;
+    var _mouseButtons = [0,0,0];
+    var _mousePos = { x:0, y:0 };
+    var _mouseInputFlag = false;
+
 
     // javascript specific
     var _onGameEvent = null;
@@ -50,6 +54,43 @@ var GX = new function() {
 		    _canvas = document.createElement("canvas");
             _canvas.id = "gx-canvas";
             document.getElementById("gx-container").appendChild(_canvas);
+
+            _canvas.addEventListener("mousemove", function(event) {
+                _mousePos.x = event.offsetX;
+                _mousePos.y = event.offsetY;
+                _mouseInputFlag = true;
+            });
+    
+            _canvas.addEventListener("mousedown", function(event) {
+                event.preventDefault();
+                if (event.button == 0) {
+                    _mouseButtons[0] = -1;
+                }
+                else if (event.button == 1) {
+                    _mouseButtons[2] = -1;
+                }
+                else if (event.button == 2) {
+                    _mouseButtons[1] = -1;
+                }
+                _mouseInputFlag = true;
+            });
+    
+            _canvas.addEventListener("mouseup", function(event) {
+                if (event.button == 0) {
+                    _mouseButtons[0] = 0;
+                }
+                else if (event.button == 1) {
+                    _mouseButtons[2] = 0;
+                }
+                else if (event.button == 2) {
+                    _mouseButtons[1] = 0;
+                }
+                _mouseInputFlag = true;
+            });
+
+            _canvas.addEventListener("contextmenu", function(event) {
+                event.preventDefault();
+            });
         }
         _canvas.width = width;
         _canvas.height = height;
@@ -227,17 +268,19 @@ var GX = new function() {
 
         _scene.frame = 0;
         _scene.active = true;
-    
+/*    
         // detect key state for KeyDown method
-        window.onkeyup = function(event) { 
+        addEventListener("keyup", function(event) { 
+        //window.onkeyup = function(event) { 
             event.preventDefault();
             _pressedKeys[event.keyCode] = false;
-        };
-        window.onkeydown = function(event) { 
+        });
+        addEventListener("keydown", function(event) { 
+        //window.onkeydown = function(event) { 
             event.preventDefault();
             _pressedKeys[event.keyCode] = true;
-        };
-
+        });
+*/
         _sceneLoad();
     }
 
@@ -1632,6 +1675,7 @@ var GX = new function() {
     }
 
     function _drawText (fid, sx, sy, s) {
+        if (s == undefined) { return; }
         //alert(fid);
         var x = sx;
         var y = sy;
@@ -1686,6 +1730,28 @@ var GX = new function() {
 
     // Input Device Methods
     // -----------------------------------------------------------------
+    function _mouseInput() {
+        // TODO: need to decide whether to keep this here
+        //       it is not needed for GX only to support QB64
+        var mi = _mouseInputFlag;
+        _mouseInputFlag = false;
+        return mi;
+    }
+
+    function _mouseX() {
+        return _mousePos.x;
+    }
+
+    function _mouseY() {
+        return _mousePos.y;
+    };
+
+    function _mouseButton(button) {
+        // TODO: need to decide whether to keep this here
+        //       it is not needed for GX - only to support QB64
+        return _mouseButtons[button-1];
+    };
+
     function _deviceInputTest(di) {
         if (di.deviceType = GX.DEVICE_KEYBOARD) {
             if (di.inputType = GX.DEVICE_BUTTON) {
@@ -1694,6 +1760,7 @@ var GX = new function() {
         }
         return false;
     }
+
 /*
     Function GXDeviceInputTest% (di As GXDeviceInput)
         Dim dcount As Integer
@@ -2137,6 +2204,17 @@ var GX = new function() {
         // init
         _fontCreateDefault(GX.FONT_DEFAULT);
         _fontCreateDefault(GX.FONT_DEFAULT_BLACK);
+
+        // keyboard event initialization
+        // detect key state for KeyDown method
+        addEventListener("keyup", function(event) { 
+            //event.preventDefault();
+            _pressedKeys[event.keyCode] = false;
+        });
+        addEventListener("keydown", function(event) { 
+            //event.preventDefault();
+            _pressedKeys[event.keyCode] = true;
+        });
     }
 
     this.ctx = function() { return _ctx; };
@@ -2234,6 +2312,10 @@ var GX = new function() {
     this.deviceInputTest = _deviceInputTest;
     this.keyInput = _keyInput;
     this.keyButtonName = _keyButtonName;
+    this.mouseX = _mouseX;
+    this.mouseY = _mouseY;
+    this.mouseButton = _mouseButton;
+    this._mouseInput = _mouseInput;
 
     this.debug = _debug;
     this.debugFont = _debugFont;
@@ -2410,7 +2492,8 @@ var GX = new function() {
     this.CR = "\r";
     this.LF = "\n";
     this.CRLF = "\r\n"
-};
+};    
+    
 
 // Consider moving these to separate optional js files
 var GXSTR = new function() {
@@ -2420,6 +2503,10 @@ var GXSTR = new function() {
     
     this.rPad = function(str, padChar, padLength) {
         return String(str).padEnd(padLength, padChar);
+    }
+
+    this.replace = function(str, findStr, replaceStr) {
+        return String(str).replace(findStr, replaceStr);
     }
 };
 

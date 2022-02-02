@@ -8,17 +8,15 @@ Do
     Dim di As GXDeviceInput
     GXDeviceInputDetect di
     Cls
-    Print "Device #:    "; di.deviceId
-    Print "Device Name: "; GXDeviceName(di.deviceId)
-    Print "Device Type: "; GXDeviceTypeName(di.deviceType)
-    Print "Input Type:  "; GXInputTypeName(di.inputType)
-    Print "Input Id:    "; di.inputId;
+    Print "Device #:    " + Str$(di.deviceId)
+    Print "Device Name: " + GXDeviceName(di.deviceId)
+    Print "Device Type: " + GXDeviceTypeName(di.deviceType)
+    Print "Input Type:  " + GXInputTypeName(di.inputType)
+    Print "Input Id:    " + Str$(di.inputId)
     If di.deviceType = GXDEVICE_KEYBOARD Then
-        Print " [ "; GXKeyButtonName(di.inputId); " ]"
-    Else
-        Print
+        Print "Key Name: " + GXKeyButtonName(di.inputId)
     End If
-    Print "Input Value: "; di.inputValue
+    Print "Input Value: " + Str$(di.inputValue)
     Print
 Loop
 

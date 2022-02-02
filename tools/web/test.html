@@ -2,7 +2,7 @@
     <head>
         <style>
             body { 
-                background-color: #333; 
+                background-color: #000; 
             }
             #gx-container {
                 text-align: center; 
@@ -13,7 +13,7 @@
                 display: flex;
                 justify-content: space-between;
                 width: 600px;
-                /*display: none;*/
+                display: none;
             }
             #gx-link, #gx-fullscreen { 
                 margin: 1px;
@@ -44,11 +44,9 @@
         </style>
     </head>
     <body>
-        <!--<a href="#" onclick="return startGame()" id="gx-load-screen">&nbsp;</a>-->
         <div id="gx-container"></div>
         <div id="gx-footer">
             <div id="gx-link"><a href="https://github.com/boxgaming/gx" target="_blank" title="Powered by GX"><img src="gx-logo.png"></a></div>    
-            <!--<div id="gx-fullscreen"><img src="fullscreen.png" title="Full Screen Mode" onclick="GX.fullScreen(true)"></div>-->
         </div>
     </body>
     <script language="javascript" src="gx.js"></script>
@@ -56,11 +54,5 @@
     <script language="javascript" src="game.js"></script>
     <script language="javascript">
         init();
-        /*function startGame() {
-            //document.getElementById("gx-fullscreen").style.display = "inline-block";
-            document.getElementById("gx-load-screen").style.display = "none";
-            init();
-            return false;
-        }*/
     </script>
 </html>

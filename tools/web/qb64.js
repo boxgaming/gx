@@ -8,19 +8,91 @@ var QB64 = new function() {
     var _locY = 0;
     var _lastKey = null;
     var _inputMode = false;
+    var _haltedFlag = false;
+    var _runningFlag = false;
 
-    this.initArray = function(a, dimensions, obj, index) {
-        if (index == undefined) { index = 0; }
-        a.length = dimensions[index]+1;
-        for (var i=0; i < a.length; i++) {
-            if (index < dimensions.length-1) {
-                a[i] = [];
-                this.initArray(a[i], dimensions, obj, index+1);
+    // Array handling methods
+    // ----------------------------------------------------
+    this.initArray = function(dimensions, obj) {
+        var a = {};
+        a._dimensions = dimensions;
+        a._newObj = { value: obj };
+        return a;
+    };
+
+    this.resizeArray = function(a, dimensions, obj, preserve) {
+       if (!preserve) {
+         var props = Object.getOwnPropertyNames(a);
+         for (var i = 0; i < props.length; i++) {
+            if (props[i] != "_newObj") {
+               delete a[props[i]];
             }
-            else {
-                a[i] = JSON.parse(JSON.stringify(obj));
+         }
+      }
+      a._dimensions = dimensions;
+    };
+
+    this.arrayValue = function(a, indexes) {
+        var value = a;
+        for (var i=0; i < indexes.length; i++) {
+            if (value[indexes[i]] == undefined) {
+                if (i == indexes.length-1) {
+                    value[indexes[i]] = JSON.parse(JSON.stringify(a._newObj));
+                }
+                else {
+                    value[indexes[i]] = {};
+                }
             }
+            value = value[indexes[i]];
         }
+        return value;
+    };
+
+    // Process control methods
+    // -------------------------------------------
+    this.halt = function() {
+        _haltedFlag = true;
+        _runningFlag = false;
+    };
+
+    this.halted = function() {
+        return _haltedFlag;
+    };
+
+    this.end = function() {
+        _runningFlag = false;
+    };
+
+    this.start = function() {
+        _runningFlag = true;
+        _haltedFlag = false;
+    }
+
+    this.running = function() {
+        return _runningFlag;
+    };
+
+
+    // Extended QB64 Keywords
+    // --------------------------------------------
+    this.func__Alpha = function(rgb, imageHandle) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).a * 255;
+    };
+
+    this.func__Alpha32 = function(rgb) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).a * 255;
+    };
+
+    this.func__Blue = function(rgb, imageHandle) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).b;
+    };
+
+    this.func__Blue32 = function(rgb) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).b;
     };
 
     this.sub__Delay = async function(seconds) {
@@ -35,13 +107,44 @@ var QB64 = new function() {
         return GX.fontWidth(_fntDefault);
     };
 
+    this.func__Green = function(rgb, imageHandle) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).g;
+    };
+
+    this.func__Green32 = function(rgb) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).g;
+    };
+
     this.func__Height = function(img) {
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return GX.sceneHeight();
     };
 
+    this.func__InStrRev = function(arg1, arg2, arg3) {
+      var startIndex = +Infinity;
+      var strSource = "";
+      var strSearch = "";
+      if (arg3 != undefined) {
+          startIndex = arg1-1;
+          strSource = String(arg2);
+          strSearch = String(arg3);
+      }
+      else {
+          strSource = String(arg1);
+          strSearch = String(arg2);
+      }
+      return strSource.lastIndexOf(strSearch, startIndex)+1;
+    };
+
+   this.func__KeyDown = function(keyCode) {
+        // TODO: actual implementation (maybe)
+        //       this is here just to allow converted programs to compile
+        return GX.keyDown(keyCode) ? -1 : 0;
+    };
     this.func__KeyHit = function() {
-        // TODO: actual implementation
+        // TODO: actual implementation (maybe)
         //       this is here just to support rendering loops that are using _KeyHit as the exit criteria
         return 0;
     };
@@ -49,7 +152,23 @@ var QB64 = new function() {
     this.sub__Limit = async function(fps) {
         // TODO: limit based on frame rate
         //       need to incorporate time elapsed from last loop invocation
-        await GX.sleep(50);
+        await GX.sleep(10);
+    };
+
+    this.func__MouseInput = function() {
+        return GX._mouseInput();
+    };
+
+    this.func__MouseX = function() {
+        return GX.mouseX();
+    };
+
+    this.func__MouseY = function() {
+        return GX.mouseY();
+    };
+
+    this.func__MouseButton = function(button) {
+        return GX.mouseButton(button);
     };
 
     this.func__NewImage = function(iwidth, iheight) {
@@ -70,6 +189,7 @@ var QB64 = new function() {
     };
 
     this.func__PrintWidth = function(s) {
+        if (!s) { return 0; }
         return String(s).length * QB64.func__FontWidth();
     };
 
@@ -90,6 +210,16 @@ var QB64 = new function() {
             rgba: function() { return "rgba(" + this.r + "," + this.g + "," + this.b + "," + this.a + ")"; }
         }
     }
+
+    this.func__Red = function(rgb, imageHandle) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).r;
+    };
+
+    this.func__Red32 = function(rgb) {
+        // TODO: implement corresponding logic when an image handle is supplied (maybe)
+        return _color(rgb).r;
+    };
 
     this.func__RGB = function(r, g, b) {
         return this.func__RGB32(r, g, b);
@@ -124,6 +254,10 @@ var QB64 = new function() {
         return Math.round(value);
     };
 
+    this.func__ScreenExists = function() {
+        return true;
+    }
+
     this.sub__Title = function(title) {
         document.title = title;
     };
@@ -138,6 +272,8 @@ var QB64 = new function() {
     };
 
 
+    // Extended QB45 Keywords
+    // --------------------------------------------
     this.func_Asc = function(value, pos) {
         if (pos == undefined) {
             pos = 0;
@@ -163,17 +299,32 @@ var QB64 = new function() {
         ctx.fillRect(0, 0, QB64.func__Width() , QB64.func__Height());
     };
 
+    function _color(c) {
+        if (c != undefined && c.r != undefined) {
+            return c;
+        }
+        return QB64.func__RGB(0,0,0);
+    }
+
     this.sub_Color = function(fg, bg) {
         if (fg != undefined) {
-            _fgColor = fg;
+            _fgColor = _color(fg);
         }
         if (bg != undefined) {
-            _bgColor = bg;
+            _bgColor = _color(bg);
         }
     };
 
+    this.func_Command = function() {
+        return "";
+    };
+    
     this.func_Cos = function(value) {
         return Math.cos(value);
+    };
+
+    this.func_Exp = function(value) {
+        return Math.exp(value);
     };
 
     this.func_Fix = function(value) {
@@ -265,6 +416,32 @@ var QB64 = new function() {
         return String(value).length;
     };
 
+    this.sub_Circle = function(step, x, y, radius, color, startAngle, endAngle, aspect) {
+        // TODO: implement aspect parameter
+        if (color == undefined) {
+            color = _fgColor;
+        }
+        else {
+            color = _color(color);
+        }
+
+        if (startAngle == undefined) { startAngle = 0; }
+        if (endAngle == undefined) { endAngle = 2 * Math.PI; }
+        
+        if (step) {
+            x = _lastX + x;
+            y = _lastY + y;
+        }
+        _lastX = x;
+        _lastY = y;
+
+        var ctx = GX.ctx();
+        ctx.strokeStyle = color.rgba();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, startAngle, endAngle);
+        ctx.stroke();
+    };
+
     this.sub_Line = function(sstep, sx, sy, estep, ex, ey, color, style, pattern) {
         if (color == undefined) {
             if (style == "BF") {
@@ -274,6 +451,10 @@ var QB64 = new function() {
                 color = _fgColor;
             }
         }
+        else {
+            color = _color(color);
+        }
+        
         if (sstep) {
             sx = _lastX + sx;
             sy = _lastY + sy;
@@ -332,7 +513,12 @@ var QB64 = new function() {
     }
 
     this.func_Mid = function(value, n, len) {
+      if (len == undefined) {
+         return String(value).substring(n-1);
+      }
+      else {
         return String(value).substring(n-1, n+len-1);
+      }
     };
 
     this.sub_Print = async function(str) {
@@ -380,7 +566,30 @@ var QB64 = new function() {
         ctx.drawImage(img, 0, -QB64.func__FontHeight());
     }
 
+    this.sub_PSet = function(sstep, x, y, color) {
+        if (color == undefined) {
+            color = _fgColor;
+        }
+        else {
+            color = _color(color);
+        }
+        if (sstep) {
+            x = _lastX + x;
+            y = _lastY + y;
+        }
+        _lastX = x;
+        _lastY = y;
+
+        var ctx = GX.ctx();
+        ctx.fillStyle = color.rgba();
+        ctx.beginPath();
+        ctx.fillRect(x, y, 1, 1);
+    };
+
     this.func_Right = function(value, n) {
+        if (value == undefined) {
+            return "";
+        }
         var s = String(value);
         return s.substring(s.length-n, s.length);
     };
@@ -423,6 +632,12 @@ var QB64 = new function() {
         // initialize the graphics
         _fgColor = this.func__RGB(255, 255, 255); 
         _bgColor = this.func__RGB(0, 0, 0);
+        _lastX = 0;
+        _lastY = 0;
+        _locX = 0;
+        _locY = 0;
+        _lastKey = null;
+        _inputMode = false;
     };
 
     this.func_Sgn = function(value) {
@@ -449,16 +664,33 @@ var QB64 = new function() {
         return String(value);
     };
 
+    this.sub_Swap = function(values) {
+        var temp = values[1];
+        values[1] = values[0];
+        values[0] = temp;
+    };
+
     this.func_Tan = function(value) {
         return Math.tan(value);
+    };
+
+    this.func_Timer = function(accuracy) {
+        // TODO: implement optional accuracy
+        var midnight = new Date();
+        midnight.setHours(0, 0, 0, 0);
+        return ((new Date()).getTime() - midnight.getTime()) / 1000;
     };
 
     this.func_Atn = function(value) {
         return Math.atan(value);
     };
 
-    this.func_UBound = function(a) {
-        return a.length-1;
+    this.func_UBound = function(a, dimension) {
+        if (dimension == undefined) {
+            dimension = 1;
+        }
+        return a._dimensions[dimension-1];
+        //return a.length-1;
     };
 
     this.func_UCase = function(value) {
