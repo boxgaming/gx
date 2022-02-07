@@ -42,25 +42,19 @@ CodeMirror.defineMode("vbscript", function(conf, parserConf) {
     var wordOperators = wordRegexp(['and', 'or', 'not', 'xor', 'is', 'mod', 'eqv', 'imp']);
     var commonkeywords = ['dim', 'as', 'redim', 'then', 'until', 'randomize',
                           'byval','byref','new','property', 'exit', 'in',
-                          'const','private', 'public',
-                          'integer', 'single',
-                          'get','set','let', 'stop', 'on error resume next', 'on error goto 0', 'option explicit', 'call', 'me'];
+                          'const', 'integer', 'single', 'double', '_unsigned', 'string', '_byte',
+                          'let', 'option explicit', 'call'];
 
     //This list was from: http://msdn.microsoft.com/en-us/library/f8tbc79x(v=vs.84).aspx
     var atomWords = ['true', 'false', 'nothing', 'empty', 'null'];
-    //This list was from: http://msdn.microsoft.com/en-us/library/3ca8tfek(v=vs.84).aspx
+
+    // QB64 Keywords
     var builtinFuncsWords = ['_delay', '_fontwidth', '_height', '_limit', '_keyhit', '_newimage', '_pi', '_printstring', '_printwidth', '_rgb',
                             '_rgb32', '_round', '_title', '_trim', '_width', 'abs', 'asc', 'atn', 'chr$', 'cls', 'color', 'cos', 'fix', 'input',
                             'instr', 'int', 'left$', 'lcase$', 'len', 'line', 'locate', 'ltrim$', 'mid$', 'print', 'right$', 'rtrim$', 'rnd',
                             'screen', 'sgn', 'sin', 'sleep', 'sqr', 'str$', 'tan', 'ubound', 'ucase$', 'val', '_screenexists', 'exp', 'timer',
                             'pset', '_red32', '_green32', '_blue32', '_red', '_green', '_blue', 'circle', '_alpha32', '_keydown', 'swap', '_instrrev',
-                            'command$', '_mouseinput', '_mousex', '_mousey', '_mousebutton'];
-                         /*['abs', 'array', 'asc', 'atn', 'cbool', 'cbyte', 'ccur', 'cdate', 'cdbl', 'chr', 'cint', 'clng', 'cos', 'csng', 'cstr', 'date', 'dateadd', 'datediff', 'datepart',
-                        'dateserial', 'datevalue', 'day', 'escape', 'eval', 'execute', 'exp', 'filter', 'formatcurrency', 'formatdatetime', 'formatnumber', 'formatpercent', 'getlocale', 'getobject',
-                        'getref', 'hex', 'hour', 'inputbox', 'instr', 'instrrev', 'int', 'fix', 'isarray', 'isdate', 'isempty', 'isnull', 'isnumeric', 'isobject', 'join', 'lbound', 'lcase', 'left',
-                        'len', 'loadpicture', 'log', 'ltrim', 'rtrim', 'trim', 'maths', 'mid', 'minute', 'month', 'monthname', 'msgbox', 'now', 'oct', 'replace', 'rgb', 'right', 'rnd', 'round',
-                        'scriptengine', 'scriptenginebuildversion', 'scriptenginemajorversion', 'scriptengineminorversion', 'second', 'setlocale', 'sgn', 'sin', 'space', 'split', 'sqr', 'strcomp',
-                        'string', 'strreverse', 'tan', 'time', 'timer', 'timeserial', 'timevalue', 'typename', 'ubound', 'ucase', 'unescape', 'vartype', 'weekday', 'weekdayname', 'year'];*/
+                            'command$', '_mouseinput', '_mousex', '_mousey', '_mousebutton', 'log', '_atan2'];
 
     //This list was from: http://msdn.microsoft.com/en-us/library/ydz4cfk3(v=vs.84).aspx
     var builtinConsts = ['gx_true','vbBlack', 'vbRed', 'vbGreen', 'vbYellow', 'vbBlue', 'vbMagenta', 'vbCyan', 'vbWhite', 'vbBinaryCompare', 'vbTextCompare',

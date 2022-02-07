@@ -15,7 +15,14 @@ var QB64 = new function() {
     // ----------------------------------------------------
     this.initArray = function(dimensions, obj) {
         var a = {};
-        a._dimensions = dimensions;
+        if (dimensions && dimensions.length > 0) {
+            a._dimensions = dimensions;
+        }
+        else {
+            // default to single dimension to support Dim myArray() syntax
+            // for convenient hashtable declaration
+            a._dimensions = [0];
+        }
         a._newObj = { value: obj };
         return a;
     };
@@ -46,6 +53,20 @@ var QB64 = new function() {
             value = value[indexes[i]];
         }
         return value;
+    };
+
+    this.byRef = function(v) {
+        if (v != undefined && v.value == undefined) {
+            return { value: v };
+        }
+        return v;
+    };
+
+    this.byValue = function(v) {
+        if (v !== undefined && v.value != undefined) {
+            return v.value;
+        }
+        return v;
     };
 
     // Process control methods
@@ -83,6 +104,10 @@ var QB64 = new function() {
     this.func__Alpha32 = function(rgb) {
         // TODO: implement corresponding logic when an image handle is supplied (maybe)
         return _color(rgb).a * 255;
+    };
+
+    this.func__Atan2 = function(y, x) {
+        return Math.atan2(y, x);
     };
 
     this.func__Blue = function(rgb, imageHandle) {
@@ -416,6 +441,10 @@ var QB64 = new function() {
         return String(value).length;
     };
 
+    this.func_Log = function(value) {
+        return Math.log(value);
+    };
+
     this.sub_Circle = function(step, x, y, radius, color, startAngle, endAngle, aspect) {
         // TODO: implement aspect parameter
         if (color == undefined) {
@@ -651,9 +680,17 @@ var QB64 = new function() {
     };
 
     this.sub_Sleep = async function(seconds) {
-        // TODO: need to incorporate early exit with keypress
-        //       and limit to whole seconds
-        await GX.sleep(seconds*1000);
+        var elapsed = 0;
+        var totalWait = Infinity;
+        if (seconds != undefined) {
+            totalWait = seconds*1000;
+        }
+        
+        _lastKey = null;
+        while (!_lastKey && elapsed < totalWait) { 
+            await GX.sleep(100); 
+            elapsed += 100;
+        }
     };
 
     this.func_Sqr = function(value) {

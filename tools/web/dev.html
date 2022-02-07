@@ -11,10 +11,25 @@
                 font-family: dosvga, Arial, Helvetica, sans-serif;
                 color: #999;
             }
-            a, a:link, a:visited, a:hover {
+            a, a:link, a:visited {
                 text-decoration: none;
-                color: fff;
+                color: #ccc;
             }
+            a:hover { color: #fff;  }
+            a:before { content: "< "; }
+            a:after { content: " >"; }
+
+            /*button {
+                color: #ccc;
+                border:0;
+                background-color: transparent;
+                font-family: dosvga;
+                font-size: 1em;
+            }
+            button:before { content: "< "; }
+            button:after { content: " >"; }
+            button:hover { color: #fff; }*/
+
             #code-container {
                 /*float: left;*/
                 position: absolute;
@@ -30,11 +45,11 @@
                 position: absolute;
                 left: 620px;
                 top: 10px;
-                background-color: #000;
             }
             #gx-container {
                 border: 1px solid #666;
                 text-align: center; 
+                background-color: #000;
             }
             #gx-canvas {
                 border: 1px solid #222; 
@@ -54,9 +69,9 @@
                 white-space: pre;
             }
             #show-js-container {
-                /*display: inline-block;*/
-                float: right;
+                /*float: right;*/
                 color: #666;
+                position: absolute;
             }
             #warning-container {
                 white-space: pre;
@@ -64,20 +79,27 @@
                 color: #999;
                 padding: 4px;
             }
+            #share-button {
+                float: right;
+            }
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.2/codemirror.min.css"></link>
         <link rel="stylesheet" href="qb64-ide.css"></link>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.2/codemirror.min.js"></script>
         <script type="text/javascript" src="qb64-lang.js"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.52.2/addon/selection/active-line.js"></script>
+        <script type="text/javascript" src="shorty.min.js"></script>
     </head>
     <body>
         <div id="code-container">
             <div id="code"></div>
             <!-- <div id="warning-container"></div> -->
-            <a id="run-button" href="#" onclick="runProgram(); return false;">&lt; Run Program &gt;</a>
-            <a id="stop-button" href="#" onclick="QB64.halt(); return false;">&lt; Stop &gt;</a>
-            <div id="show-js-container"><input type="checkbox" id="show-js" onclick="window.onresize()"/> Show Javascript</div>
+            <!-- <button id="run-button" onclick="runProgram()" onmousedown="nofocus()">Run Program</button>
+            <button id="stop-button" onclick="stopProgram()" onmousedown="nofocus()">Stop</button>
+            <button id="share-button" onclick="shareProgram()" onmousedown="nofocus()"">Share</button> -->
+            <a id="run-button" href="javascript:runProgram()">Run Program</a>
+            <a id="stop-button" href="javascript:stopProgram()">Stop</a>
+            <a id="share-button" href="javascript:shareProgram()">Share</a>
         </div>
         <div id="game-container">
             <div id="gx-container"></div>
@@ -85,6 +107,7 @@
                 <div id="warning-container"></div>
                 <div id="js-code"></div>
             </div>
+            <div id="show-js-container"><input type="checkbox" id="show-js" onclick="window.onresize()"/> Show Javascript</div>
         </div>
         <div id="gx-footer"></div>
     </body>
@@ -92,11 +115,31 @@
     <script language="javascript" src="qb64.js"></script>
     <script language="javascript" src="qb2js.js"></script>
     <script language="javascript">
+        // if code has been passed on the query string load it into the editor
+
+        var qbcode = "";
+        var url = location.href; //document.referrer;
+        //document.getElementById("warning-container").innerHTML = "[" + url + "]";
+ 
+        if (url && url.indexOf("?")) {
+            var queryString = url.substring(url.indexOf("?")+1);
+            var nvpairs = queryString.split("&");
+            for (var i = 0; i < nvpairs.length; i++) {
+                var nv = nvpairs[i].split("=");
+                if (nv[0] == "qbcode") {
+                    var zin = new Shorty();
+                    qbcode = zin.inflate(atob(nv[1]));
+                    break;
+                }
+            }
+        }
+
+        // initialize the code editor
         var editor = CodeMirror(document.querySelector("#code"), {
             lineNumbers: true,
             tabSize: 4,
             indentUnit: 4,
-            value: "",
+            value: qbcode,
             module: "vbscript",
             theme: "lesser-dark",
             height: "auto",
@@ -136,6 +179,22 @@
             catch (error) {
                 console.error(error);
             }
+            document.getElementById("gx-container").focus();
+        }
+
+        function stopProgram() {
+            QB64.halt();
+            GX.sceneStop();
+        }
+
+        function shareProgram() {
+            var zout = new Shorty();
+            var wdiv = document.getElementById("warning-container");
+            var b64 = btoa(zout.deflate(editor.getValue()));
+            var baseUrl = location.href.split('?')[0];
+            wdiv.innerHTML = baseUrl + "?qbcode=" + b64;
+            warnCount = 1;
+            window.onresize();
         }
 
         function displayWarnings() {
@@ -165,6 +224,8 @@
                 f.style.height = (window.innerHeight - 50) + "px";
                 jsDiv.style.display = "none";
             }
+            document.getElementById("show-js-container").style.top = (window.innerHeight - 45) + "px";
+            document.getElementById("show-js-container").style.right = "5px";
             
             document.getElementById("js-code").style.display = document.getElementById("show-js").checked ? "block" : "none";
 
@@ -174,7 +235,7 @@
 
         function checkButtonState() {
             var stopButton = document.getElementById("stop-button");
-            if (QB64.running()) {
+            if (GX.sceneActive() || QB64.running()) {
                 stopButton.style.display = "inline";
             }
             else {
@@ -184,5 +245,6 @@
             setTimeout(checkButtonState, 100);
         }
         checkButtonState();
+        
     </script>
 </html>

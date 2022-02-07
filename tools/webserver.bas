@@ -197,7 +197,8 @@ Function get_requested_filesystem_path$ (c)
     questionmark = InStr(raw_path, "?")
     path_len = Len(raw_path)
     If hash > 0 Then path_len = hash - 1
-    If questionmark > 0 And questionmark < hash Then path_len = questionmark - 1
+    'If questionmark > 0 And questionmark < hash Then path_len = questionmark - 1
+    If questionmark > 0 Then path_len = questionmark - 1
     ' Query strings are ignored for now
 
     'Dim cwd As String
@@ -206,6 +207,8 @@ Function get_requested_filesystem_path$ (c)
     '    'raw_path = GXSTR_Replace(raw_path, "/", "\")
     '    cwd = GXSTR_Replace(cwd, "\", "/")
     '$End If
+
+    Print "--> " + Left$(raw_path, path_len)
 
     get_requested_filesystem_path = _CWD$ + cannonicalise_path(percent_decode(Left$(raw_path, path_len)))
 End Function

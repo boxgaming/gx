@@ -107,6 +107,7 @@ var GX = new function() {
         _scene.followMode = GX.SCENE_FOLLOW_NONE;
         _scene.followEntity = null;
         _scene.constrainMode = GX.SCENE_CONSTRAIN_NONE;
+        _scene.active = false;
 
         _customEvent(GX.EVENT_INIT);
     }
@@ -268,19 +269,7 @@ var GX = new function() {
 
         _scene.frame = 0;
         _scene.active = true;
-/*    
-        // detect key state for KeyDown method
-        addEventListener("keyup", function(event) { 
-        //window.onkeyup = function(event) { 
-            event.preventDefault();
-            _pressedKeys[event.keyCode] = false;
-        });
-        addEventListener("keydown", function(event) { 
-        //window.onkeydown = function(event) { 
-            event.preventDefault();
-            _pressedKeys[event.keyCode] = true;
-        });
-*/
+
         _sceneLoad();
     }
 
@@ -2208,11 +2197,15 @@ var GX = new function() {
         // keyboard event initialization
         // detect key state for KeyDown method
         addEventListener("keyup", function(event) { 
-            //event.preventDefault();
+            if (_scene.active) {
+                event.preventDefault();
+            }
             _pressedKeys[event.keyCode] = false;
         });
         addEventListener("keydown", function(event) { 
-            //event.preventDefault();
+            if (_scene.active) {
+                event.preventDefault();
+            }
             _pressedKeys[event.keyCode] = true;
         });
     }
@@ -2330,6 +2323,8 @@ var GX = new function() {
     this.sleep = _sleep;
     this.registerGameEvents = _registerGameEvents;
     this.resourcesLoaded = _resourcesLoaded;
+    
+    this.sceneActive = function() { return _scene.active; }
 
     // constants
     this.TRUE = true;

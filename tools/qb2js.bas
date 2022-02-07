@@ -2066,6 +2066,7 @@ End Sub
 
 Sub InitQB64Methods
     AddQB64Method "FUNCTION", "_Alpha32"
+    AddQB64Method "FUNCTION", "_Atan2"
     AddQB64Method "FUNCTION", "_Blue"
     AddQB64Method "FUNCTION", "_Blue32"
     AddQB64Method "SUB", "_Delay"
@@ -2114,6 +2115,7 @@ Sub InitQB64Methods
     AddQB64Method "FUNCTION", "Len"
     AddQB64Method "SUB", "Line"
     AddQB64Method "SUB", "Locate"
+    AddQB64Method "FUNCTION", "Log"
     AddQB64Method "FUNCTION", "LTrim$"
     AddQB64Method "FUNCTION", "Mid$"
     AddQB64Method "SUB", "Print"
