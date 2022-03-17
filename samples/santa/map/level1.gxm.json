@@ -161,6 +161,6 @@
 "tileset":{
 "width": 32 ,
 "height": 32 ,
-"image":"map/level1.gxm.png"
+"image":"level1.gxm.json.png"
 }
 }
