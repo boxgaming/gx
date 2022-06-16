@@ -18,4 +18,4 @@ The current alpha build has support for:
 - Device input management
   - Keyboard, mouse, and game controller
 - Interactive debugging
-- Export to Web (Experimental)
+- Export to Web
