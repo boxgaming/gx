@@ -27,7 +27,9 @@ var GX = new function() {
     var _mouseButtons = [0,0,0];
     var _mousePos = { x:0, y:0 };
     var _mouseInputFlag = false;
-
+    var _touchInputFlag = false;
+    var _touchPos = { x:0, y:0 };
+    var _bindTouchToMouse = true;
 
     // javascript specific
     var _onGameEvent = null;
@@ -46,6 +48,44 @@ var GX = new function() {
         return { eid:0, charSpacing:0, lineSpacing: 0}
     }
     
+    function _reset() {
+        // TODO: stop any sounds that are currently playing
+        _framerate = 60;
+        _bg = [];
+        _images = [];
+        _entities = [];
+        _scene = {};
+        _tileset = {};
+        _map = {};
+        _map_layers = [];
+        _map_layer_info = [];
+        _map_loading = false;
+        _gravity = 9.8 * 8;
+        _terminal_velocity = 300;
+
+        _fonts = new Array(2);
+        _fonts[0] = { eid:0, charSpacing:0, lineSpacing: 0};
+        _fonts[1] = { eid:0, charSpacing:0, lineSpacing: 0};
+        _font_charmap = new Array(2).fill(new Array(256).fill({x:0,y:0}));
+        _fontCreateDefault(GX.FONT_DEFAULT);
+        _fontCreateDefault(GX.FONT_DEFAULT_BLACK);
+
+        _fullscreenFlag = false;
+        __debug = {
+            enabled: false,
+            font: 1 // GX.FONT_DEFAULT
+        };
+        _sounds = [];
+        _sound_muted = false;
+        _mouseButtons = [0,0,0];
+        _mousePos = { x:0, y:0 };
+        _mouseInputFlag = false;
+    
+        // javascript specific
+        _onGameEvent = null;
+        _pressedKeys = {};
+    }
+
     // Scene Functions
     // -----------------------------------------------------------------
     function _sceneCreate(width, height) {
@@ -63,34 +103,108 @@ var GX = new function() {
     
             _canvas.addEventListener("mousedown", function(event) {
                 event.preventDefault();
-                if (event.button == 0) {
-                    _mouseButtons[0] = -1;
-                }
-                else if (event.button == 1) {
-                    _mouseButtons[2] = -1;
-                }
-                else if (event.button == 2) {
-                    _mouseButtons[1] = -1;
-                }
+                if (event.button == 0) { _mouseButtons[0] = -1; }
+                else if (event.button == 1) { _mouseButtons[2] = -1; }
+                else if (event.button == 2) { _mouseButtons[1] = -1; }
                 _mouseInputFlag = true;
             });
     
             _canvas.addEventListener("mouseup", function(event) {
-                if (event.button == 0) {
-                    _mouseButtons[0] = 0;
-                }
-                else if (event.button == 1) {
-                    _mouseButtons[2] = 0;
-                }
-                else if (event.button == 2) {
-                    _mouseButtons[1] = 0;
-                }
+                if (event.button == 0) { _mouseButtons[0] = 0; }
+                else if (event.button == 1) { _mouseButtons[2] = 0; }
+                else if (event.button == 2) { _mouseButtons[1] = 0; }
                 _mouseInputFlag = true;
             });
 
             _canvas.addEventListener("contextmenu", function(event) {
                 event.preventDefault();
             });
+
+            _canvas.addEventListener("touchmove", function(event) {
+                event.preventDefault();
+                var touch = event.touches[0];
+                var rect = event.target.getBoundingClientRect();
+                _touchPos.x = touch.pageX - rect.x;
+                _touchPos.y = touch.pageY - rect.y;
+                //alert(_touchPos.x + "," + _touchPos.y);
+                _touchInputFlag = true;
+                if (_bindTouchToMouse) {
+                    //_mousePos.x = event.offsetX;
+                    //_mousePos.y = event.offsetY;
+                    _mousePos = _touchPos;
+                    _mouseInputFlag = true;
+                }
+            });
+    
+            _canvas.addEventListener("touchstart", function(event) {
+                //alert("touchstart");
+                event.preventDefault();
+                var touch = event.touches[0];
+                var rect = event.target.getBoundingClientRect();
+                _touchPos.x = touch.pageX - rect.x;
+                _touchPos.y = touch.pageY - rect.y;
+                _touchInputFlag = true;
+                if (_bindTouchToMouse) {
+                    _mouseButtons[0] = -1;
+                    _mouseInputFlag = true;
+                    _mousePos = _touchPos;
+                }
+            });
+    
+            _canvas.addEventListener("touchend", function(event) {
+                event.preventDefault();
+                _touchInputFlag = false;
+                if (_bindTouchToMouse) {
+                    _mouseButtons[0] = 0;
+                    _mouseInputFlag = true;
+                }
+            });
+
+            document.addEventListener("fullscreenchange", function(event) {
+                if (document.fullscreenElement) {
+                    _fullscreenFlag = true;
+                    _scene.prevScaleX = _scene.scaleX;
+                    _scene.prevScaleY = _scene.scaleY;
+                    var widthFactor = screen.width / _scene.width;
+                    var heightFactor = screen.height / _scene.height;
+                    var factor = Math.min(widthFactor, heightFactor);
+                    var offsetX = 0;
+                    var offsetY = 0;
+                    if (widthFactor > heightFactor) {
+                        offsetX = (screen.width - _scene.width * factor) / 2;
+                    }
+                    else {
+                        offsetY = (screen.height - _scene.height * factor) / 2;
+                    }
+                    
+                    _scene.scaleX = factor;
+                    _scene.scaleY = factor;
+                    _scene.offsetX = offsetX;
+                    _scene.offsetY = offsetY;
+                }
+                else {
+                    _fullscreenFlag = false;
+                    _scene.scaleX = _scene.prevScaleX;
+                    _scene.scaleY = _scene.prevScaleY;
+                    _scene.offsetX = 0;
+                    _scene.offsetY = 0;
+                }
+            });
+
+/*
+            _canvas.addEventListener("keyup", function(event) { 
+                if (_scene.active) {
+                    event.preventDefault();
+                }
+                _pressedKeys[event.keyCode] = false;
+            });
+            _canvas.addEventListener("keydown", function(event) { 
+                if (_scene.active) {
+                    event.preventDefault();
+                }
+                _pressedKeys[event.keyCode] = true;
+            });
+            */
         }
         _canvas.width = width;
         _canvas.height = height;
@@ -103,6 +217,10 @@ var GX = new function() {
         _scene.height = height;
         _scene.x = 0;
         _scene.y = 0;
+        _scene.scaleX = 1;
+        _scene.scaleY = 1;
+        _scene.offsetX = 0;
+        _scene.offsetY = 0;
         _scene.frame = 0;
         _scene.followMode = GX.SCENE_FOLLOW_NONE;
         _scene.followEntity = null;
@@ -112,14 +230,37 @@ var GX = new function() {
         _customEvent(GX.EVENT_INIT);
     }
 
+    // Resize the scene with the specified pixel width and height.
+    function _sceneResize(swidth, sheight) {
+        _scene.width = swidth;
+        _scene.height = sheight;
+        _canvas.width = _scene.width;
+        _canvas.height = _scene.height;
+        _updateSceneSize();
+    }
+
+    function _updateSceneSize() {
+        if (GX.tilesetWidth() < 1 || GX.tilesetHeight() < 1) { return; }
+    
+        if (GX.mapIsometric()) {
+            _scene.columns = Math.floor(GX.sceneWidth() / GX.tilesetWidth())
+            _scene.rows = GX.sceneHeight() / (GX.tilesetWidth() / 4)
+        }
+        else {
+            _scene.columns = Math.floor(GX.sceneWidth() / GX.tilesetWidth());
+            _scene.rows = Math.floor(GX.sceneHeight() / GX.tilesetHeight());
+        }
+    }
+
+
     // Scale the scene by the specified scale factor.
     function _sceneScale (scale) {
         _scene.scaleX = scale;
         _scene.scaleY = scale;
         _canvas.width = _scene.width * _scene.scaleX;
         _canvas.height = _scene.height * _scene.scaleY;
-        _ctx.scale(_scene.scaleX, _scene.scaleY);
         _ctx.imageSmoothingEnabled = false;
+        _ctx.scale(_scene.scaleX, _scene.scaleY);
 
         var footer = document.getElementById("gx-footer");
         footer.style.width = _canvas.width;
@@ -265,12 +406,16 @@ var GX = new function() {
     // Start the game loop.
     // Game events will be sent to the GXOnGameEvent method during the game
     // loop execution.
-    function _sceneStart() {
+    async function _sceneStart() {
 
         _scene.frame = 0;
         _scene.active = true;
 
-        _sceneLoad();
+        setTimeout(_sceneLoad, 10);
+
+        while (_scene.active) {
+            await _sleep(100);
+        }
     }
 
     function _resourcesLoaded() {
@@ -516,6 +661,11 @@ var GX = new function() {
 
     // Sound Methods
     // ----------------------------------------------------------------------------
+    function _soundClose (sid) {
+        _sounds[sid-1].pause();
+        _sounds[sid-1] = undefined;
+    }
+
     function _soundLoad (filename) {
         var a = new Audio(filename);
         _sounds.push(a);
@@ -557,7 +707,6 @@ var GX = new function() {
         return _sound_muted;
     }
     
-
     // Entity Functions
     // -----------------------------------------------------------------------------
     function _entityCreate (imageFilename, ewidth, height, seqFrames, uid) {
@@ -753,7 +902,9 @@ var GX = new function() {
     async function _mapLoad(filename) {
         _map_loading = true;
         var data = await _getJSON(filename);
-        GX.tilesetCreate(data.tileset.image, data.tileset.width, data.tileset.height);
+        var parentPath = filename.substring(0, filename.lastIndexOf("/")+1);
+        var imagePath = data.tileset.image.substring(data.tileset.image.lastIndexOf("/")+1);
+        GX.tilesetCreate(parentPath + imagePath, data.tileset.width, data.tileset.height);
         GX.mapCreate(data.columns, data.rows, data.layers.length);
         for (var layer=0; layer < data.layers.length; layer++) {
             for (var row=0; row < GX.mapRows(); row++) {
@@ -1601,14 +1752,19 @@ var GX = new function() {
 
     function _fullScreen(fullscreenFlag) {
         if (fullscreenFlag != undefined) {
-            _fullscreenFlag = fullscreenFlag;
             if (fullscreenFlag) {
-                document.getElementById("gx-container").requestFullscreen();
+                if (_canvas.requestFullscreen) {
+                    _canvas.requestFullscreen();
+                    _fullscreenFlag = true;
+                }
             } else {
-                document.exitFullscreen();
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    _fullscreenFlag = false;
+                }
             }
         }
-        return _fullscreenFlag;
+        return _fullscreenFlag; //(window.innerHeight == screen.height);
     }
 
 
@@ -1728,11 +1884,11 @@ var GX = new function() {
     }
 
     function _mouseX() {
-        return _mousePos.x;
+        return Math.round((_mousePos.x - _scene.offsetX) / _scene.scaleX);
     }
 
     function _mouseY() {
-        return _mousePos.y;
+        return Math.round((_mousePos.y - _scene.offsetY) / _scene.scaleY);
     };
 
     function _mouseButton(button) {
@@ -1740,6 +1896,24 @@ var GX = new function() {
         //       it is not needed for GX - only to support QB64
         return _mouseButtons[button-1];
     };
+
+    function _touchInput() {
+        var ti = _touchInputFlag;
+        _touchInputFlag = false;
+        return ti;
+    }
+
+    function _touchX() {
+        return _touchPos.x;
+    }
+
+    function _touchY() {
+        return _touchPos.y;
+    }
+    
+    function _enableTouchMouse(enable) {
+        _bindTouchToMouse = enable;
+    }
 
     function _deviceInputTest(di) {
         if (di.deviceType = GX.DEVICE_KEYBOARD) {
@@ -2200,13 +2374,13 @@ var GX = new function() {
             if (_scene.active) {
                 event.preventDefault();
             }
-            _pressedKeys[event.keyCode] = false;
+            _pressedKeys[event.code] = false;
         });
         addEventListener("keydown", function(event) { 
             if (_scene.active) {
                 event.preventDefault();
             }
-            _pressedKeys[event.keyCode] = true;
+            _pressedKeys[event.code] = true;
         });
     }
 
@@ -2224,6 +2398,7 @@ var GX = new function() {
     this.sceneHeight = _sceneHeight;
     this.sceneMove = _sceneMove;
     this.scenePos = _scenePos;
+    this.sceneResize = _sceneResize;
     this.sceneRows = _sceneRows;
     this.sceneScale = _sceneScale;
     this.sceneStart = _sceneStart;
@@ -2241,6 +2416,7 @@ var GX = new function() {
     this.backgroundHeight = _backgroundHeight;
     this.backgroundClear = _backgroundClear;
 
+    this.soundClose = _soundClose;
     this.soundLoad = _soundLoad;
     this.soundPlay = _soundPlay;
     this.soundRepeat = _soundRepeat;
@@ -2309,6 +2485,10 @@ var GX = new function() {
     this.mouseY = _mouseY;
     this.mouseButton = _mouseButton;
     this._mouseInput = _mouseInput;
+    this.touchX = _touchX;
+    this.touchY = _touchY
+    this._touchInput = _touchInput;
+    this._enableTouchMouse = _enableTouchMouse;
 
     this.debug = _debug;
     this.debugFont = _debugFont;
@@ -2320,6 +2500,7 @@ var GX = new function() {
     this.keyDown = _keyDown;
 
     this.init = _init;
+    this.reset = _reset;
     this.sleep = _sleep;
     this.registerGameEvents = _registerGameEvents;
     this.resourcesLoaded = _resourcesLoaded;
@@ -2351,107 +2532,109 @@ var GX = new function() {
     this.BG_WRAP = 3;
 
 
-    this.KEY_ESC = 27;
-    this.KEY_1 = 49;
-    this.KEY_2 = 50;
-    this.KEY_3 = 51;
-    this.KEY_4 = 52;
-    this.KEY_5 = 53;
-    this.KEY_6 = 54;
-    this.KEY_7 = 55;
-    this.KEY_8 = 56;
-    this.KEY_9 = 57;
-    this.KEY_0 = 48;
-    this.KEY_DASH = 189;
-    this.KEY_EQUALS = 187;
-    this.KEY_BACKSPACE = 8;
-    this.KEY_TAB = 9;
-    this.KEY_Q = 81;
-    this.KEY_W = 87;
-    this.KEY_E = 69;
-    this.KEY_R = 82;
-    this.KEY_T = 84;
-    this.KEY_Y = 89;
-    this.KEY_U = 85;
-    this.KEY_I = 73;
-    this.KEY_O = 79;
-    this.KEY_P = 80;
-    this.KEY_LBRACKET = 219;
-    this.KEY_RBRACKET = 221;
-    this.KEY_ENTER = 13;
-    this.KEY_LCTRL = 17;
-    this.KEY_A = 65;
-    this.KEY_S = 83;
-    this.KEY_D = 68;
-    this.KEY_F = 70;
-    this.KEY_G = 71;
-    this.KEY_H = 72;
-    this.KEY_J = 74;
-    this.KEY_K = 75;
-    this.KEY_L = 76;
-    this.KEY_SEMICOLON = 186;
-    this.KEY_QUOTE = 222;
-    this.KEY_BACKQUOTE = 192;
-    this.KEY_LSHIFT = 16;
-    this.KEY_BACKSLASH = 220;
-    this.KEY_Z = 90;
-    this.KEY_X = 88;
-    this.KEY_C = 67;
-    this.KEY_V = 86;
-    this.KEY_B = 66;
-    this.KEY_N = 78;
-    this.KEY_M = 77;
-    this.KEY_COMMA = 188;
-    this.KEY_PERIOD = 190;
-    this.KEY_SLASH = 191;
-    this.KEY_RSHIFT = 16;
-    this.KEY_NUMPAD_MULTIPLY = 106;
-    this.KEY_SPACEBAR = 32;
-    this.KEY_CAPSLOCK = 20;
-    this.KEY_F1 = 112;
-    this.KEY_F2 = 113;
-    this.KEY_F3 = 114;
-    this.KEY_F4 = 115;
-    this.KEY_F5 = 116;
-    this.KEY_F6 = 117;
-    this.KEY_F7 = 118;
-    this.KEY_F8 = 119;
-    this.KEY_F9 = 120;
-    this.KEY_F9 = 121;
-    this.KEY_PAUSE = 19;
-    this.KEY_SCRLK = 145;
-    this.KEY_NUMPAD_7 = 103;
-    this.KEY_NUMPAD_8 = 104;
-    this.KEY_NUMPAD_9 = 105;
-    this.KEY_NUMPAD_MINUS = 109;
-    this.KEY_NUMPAD_4 = 100;
-    this.KEY_NUMPAD_5 = 101;
-    this.KEY_NUMPAD_6 = 102;
-    this.KEY_NUMPAD_PLUS = 107;
-    this.KEY_NUMPAD_1 = 97;
-    this.KEY_NUMPAD_2 = 98;
-    this.KEY_NUMPAD_3 = 99;
-    this.KEY_NUMPAD_0 = 96;
-    this.KEY_NUMPAD_PERIOD = 110;
-    this.KEY_F11 = 122;
-    this.KEY_F12 = 123;
-    this.KEY_NUMPAD_ENTER = 13;
-    this.KEY_RCTRL = 17;
-    this.KEY_NUMPAD_DIVIDE = 111;
-    this.KEY_NUMLOCK = 144;
-    this.KEY_HOME = 36;
-    this.KEY_UP = 38;
-    this.KEY_PAGEUP = 33;
-    this.KEY_LEFT = 37;
-    this.KEY_RIGHT = 39;
-    this.KEY_END = 35;
-    this.KEY_DOWN = 40;
-    this.KEY_PAGEDOWN = 34;
-    this.KEY_INSERT = 45;
-    this.KEY_DELETE = 46;
-    this.KEY_LWIN = 91;
-    this.KEY_RWIN = 92;
-    this.KEY_MENU = 93;
+    this.KEY_ESC = 'Escape';
+    this.KEY_1 = 'Digit1';
+    this.KEY_2 = 'Digit2';
+    this.KEY_3 = 'Digit3';
+    this.KEY_4 = 'Digit4';
+    this.KEY_5 = 'Digit5';
+    this.KEY_6 = 'Digit6';
+    this.KEY_7 = 'Digit7';
+    this.KEY_8 = 'Digit8';
+    this.KEY_9 = 'Digit9';
+    this.KEY_0 = 'Digit0';
+    this.KEY_DASH = 'Minus';
+    this.KEY_EQUALS = 'Equal';
+    this.KEY_BACKSPACE = 'Backspace';
+    this.KEY_TAB = 'Tab';
+    this.KEY_Q = 'KeyQ';
+    this.KEY_W = 'KeyW';
+    this.KEY_E = 'KeyE';
+    this.KEY_R = 'KeyR';
+    this.KEY_T = 'KeyT';
+    this.KEY_Y = 'KeyY';
+    this.KEY_U = 'KeyU';
+    this.KEY_I = 'KeyI';
+    this.KEY_O = 'KeyO';
+    this.KEY_P = 'KeyP';
+    this.KEY_LBRACKET = 'BracketLeft';
+    this.KEY_RBRACKET = 'BracketRight';
+    this.KEY_ENTER = 'Enter';
+    this.KEY_LCTRL = 'ControlLeft';
+    this.KEY_A = 'KeyA';
+    this.KEY_S = 'KeyS';
+    this.KEY_D = 'KeyD';
+    this.KEY_F = 'KeyF';
+    this.KEY_G = 'KeyG';
+    this.KEY_H = 'KeyH';
+    this.KEY_J = 'KeyJ';
+    this.KEY_K = 'KeyK';
+    this.KEY_L = 'KeyL';
+    this.KEY_SEMICOLON = 'Semicolon';
+    this.KEY_QUOTE = 'Quote';
+    this.KEY_BACKQUOTE = 'Backquote';
+    this.KEY_LSHIFT = 'ShiftLeft';
+    this.KEY_BACKSLASH = 'Backslash';
+    this.KEY_Z = 'KeyZ';
+    this.KEY_X = 'KeyX';
+    this.KEY_C = 'KeyC';
+    this.KEY_V = 'KeyV';
+    this.KEY_B = 'KeyB';
+    this.KEY_N = 'KeyN';
+    this.KEY_M = 'KeyM';
+    this.KEY_COMMA = 'Comma';
+    this.KEY_PERIOD = 'Period';
+    this.KEY_SLASH = 'Slash';
+    this.KEY_RSHIFT = 'ShiftRight';
+    this.KEY_NUMPAD_MULTIPLY = 'NumpadMultiply';
+    this.KEY_SPACEBAR = 'Space';
+    this.KEY_CAPSLOCK = 'CapsLock';
+    this.KEY_F1 = 'F1';
+    this.KEY_F2 = 'F2';
+    this.KEY_F3 = 'F3';
+    this.KEY_F4 = 'F4';
+    this.KEY_F5 = 'F5';
+    this.KEY_F6 = 'F6';
+    this.KEY_F7 = 'F7';
+    this.KEY_F8 = 'F8';
+    this.KEY_F9 = 'F9';
+    this.KEY_F10 = 'F10';
+    this.KEY_PAUSE = 'Pause';
+    this.KEY_SCRLK = 'ScrollLock';
+    this.KEY_NUMPAD_7 = 'Numpad7';
+    this.KEY_NUMPAD_8 = 'Numpad8';
+    this.KEY_NUMPAD_9 = 'Numpad9';
+    this.KEY_NUMPAD_MINUS = 'NumpadSubtract';
+    this.KEY_NUMPAD_4 = 'Numpad4';
+    this.KEY_NUMPAD_5 = 'Numpad5';
+    this.KEY_NUMPAD_6 = 'Numpad6';
+    this.KEY_NUMPAD_PLUS = 'NumpadAdd';
+    this.KEY_NUMPAD_1 = 'Numpad1';
+    this.KEY_NUMPAD_2 = 'Numpad2';
+    this.KEY_NUMPAD_3 = 'Numpad3';
+    this.KEY_NUMPAD_0 = 'Numpad0';
+    this.KEY_NUMPAD_PERIOD = 'NumpadDecimal';
+    this.KEY_F11 = 'F11';
+    this.KEY_F12 = 'F12';
+    this.KEY_NUMPAD_ENTER = 'NumpadEnter';
+    this.KEY_RCTRL = 'ControlRight';
+    this.KEY_NUMPAD_DIVIDE = 'NumpadDivide';
+    this.KEY_NUMLOCK = 'NumLock';
+    this.KEY_HOME = 'Home';
+    this.KEY_UP = 'ArrowUp';
+    this.KEY_PAGEUP = 'PageUp';
+    this.KEY_LEFT = 'ArrowLeft';
+    this.KEY_RIGHT = 'ArrowRight';
+    this.KEY_END = 'End';
+    this.KEY_DOWN = 'ArrowDown';
+    this.KEY_PAGEDOWN = 'PageDown';
+    this.KEY_INSERT = 'Insert';
+    this.KEY_DELETE = 'Delete';
+    this.KEY_LWIN = 'MetaLeft';
+    this.KEY_RWIN = 'MetaRight';
+    this.KEY_MENU = 'ContextMenu';
+    this.KEY_LALT = "AltLeft";
+    this.KEY_RALT = "AltRight";
 
     this.ACTION_MOVE_LEFT = 1;
     this.ACTION_MOVE_RIGHT = 2;

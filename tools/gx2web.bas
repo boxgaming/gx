@@ -91,12 +91,18 @@ Sub ConvertMaps
         fcount = GXFS_DirList(mapDir, 0, mapFiles())
         Dim i As Integer
         For i = 1 To fcount
-            Print " -> " + mapFiles(i)
-            Dim mapFullPath As String
-            Dim mapDestPath As String
-            mapFullPath = mapDir + GXFS_PathSeparator + mapFiles(i)
-            mapDestPath = mapDestDir + GXFS_PathSeparator + mapFiles(i)
-            Shell "." + GXFS_PathSeparator + "map2web " + Chr$(32) + mapFullPath + Chr$(32) + " " + Chr$(32) + mapDestPath + Chr$(32)
+            Dim flen As Integer
+            Dim uname As String
+            flen = Len(mapFiles(i))
+            uname = UCase$(mapFiles(i))
+            If flen - _InStrRev(uname, ".GXM") = 3 Or flen - _InStrRev(uname, ".MAP") = 3 Then
+                Print " -> " + mapFiles(i)
+                Dim mapFullPath As String
+                Dim mapDestPath As String
+                mapFullPath = mapDir + GXFS_PathSeparator + mapFiles(i)
+                mapDestPath = mapDestDir + GXFS_PathSeparator + mapFiles(i)
+                Shell "." + GXFS_PathSeparator + "map2web " + Chr$(32) + mapFullPath + Chr$(32) + " " + Chr$(32) + mapDestPath + Chr$(32)
+            End If
         Next i
     End If
 End Sub
