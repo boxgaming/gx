@@ -41,7 +41,7 @@ Sub GXOnGameEvent (e As GXEvent)
 End Sub
 
 Sub CreatePlayer
-    player = GXEntityCreate("../overworld/img/character.png", 16, 20, 4)
+    player = GXEntityCreate("img/character.png", 16, 20, 4)
 
     GXEntityAnimate player, 3, 0
     GXEntityPos player, 100, 100
