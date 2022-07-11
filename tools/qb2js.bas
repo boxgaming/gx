@@ -245,6 +245,7 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
     Dim loopLevel As Integer
     Dim caseVar As String
     Dim currType As Integer
+    Dim loopIndex As String
 
     For i = firstLine To lastLine
         indent = 0
@@ -362,8 +363,12 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
                 If Left$(_Trim$(fstep), 1) = "-" Then fcond = " >= "
 
-                js = "for (" + fvar + "=" + sval + "; " + fvar + fcond + uval + "; " + fvar + "=" + fvar + " + " + fstep + ") {"
-                js = js + "  if (QB.halted()) { return; }"
+                loopIndex = GenJSVar
+                js = "var " + loopIndex + " = 0;"
+                js = js + " for (" + fvar + "=" + sval + "; " + fvar + fcond + uval + "; " + fvar + "=" + fvar + " + " + fstep + ") {"
+                js = js + " if (QB.halted()) { return; } "
+                js = js + loopIndex + "++; "
+                js = js + "  if (" + loopIndex + " % 100 == 0) { await QB.autoLimit(); }"
 
                 indent = 1
 
@@ -385,8 +390,19 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 tempIndent = -1
 
             ElseIf first = "NEXT" Then
-                js = js + "}"
-                indent = -1
+                If c > 1 Then
+                    ReDim nparts(0) As String
+                    Dim npcount As Integer
+                    Dim npi As Integer
+                    npcount = ListSplit(Join(parts(), 2, -1, " "), nparts())
+                    For npi = 1 To npcount
+                        js = js + "} "
+                        indent = indent - 1
+                    Next npi
+                Else
+                    js = js + "}"
+                    indent = -1
+                End If
 
             ElseIf first = "END" Then
                 If UBound(parts) = 1 Then
@@ -410,26 +426,38 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
             ElseIf first = "DO" Then
                 loopLevel = loopLevel + 1
+
+                loopIndex = GenJSVar
+                js = "var " + loopIndex + " = 0;"
+
                 If UBound(parts) > 1 Then
                     If UCase$(parts(2)) = "WHILE" Then
-                        js = "while (" + ConvertExpression(Join(parts(), 3, -1, " "), i) + ") {"
+                        js = js + " while (" + ConvertExpression(Join(parts(), 3, -1, " "), i) + ") {"
                     Else
-                        js = "while (!(" + ConvertExpression(Join(parts(), 3, -1, " "), i) + ")) {"
+                        js = js + " while (!(" + ConvertExpression(Join(parts(), 3, -1, " "), i) + ")) {"
                     End If
                     loopMode(loopLevel) = 1
                 Else
-                    js = "do {"
+                    js = js + " do {"
                     loopMode(loopLevel) = 2
                 End If
                 indent = 1
-                js = js + "  if (QB.halted()) { return; }"
+                js = js + " if (QB.halted()) { return; }"
+                js = js + loopIndex + "++; "
+                js = js + "  if (" + loopIndex + " % 100 == 0) { await QB.autoLimit(); }"
 
 
             ElseIf first = "WHILE" Then
                 loopLevel = loopLevel + 1
-                js = "while (" + ConvertExpression(Join(parts(), 2, -1, " "), i) + ") {"
+
+                loopIndex = GenJSVar
+                js = "var " + loopIndex + " = 0;"
+                js = js + " while (" + ConvertExpression(Join(parts(), 2, -1, " "), i) + ") {"
+                js = js + " if (QB.halted()) { return; }"
+                js = js + loopIndex + "++; "
+                js = js + "  if (" + loopIndex + " % 100 == 0) { await QB.autoLimit(); }"
+
                 indent = 1
-                js = js + "  if (QB.halted()) { return; }"
 
             ElseIf first = "WEND" Then
                 js = "}"
@@ -512,7 +540,7 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     AddWarning i, "Missing Sub [" + subname + "], ignoring Call command"
                 End If
 
-            ElseIf c > 2 Then
+            ElseIf c > 2 Or first = "LET" Then
                 Dim assignment As Integer
                 assignment = 0
                 Dim j As Integer
@@ -523,11 +551,15 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     End If
                 Next j
 
+                Dim asnVarIndex
+                asnVarIndex = 1
+                If first = "LET" Then asnVarIndex = 2
+
                 If assignment > 0 Then
                     ' This is a variable assignment
                     ' TODO: implicit variable declaration
                     ' TODO: special case for Mid$ statement
-                    js = RemoveSuffix(ConvertExpression(Join(parts(), 1, assignment - 1, " "), i)) + " = " + ConvertExpression(Join(parts(), assignment + 1, -1, " "), i) + ";"
+                    js = RemoveSuffix(ConvertExpression(Join(parts(), asnVarIndex, assignment - 1, " "), i)) + " = " + ConvertExpression(Join(parts(), assignment + 1, -1, " "), i) + ";"
 
                 Else
                     If FindMethod(parts(1), m, "SUB") Then
@@ -544,7 +576,11 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     js = ConvertSub(m, Join(parts(), 2, -1, " "), i)
                 Else
                     js = "// " + l
-                    AddWarning i, "Missing or unsupported method: '" + parts(1) + "' - ignoring line"
+                    If first = "GOTO" Then
+                        AddWarning i, "Missing or unsupported method: '<a href='https://xkcd.com/292/' target='_blank'>GOTO</a>'"
+                    Else
+                        AddWarning i, "Missing or unsupported method: '" + parts(1) + "' - ignoring line"
+                    End If
                 End If
             End If
 
@@ -1683,8 +1719,9 @@ Function ReadLine (lineIndex As Integer, fline As String, rawJS As Integer)
     quoteDepth = 0
     Dim i As Integer
     For i = 1 To Len(fline)
-        Dim c As String
+        Dim As String c, c4
         c = Mid$(fline, i, 1)
+        c4 = UCase$(Mid$(fline, i, 4))
         If c = Chr$(34) Then
             If quoteDepth = 0 Then
                 quoteDepth = 1
@@ -1692,7 +1729,7 @@ Function ReadLine (lineIndex As Integer, fline As String, rawJS As Integer)
                 quoteDepth = 0
             End If
         End If
-        If quoteDepth = 0 And c = "'" Then
+        If quoteDepth = 0 And (c = "'" Or c4 = "REM ") Then
             fline = Left$(fline, i - 1)
             Exit For
         End If

@@ -3,11 +3,12 @@
         <style>
             @font-face {
             	font-family: dosvga;
-	            src: url(lp-dosvga.ttf);
+	            src: url(dosvga.ttf);
             }   
             body { 
                 background-color: #333; 
                 font-family: dosvga, Arial, Helvetica, sans-serif;
+                letter-spacing: -1px;
             }
             #gx-container {
                 text-align: center; 
@@ -48,7 +49,7 @@
         </style>
     </head>
     <body>
-        <a href="#" onclick="return startGame()" id="gx-load-screen">&nbsp;</a>
+        <a href="#" onclick="return startGame()" id="gx-load-screen"> </a>
         <div id="gx-container"></div>
         <div id="gx-footer">
             <div id="gx-link"><a href="https://github.com/boxgaming/gx" target="_blank" title="Powered by GX"><img src="gx-logo.png"></a></div>    
