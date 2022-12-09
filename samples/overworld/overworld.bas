@@ -7,6 +7,7 @@ Const DOWN = 3
 Const UP = 4
 Const SPEED = 60
 
+'GXDebug GX_TRUE
 GXSceneCreate 500, 282
 GXSceneScale 2
 GXMapLoad "map/overworld.gxm"
