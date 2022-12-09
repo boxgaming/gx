@@ -262,6 +262,7 @@ $If GXBI = UNDEFINED Then
         y As Integer
         width As Integer
         height As Integer
+        wrapFactor As Double
     End Type
 
     Type GXTileset

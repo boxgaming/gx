@@ -39,7 +39,11 @@ $If GXBM = UNDEFINED Then
     ' ----------------------------------------------------------------------------
     Function GXSoundLoad& (filename As String)
         $If MAC Then
-            ' Sound not currently supported for macosx
+            $If VERSION < 2.1 Then
+                ' Sound not currently supported for macosx
+            $Else
+                GXSoundLoad = _SndOpen(filename)
+            $End If
         $Else
             GXSoundLoad = _SndOpen(filename)
         $End If
@@ -47,7 +51,11 @@ $If GXBM = UNDEFINED Then
 
     Sub GXSoundPlay (sid As Long)
         $If MAC Then
-            ' Sound not currently supported for macosx
+            $If VERSION < 2.1 Then
+                ' Sound not currently supported for macosx
+            $Else
+                If Not GXSoundMuted Then _SndPlay sid
+            $End If
         $Else
             If Not GXSoundMuted Then _SndPlay sid
         $End If
@@ -55,7 +63,11 @@ $If GXBM = UNDEFINED Then
 
     Sub GXSoundRepeat (sid As Long)
         $If MAC Then
-            ' Sound not currently supported for macosx
+            $If VERSION < 2.1 Then
+                ' Sound not currently supported for macosx
+            $Else
+                If Not GXSoundMuted Then _SndLoop sid
+            $End If
         $Else
             If Not GXSoundMuted Then _SndLoop sid
         $End If
@@ -63,7 +75,11 @@ $If GXBM = UNDEFINED Then
 
     Sub GXSoundVolume (sid As Long, v)
         $If MAC Then
-            ' Sound not currently supported for macosx
+            $If VERSION < 2.1 Then
+                ' Sound not currently supported for macosx
+            $Else
+                _SndVol sid, v / 100
+            $End If
         $Else
             _SndVol sid, v / 100
         $End If
@@ -71,7 +87,11 @@ $If GXBM = UNDEFINED Then
 
     Sub GXSoundPause (sid As Long)
         $If MAC Then
-            ' Sound not currently supported for macosx
+            $If VERSION < 2.1 Then
+                ' Sound not currently supported for macosx
+            $Else
+                _SndPause sid
+            $End If
         $Else
             _SndPause sid
         $End If
@@ -79,7 +99,11 @@ $If GXBM = UNDEFINED Then
 
     Sub GXSoundStop (sid As Long)
         $If MAC Then
-            ' Sound not currently supported for macosx
+            $If VERSION < 2.1 Then
+                ' Sound not currently supported for macosx
+            $Else
+                _SndStop sid
+            $End If
         $Else
             _SndStop sid
         $End If
@@ -221,7 +245,7 @@ $If GXBM = UNDEFINED Then
 
     Sub GXEntityFrameNext (eid As Integer)
         If __gx_entities(eid).animateMode = GXANIMATE_SINGLE Then
-            If __gx_entities(eid).spriteFrame + 1 >= __gx_entities(eid).seqFrames Then
+            If __gx_entities(eid).spriteFrame + 1 > __gx_entities(eid).seqFrames Then
                 If Not __gx_entities(eid).spriteFrame = __gx_entities(eid).prevFrame Then
                     ' Fire animation complete event
                     Dim e As GXEvent
@@ -246,6 +270,14 @@ $If GXBM = UNDEFINED Then
         __gx_entities(eid).spriteFrame = frame
         __gx_entities(eid).prevFrame = frame - 1
     End Sub
+
+    Function GXEntityFrame (eid As Integer)
+        GXEntityFrame = __gx_entities(eid).spriteFrame
+    End Function
+
+    Function GXEntitySequence (eid As Integer)
+        GXEntitySequence = __gx_entities(eid).spriteSeq
+    End Function
 
     'SUB GXEntityImageSet (eid AS INTEGER, filename AS STRING)
     '    __gx_entities(eid).image = __GX_ImageLoad(filename)
@@ -340,88 +372,6 @@ $If GXBM = UNDEFINED Then
         GXEntityCollisionOffsetBottom = __gx_entities(eid).coBottom
     End Function
 
-
-    'Function GXPlayerCreate (eid As Integer)
-    '    __gx_player_count = __gx_player_count + 1
-    '    ReDim _Preserve __gx_players(__gx_player_count) As GXPlayer
-    '    ReDim _Preserve __gx_player_keymap(10, __gx_player_count) As GXAction
-    '    __gx_players(__gx_player_count).eid = eid
-    '    __gx_players(__gx_player_count).walkSpeed = 60
-    '    __gx_players(__gx_player_count).runSpeed = 120
-    '    __gx_players(__gx_player_count).jumpSpeed = 120
-    '    GXPlayerCreate = __gx_player_count
-    'End Function
-
-    'Sub GXPlayerMoveSpeed (pid As Integer, moveSpeed As Integer)
-    '    __gx_players(pid).walkSpeed = moveSpeed
-    'End Sub
-
-    'Sub GXPlayerJumpSpeed (pid As Integer, jumpSpeed As Integer)
-    '    __gx_players(pid).jumpSpeed = jumpSpeed
-    'End Sub
-
-    'Sub GXPlayerActionKey (pid As Integer, actionType As Integer, k As Long)
-    '    __gx_player_keymap(actionType, pid).type = actionType
-    '    __gx_player_keymap(actionType, pid).diDeviceType = GXDEVICE_KEYBOARD
-    '    __gx_player_keymap(actionType, pid).diDeviceId = 1
-    '    __gx_player_keymap(actionType, pid).diInputType = GXDEVICE_BUTTON
-    '    __gx_player_keymap(actionType, pid).diInputId = k
-    '    __gx_player_keymap(actionType, pid).diInputValue = -1
-    'End Sub
-
-    'Function GXPlayerActionKey (pid As Integer, actionType As Integer)
-    '    If __gx_player_keymap(actionType, pid).diDeviceType = GXDEVICE_KEYBOARD Then
-    '        GXPlayerActionKey = __gx_player_keymap(actionType, pid).diInputId
-    '    Else
-    '        GXPlayerActionKey = 0
-    '    End If
-    'End Function
-
-    'Sub GXPlayerActionDisabled (pid As Integer, actionType As Integer, disabled As Integer)
-    '    __gx_player_keymap(actionType, pid).disabled = disabled
-    'End Sub
-
-    'Function GXPlayerActionDisabled (pid As Integer, actionType As Integer)
-    '    GXPlayerActionDisabled = __gx_player_keymap(actionType, pid).disabled
-    'End Function
-
-    'Sub GXPlayerActionInput (pid As Integer, actionType As Integer, di As GXDeviceInput)
-    '    If di.deviceId = 0 Then
-    '        ' Get the currently set device input values
-    '        __GX_ActionInput __gx_player_keymap(actionType, pid), di
-    '    Else
-    '        ' Set the device input
-    '        __gx_player_keymap(actionType, pid).type = actionType
-    '        __gx_player_keymap(actionType, pid).diDeviceId = di.deviceId
-    '        __gx_player_keymap(actionType, pid).diDeviceType = di.deviceType
-    '        __gx_player_keymap(actionType, pid).diInputId = di.inputId
-    '        __gx_player_keymap(actionType, pid).diInputType = di.inputType
-    '        __gx_player_keymap(actionType, pid).diInputValue = di.inputValue
-    '    End If
-    'End Sub
-
-    'Sub GXPlayerMoveKey (pid As Integer, action As Integer, k As Long, animationSeq As Integer, animationSpeed As Integer)
-    '    Dim di As GXDeviceInput
-    '    GXKeyInput k, di
-    '    GXPlayerActionInput pid, action, di
-    '    GXPlayerActionAnimationSeq pid, action, animationSeq
-    '    GXPlayerActionAnimationSpeed pid, action, animationSpeed
-    'End Sub
-
-    'Sub GXPlayerMoveInput (pid As Integer, action As Integer, di As GXDeviceInput, animationSeq As Integer, animationSpeed As Integer)
-    '    GXPlayerActionInput pid, action, di
-    '    GXPlayerActionAnimationSeq pid, action, animationSeq
-    '    GXPlayerActionAnimationSpeed pid, action, animationSpeed
-    'End Sub
-
-    'Sub __GX_ActionInput (a As GXAction, di As GXDeviceInput)
-    '    di.deviceId = a.diDeviceId
-    '    di.deviceType = a.diDeviceType
-    '    di.inputId = a.diInputId
-    '    di.inputType = a.diInputType
-    '    di.inputValue = a.diInputValue
-    'End Sub
-
     Function GXDeviceInputTest% (di As GXDeviceInput)
         Dim dcount As Integer
         dcount = _Devices
@@ -476,30 +426,6 @@ $If GXBM = UNDEFINED Then
         End Function
     $End If
 
-    'Sub GXPlayerActionAnimationSeq (pid As Integer, actionType As Integer, animationSeq As Integer)
-    '    __gx_player_keymap(actionType, pid).animationSeq = animationSeq
-    'End Sub
-
-    'Function GXPlayerActionAnimationSeq (pid As Integer, actionType As Integer)
-    '    GXPlayerActionAnimationSeq = __gx_player_keymap(actionType, pid).animationSeq
-    'End Function
-
-    'Sub GXPlayerActionAnimationMode (pid As Integer, actionType As Integer, animationMode As Integer)
-    '    __gx_player_keymap(actionType, pid).animationMode = animationMode
-    'End Sub
-
-    'Function GXPlayerActionAnimationMode (pid As Integer, actionType As Integer)
-    '    GXPlayerActionAnimationMode = __gx_player_keymap(actionType, pid).animationMode
-    'End Function
-
-    'Sub GXPlayerActionAnimationSpeed (pid As Integer, actionType As Integer, animationSpeed As Integer)
-    '    __gx_player_keymap(actionType, pid).animationSpeed = animationSpeed
-    'End Sub
-
-    'Function GXPlayerActionAnimationSpeed (pid As Integer, actionType As Integer)
-    '    GXPlayerActionAnimationSpeed = __gx_player_keymap(actionType, pid).animationSpeed
-    'End Function
-
     ' Sets the fullscreen status.
     ' When set to true the scene content will stretch to fill the entire screen.
     ' This value is set to false by default.
@@ -522,37 +448,19 @@ $If GXBM = UNDEFINED Then
     ' One of the following modes must be specified:
     '   GXBG_STRETCH - Stretch the background image to the size of the scene.
     '   GXBG_SCROLL  - Fit the height of the background image to the size of the screen.
-    '                   Scroll the horizontal position relative to the position on the map.
-    '   GXBG_WRAP    - Continuously wrap the background as the scene is moved horizontally.
+    '                  Scroll the horizontal position relative to the position on the map.
+    '   GXBG_WRAP    - Continuously wrap the background image as the scene is moved.
     Function GXBackgroundAdd% (imageFilename As String, mode As Integer)
         __gx_bg_count = __gx_bg_count + 1
         ReDim _Preserve __gx_bg(__gx_bg_count) As GXBackground
         __gx_bg(__gx_bg_count).mode = mode
-        If mode = GXBG_WRAP Then
-            Dim img As Long
-            img = __GX_ImageLoad(imageFilename)
-            Dim w As Integer, h As Integer
-            w = _Width(img)
-            h = _Height(img)
-            Dim newImage As Long
-            'newImage = _NewImage(w * 2, h, 32)
-            newImage = __GX_HardwareImage(w * 2, h)
-            _PutImage (0, 0)-(w, h), img, newImage
-            _PutImage (w, 0)-(w * 2, h), img, newImage
-            _FreeImage img
-            __gx_bg(__gx_bg_count).image = newImage
-        Else
-            __gx_bg(__gx_bg_count).image = __GX_ImageLoad(imageFilename)
-        End If
+        __gx_bg(__gx_bg_count).wrapFactor = 1
+        __gx_bg(__gx_bg_count).image = __GX_ImageLoad(imageFilename)
         GXBackgroundAdd = __gx_bg_count
     End Function
 
-    Sub GXBackgroundY (gi As Integer, y As Integer)
-        __gx_bg(gi).y = y
-    End Sub
-
-    Sub GXBackgroundHeight (gi As Integer, height As Integer)
-        __gx_bg(gi).height = height
+    Sub GXBackgroundWrapFactor (gi As Integer, wrapFactor As Double)
+        __gx_bg(gi).wrapFactor = wrapFactor
     End Sub
 
     ' Removes all background images from the scene.
@@ -577,16 +485,50 @@ $If GXBM = UNDEFINED Then
             _PutImage , __gx_bg(bi).image, __gx_scene.image, (x, 0)-(x + w, h)
 
         ElseIf __gx_bg(bi).mode = GXBG_WRAP Then
-            h = __gx_bg(bi).height
-            w = GXSceneWidth
-            y = __gx_bg(bi).y
-            x = (GXSceneX Mod _Width(__gx_bg(bi).image)) / 2
-            _PutImage (0, y)-(GXSceneWidth, y + h), __gx_bg(bi).image, __gx_scene.image, (x, 0)-(x + w, _Height(__gx_bg(bi).image))
-            __gx_bg(bi).x = x + 1
-            If __gx_bg(bi).x > _Width(__gx_bg(bi).image) / 2 Then
-                __gx_bg(bi).x = 0
-            End If
+            __GX_BackgroundDrawWrap (bi)
         End If
+    End Sub
+
+    Sub __GX_BackgroundDrawWrap (bi As Integer)
+        Dim img As Long
+        Dim As Long x, y, x2, y2, xx, yy, w, h
+        Dim wrapFactor As Double
+
+        img = __gx_bg(bi).image
+        wrapFactor = __gx_bg(bi).wrapFactor
+
+        x = (GXSceneX * wrapFactor) Mod _Width(img)
+        y = (GXSceneY * wrapFactor) Mod _Height(img)
+        If x < 0 Then x = _Width(img) + x
+        If y < 0 Then y = _Height(img) + y
+        x2 = GXSceneWidth + x
+        y2 = GXSceneHeight + y
+
+        _PutImage (0, 0), img, __gx_scene.image, (x, y)-(x2, y2)
+
+        If x2 > _Width(img) Then
+            w = x2 - _Width(img)
+            xx = GXSceneWidth - w
+
+            _PutImage (xx, 0), img, __gx_scene.image, (0, y)-(w, y2)
+        End If
+
+        If y2 > _Height(img) Then
+            h = y2 - _Height(img)
+            yy = GXSceneHeight - h
+
+            _PutImage (0, yy), img, __gx_scene.image, (x, 0)-(x2, h)
+        End If
+
+        If x2 > _Width(img) And y2 > _Height(img) Then
+            w = x2 - _Width(img)
+            h = y2 - _Height(img)
+            xx = GXSceneWidth - w
+            yy = GXSceneHeight - h
+
+            _PutImage (xx, yy), img, __gx_scene.image, (0, 0)-(w, h)
+        End If
+
     End Sub
 
     ' Gets the embedded flag for the scene.
@@ -869,6 +811,9 @@ $If GXBM = UNDEFINED Then
             End If
         Next ei2
 
+        If GXDebug Then __GX_DebugMapTile
+
+
         'Call out to any custom screen drawing
         __GX_CustomDrawEvent GXEVENT_DRAWSCREEN
         If GXDebug Then __GX_DebugFrameRate
@@ -966,32 +911,26 @@ $If GXBM = UNDEFINED Then
         ' Call custom game update logic
         __GX_CustomEvent GXEVENT_UPDATE
 
-        ' Perform any movement for registered player entities
-        'Dim i As Integer
-        'For i = 1 To __gx_player_count
-        '    __GX_PlayerAction i
-        'Next i
-
         ' Check for entity movement and collisions
         ' TODO: filter out non-moving entities
         __GX_SceneMoveEntities
 
         ' Perform any auto-scene moves
         Dim sx As Long, sy As Long
-        IF __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
-           __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X OR _
-           __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_POS OR _
-           __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_NEG THEN
+            IF __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+            __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X OR _
+            __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_POS OR _
+            __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_NEG THEN
             sx = (GXEntityX(__gx_scene.followEntity) + GXEntityWidth(__gx_scene.followEntity) / 2) - GXSceneWidth / 2
             IF (sx < GXSceneX AND __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_POS) OR _
-               (sx > GXSceneX AND __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_NEG) THEN
+            (sx > GXSceneX AND __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_X_NEG) THEN
                 ' don't move the scene
             Else
                 GXScenePos sx, GXSceneY
             End If
         End If
-        IF __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
-           __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
+            IF __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER OR _
+            __gx_scene.followMode = GXSCENE_FOLLOW_ENTITY_CENTER_Y THEN
             sy = (GXEntityY(__gx_scene.followEntity) + GXEntityHeight(__gx_scene.followEntity) / 2) - GXSceneHeight / 2
             GXScenePos GXSceneX, sy
         End If
@@ -1049,70 +988,6 @@ $If GXBM = UNDEFINED Then
             If __gx_entities(eid).screen = 0 Then
                 __GX_SceneMoveEntity eid
 
-                '' Check for entity collisions
-                'ecount = __GX_EntityCollision(eid, 0, 0, centities())
-                'FOR ci = 1 TO ecount
-                '    DIM ee AS GXEvent
-                '    ee.event = GXEVENT_COLLISION_ENTITY
-                '    ee.entity = eid
-                '    ee.collisionEntity = centities(ci)
-                '    GXOnGameEvent ee
-                'NEXT ci
-
-                '' Move the entity
-                'IF __gx_entities(eid).applyGravity = 1 THEN
-                '    DIM tpos AS GXPosition
-                '    DIM centity AS INTEGER
-                '    DIM tmove AS INTEGER
-                '    tmove = __GX_EntityTestMove(eid, 0, 1, tpos, centity)
-                '    centity = 0
-                '    IF (__gx_entities(eid).jumping = 1 AND __gx_entities(eid).vy < 0) OR tmove THEN
-                '        IF __gx_entities(eid).jumpstart = 0 THEN
-                '            __gx_entities(eid).jumpstart = GXFrame - 45
-                '        ELSE
-                '            ' calculate the number of seconds since the gravity started being applied
-                '            DIM t
-                '            t = (GXFrame - __gx_entities(eid).jumpstart) / GXFrameRate
-                '            __gx_entities(eid).vy = __gx_entities(eid).vy + 9.8 * t ^ 2 / 2
-                '        END IF
-                '        'ELSE
-                '    END IF
-
-                '    ' test to see if we have hit the block or entity above or below
-                '    tmove = __GX_EntityTestMove(eid, 0, __gx_entities(eid).vy * frameFactor, tpos, centity)
-                '    IF tmove = 0 THEN
-                '        IF __gx_entities(eid).vy < 0 THEN
-
-                '            ' if we hit a block above, then reverse the current velocity
-                '            ' and make sure the entity does not move above the collision offset
-                '            __gx_entities(eid).vy = -__gx_entities(eid).vy
-                '            '                    gx_entities(eid).jumpspeed = 0
-                '            IF (centity) THEN
-                '                __gx_entities(eid).y = GXEntityY(centity) + GXEntityHeight(centity) - GXEntityCollisionOffsetTop(eid)
-                '            ELSE
-                '                __gx_entities(eid).y = GXTilesetHeight * (tpos.y + 1) - GXEntityCollisionOffsetTop(eid)
-                '            END IF
-
-                '        ELSEIF __gx_entities(eid).vy > 0 THEN
-
-                '            ' if we hit a block below, then zero out the jump speed and end the "fall"
-                '            ' and make sure the entity does not move below the collision offset
-                '            __gx_entities(eid).jumpstart = 0
-                '            __gx_entities(eid).jumping = 0
-                '            __gx_entities(eid).vy = 0
-
-                '            IF (centity) THEN
-                '                __gx_entities(eid).y = GXEntityY(centity) - GXEntityHeight(eid)
-                '            ELSE
-                '                __gx_entities(eid).y = GXTilesetHeight * (tpos.y) - (GXEntityHeight(eid) - GXEntityCollisionOffsetBottom(eid))
-                '            END IF
-                '        END IF
-
-                '        'END IF
-                '    END IF
-
-                'END IF ' end if apply gravity
-
                 ' apply the move vector to the entity's position
                 If __gx_entities(eid).vx Then
                     __gx_entities(eid).x = __gx_entities(eid).x + __gx_entities(eid).vx * frameFactor
@@ -1126,7 +1001,6 @@ $If GXBM = UNDEFINED Then
 
 
     Sub __GX_SceneMoveEntity (eid As Long)
-
         Dim tpos As GXPosition
         Dim centity As Integer
         Dim tmove As Integer
@@ -1391,7 +1265,6 @@ $If GXBM = UNDEFINED Then
         Dim xoffset, yoffset, pcol, prow As Long
         Dim t As Long, tx As Long, ty As Long
         Dim rowOffset As Long
-        'DIM rowOffset AS DOUBLE, singleRowOffset AS DOUBLE
         Dim colOffset As Long
 
         xoffset = GXSceneX Mod GXTilesetWidth
@@ -1403,12 +1276,6 @@ $If GXBM = UNDEFINED Then
             prow = Fix(GXSceneY / GXTilesetHeight)
             yoffset = GXSceneY Mod GXTilesetHeight
         End If
-
-        'singleRowOffset = 0
-        'IF GXMapIsometric THEN
-        '    singleRowOffset = GXTilesetHeight - GXTilesetWidth / 4
-        '    rowOffset = singleRowOffset
-        'END IF
 
         For li = 1 To GXMapLayers
             If Not __gx_map_layer_info(li).hidden Then
@@ -1422,18 +1289,15 @@ $If GXBM = UNDEFINED Then
                     If Not GXMapIsometric Then
                         colOffset = 0
                     Else
-                        colOffset = 0 'GXTilesetWidth / 2
+                        colOffset = 0
                         If row Mod 2 = 0 Then colOffset = GXTilesetWidth / 2
                     End If
 
                     If GXMapIsometric Then
-                        'rowOffset = (row - prow + 1) * _ROUND(GXTilesetHeight - GXTilesetWidth / 4)
                         rowOffset = (row - prow + 1) * (GXTilesetHeight - GXTilesetWidth / 4)
                     End If
 
                     For col = pcol To pcol + GXSceneColumns + 1
-                        'FOR layer = 1 TO gx_map.layers
-
                         t = GXMapTile(col, row, layer)
                         If t > 0 Then
                             Dim t1 As Integer: t1 = t
@@ -1446,12 +1310,10 @@ $If GXBM = UNDEFINED Then
                         scol = scol + 1
                     Next col
                     srow = srow + 1
-                    'IF GXMapIsometric THEN rowOffset = rowOffset + singleRowOffset '(GXTilesetHeight * .75)
                 Next row
 
             End If ' layer is not hidden
         Next li
-
 
         ' Perform tile animation
         For t = 1 To GXTilesetColumns * GXTilesetRows
@@ -1549,10 +1411,6 @@ $If GXBM = UNDEFINED Then
         Else
             Dim mpos As Long
             mpos = row * GXMapColumns + col
-            'IF mpos > UBOUND(gx_map_layers) THEN
-            '    GXMapTile = 0
-            '    EXIT SUB
-            'END IF
             GXMapTile = __gx_map_layers(mpos, layer).tile
         End If
     End Function
@@ -2026,7 +1884,7 @@ $If GXBM = UNDEFINED Then
         ' Save the tileset image meta-data
         Print #1, __JSL("width"); __gx_tileset.width; ","
         Print #1, __JSL("height"); __gx_tileset.height; ","
-        Print #1, __JSL("image"); Chr$(34) + "map/" + GXFS_GetFilename(tilesetFilename) + Chr$(34)
+        Print #1, __JSL("image"); Chr$(34) + "map/" + GXFS_GetFilename(tilesetFilename) + Chr$(34); ","
 
         ' Save the tileset image data
         Dim tsize As Long
@@ -2041,18 +1899,27 @@ $If GXBM = UNDEFINED Then
         Close #2
         Close #3
 
-        Print #1, "}"
-
         ' Save the tileset tile data
-        'Dim asize As Integer
-        'asize = UBound(__gx_tileset_tiles)
-        'Put #1, , asize
-        'Put #1, , __gx_tileset_tiles()
+        Dim i As Integer
+        Print #1, __JSL$("tiles") + " ["
+        For i = 1 To UBound(__gx_tileset_tiles)
+            If i > 1 Then Print #1, ",";
+            Print #1, "["; _Trim$(Str$(__gx_tileset_tiles(i).animationId)); ",";
+            Print #1, _Trim$(Str$(__gx_tileset_tiles(i).animationSpeed)); ",";
+            Print #1, _Trim$(Str$(__gx_tileset_tiles(i).animationFrame)); "]";
+        Next i
+        Print #1, "],"
 
-        ' Save the tileset animation data
-        'asize = UBound(__gx_tileset_animations)
-        'Put #1, , asize
-        'Put #1, , __gx_tileset_animations()
+        Print #1, __JSL$("animations") + " ["
+        For i = 1 To UBound(__gx_tileset_animations)
+            If i > 1 Then Print #1, ",";
+            Print #1, "["; _Trim$(Str$(__gx_tileset_animations(i).tileId)); ",";
+            Print #1, _Trim$(Str$(__gx_tileset_animations(i).firstFrame)); ",";
+            Print #1, _Trim$(Str$(__gx_tileset_animations(i).nextFrame)); "]";
+        Next i
+
+        Print #1, "]"
+        Print #1, "}"
     End Sub
 
 
@@ -2152,13 +2019,6 @@ $If GXBM = UNDEFINED Then
     End Function
 
     Sub GXTilesetAnimationSpeed (tileId As Integer, speed As Integer)
-        'IF tileId < 1 THEN EXIT SUB
-
-        'DIM firstFrame AS INTEGER
-        'firstFrame = gx_tileset_tiles(tileId).animationId
-        'IF firstFrame < 1 THEN EXIT SUB
-
-        'gx_tileset_animations(firstFrame).animationSpeed = speed
         __gx_tileset_tiles(tileId).animationSpeed = speed
     End Sub
 
@@ -2296,7 +2156,6 @@ $If GXBM = UNDEFINED Then
 
         Dim t As Integer, tx As Long, ty As Long, depth As Integer, i As Integer
         Dim tpos As GXPosition
-        '__GX_MapTilePosAt _MOUSEX, _MOUSEY, tpos
         GXMapTilePosAt GXMouseX, GXMouseY, tpos
         depth = GXMapTileDepth(tpos.x, tpos.y)
         tx = tpos.x * GXTilesetWidth - GXSceneX
@@ -2361,12 +2220,8 @@ $If GXBM = UNDEFINED Then
         frameRate = _Trim$(Str$(GXFrameRate))
         frameRate = String$(Len(frame) - Len(frameRate), " ") + frameRate
 
-        'Dim odest As Long
-        'odest = _Dest
-        '_Dest __gx_scene.image
         GXDrawText GXDebugFont, GXSceneWidth - (Len(frame) + 6) * 6 - 1, 1, "FRAME:" + frame
         GXDrawText GXDebugFont, GXSceneWidth - (Len(frameRate) + 4) * 6 - 1, 9, "FPS:" + frameRate
-        '_Dest odest
     End Sub
 
 
@@ -2380,21 +2235,16 @@ $If GXBM = UNDEFINED Then
             If filename = __gx_images(i).filename Then id = __gx_images(i).id
         Next i
         If id = 0 Then
-            'If Not GXSceneEmbedded Then
             If GXHardwareAcceleration Then
                 id = _LoadImage(filename, 33)
             Else
                 id = _LoadImage(filename, 32) ', 33)
             End If
-            ' "load image id: ", id
-            'Dim a: Input a
             __gx_image_count = __gx_image_count + 1
             ReDim _Preserve __gx_images(__gx_image_count) As GXImage
             __gx_images(__gx_image_count - 1).id = id
             __gx_images(__gx_image_count - 1).filename = filename
         End If
-        ' "returning id: ", id
-        'Input a
         __GX_ImageLoad = id
     End Function
 
@@ -2403,7 +2253,6 @@ $If GXBM = UNDEFINED Then
         If GXTilesetWidth < 1 Or GXTilesetHeight < 1 Then Exit Sub
         If GXMapIsometric Then
             __gx_scene.columns = Fix(GXSceneWidth / GXTilesetWidth)
-            'gx_scene.rows = FIX(GXSceneHeight / (GXTilesetHeight * .25))
             __gx_scene.rows = GXSceneHeight / (GXTilesetWidth / 4)
         Else
             __gx_scene.columns = Fix(GXSceneWidth / GXTilesetWidth)
@@ -2441,8 +2290,16 @@ $If GXBM = UNDEFINED Then
         __GX_ReadString_V1 = s
     End Function
 
-    Function __GX_EntityCollide% (eid1, eid2)
-        __GX_EntityCollide = __GX_RectCollide(GXEntityX(eid1), GXEntityY(eid1), GXEntityWidth(eid1), GXEntityHeight(eid1), GXEntityX(eid2), GXEntityY(eid2), GXEntityWidth(eid2), GXEntityHeight(eid2))
+    Function GXEntityCollide% (eid1, eid2)
+            GXEntityCollide = __GX_RectCollide( _
+            GXEntityX(eid1) + GXEntityCollisionOffsetLeft(eid1), _
+            GXEntityY(eid1) + GXEntityCollisionOffsetTop(eid1), _
+            GXEntityWidth(eid1) - GXEntityCollisionOffsetLeft(eid1) - GXEntityCollisionOffsetRight(eid1) - 1, _
+            GXEntityHeight(eid1) - GXEntityCollisionOffsetTop(eid1) - GXEntityCollisionOffsetBottom(eid1) - 1, _
+            GXEntityX(eid2) + GXEntityCollisionOffsetLeft(eid2), _
+            GXEntityY(eid2) + GXEntityCollisionOffsetTop(eid2), _
+            GXEntityWidth(eid2) - GXEntityCollisionOffsetLeft(eid2) - GXEntityCollisionOffsetRight(eid2) - 1, _
+            GXEntityHeight(eid2) - GXEntityCollisionOffsetTop(eid2) - GXEntityCollisionOffsetBottom(eid2) - 1)
     End Function
 
     Function __GX_RectCollide% (r1x1%, r1y1%, r1w%, r1h%, r2x1%, r2y1%, r2w%, r2h%)
@@ -2506,7 +2363,6 @@ $If GXBM = UNDEFINED Then
     Function __GX_EntityTestMove% (entity As Integer, mx As Long, my As Long, tpos As GXPosition, collisionEntity As Integer)
         tpos.x = -1
         tpos.y = -1
-        'IF nocollision THEN GX_EntityTestMove = 1: EXIT FUNCTION
 
         Dim tcount As Integer
         ReDim tiles(0) As GXPosition
@@ -2520,8 +2376,6 @@ $If GXBM = UNDEFINED Then
         Dim i As Integer, j As Integer
         Dim tile As Integer
         For i = 0 To tcount - 1
-            'FOR j = 1 TO GXMapTileDepth(tiles(i).x, tiles(i).y)
-            'tile = GXMapTile(tiles(i).x, tiles(i).y, j)
             Dim e As GXEvent
             e.entity = entity
             e.event = GXEVENT_COLLISION_TILE
@@ -2532,7 +2386,6 @@ $If GXBM = UNDEFINED Then
                 move = GX_FALSE
                 tpos = tiles(i)
             End If
-            'NEXT j
         Next i
 
         ' Test for entity collision
@@ -2563,13 +2416,13 @@ $If GXBM = UNDEFINED Then
             If i <> eid Then
                 ' TODO: only include entities that should be considered (e.g. visible, non-screen-level)
                 IF __GX_RectCollide(GXEntityX(eid) + GXEntityCollisionOffsetLeft(eid) + movex, _
-                   GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
-                   GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid) - 1, _
-                   GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid) - 1, _
-                   GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
-                   GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
-                   GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i) - 1, _
-                   GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)-1) THEN
+                GXEntityY(eid) + GXEntityCollisionOffsetTop(eid) + movey, _
+                GXEntityWidth(eid) - GXEntityCollisionOffsetLeft(eid) - GXEntityCollisionOffsetRight(eid) - 1, _
+                GXEntityHeight(eid) - GXEntityCollisionOffsetTop(eid) - GXEntityCollisionOffsetBottom(eid) - 1, _
+                GXEntityX(i) + GXEntityCollisionOffsetLeft(i), _
+                GXEntityY(i) + GXEntityCollisionOffsetTop(i), _
+                GXEntityWidth(i) - GXEntityCollisionOffsetLeft(i) - GXEntityCollisionOffsetRight(i) - 1, _
+                GXEntityHeight(i) - GXEntityCollisionOffsetTop(i) - GXEntityCollisionOffsetBottom(i)-1) THEN
                     ecount = ecount + 1
                     ReDim _Preserve entities(ecount) As Integer
                     entities(ecount) = i
@@ -2638,7 +2491,6 @@ $If GXBM = UNDEFINED Then
                 txn = tx
             Next x
 
-
             ReDim tiles(tcount) As GXPosition
             i = 0
             For tx = tx0 To txn
@@ -2662,106 +2514,6 @@ $If GXBM = UNDEFINED Then
         GXKeyInput k, di
         GXKeyDown = GXDeviceInputTest(di)
     End Function
-
-    'Function __GX_ActionTest (a As GXAction)
-    '    If a.disabled Then
-    '        __GX_ActionTest = GX_FALSE
-    '    Else
-    '        Dim di As GXDeviceInput
-    '        __GX_ActionInput a, di
-    '        __GX_ActionTest = GXDeviceInputTest(di)
-    '    End If
-    'End Function
-
-    'Sub __GX_PlayerAction (pid As Integer)
-    '    Dim tpos As GXPosition
-    '    Dim centity As Integer
-
-    '    Dim player As GXPlayer
-    '    player = __gx_players(pid)
-
-    '    Dim actionLeft As GXAction, actionRight As GXAction, actionUp As GXAction, actionDown As GXAction
-    '    Dim actionJump As GXAction, actionJumpRight As GXAction, actionJumpLeft As GXAction
-    '    actionLeft = __gx_player_keymap(GXACTION_MOVE_LEFT, pid)
-    '    actionRight = __gx_player_keymap(GXACTION_MOVE_RIGHT, pid)
-    '    actionUp = __gx_player_keymap(GXACTION_MOVE_UP, pid)
-    '    actionDown = __gx_player_keymap(GXACTION_MOVE_DOWN, pid)
-    '    actionJump = __gx_player_keymap(GXACTION_JUMP, pid)
-    '    actionJumpRight = __gx_player_keymap(GXACTION_JUMP_RIGHT, pid)
-    '    actionJumpLeft = __gx_player_keymap(GXACTION_JUMP_LEFT, pid)
-
-    '    If __GX_ActionTest(actionDown) Then
-    '        GXEntityAnimate player.eid, actionDown.animationSeq, actionDown.animationSpeed
-    '        If __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) Then
-    '            __gx_entities(player.eid).vy = player.walkSpeed
-    '        Else
-    '            If Not __gx_entities(player.eid).applyGravity Then __gx_entities(player.eid).vy = 0
-    '        End If
-    '        __gx_entities(player.eid).vx = 0
-    '        __GX_PlayerEvent pid, actionDown.type
-
-    '    ElseIf __GX_ActionTest(actionUp) Then
-    '        GXEntityAnimate player.eid, actionUp.animationSeq, actionUp.animationSpeed
-    '        If __GX_EntityTestMove(player.eid, 0, -1, tpos, centity) Then
-    '            __gx_entities(player.eid).vy = -player.walkSpeed
-    '        Else
-    '            If Not __gx_entities(player.eid).applyGravity Then __gx_entities(player.eid).vy = 0
-    '        End If
-    '        __gx_entities(player.eid).vx = 0
-    '        __GX_PlayerEvent pid, actionUp.type
-
-    '    ElseIf __GX_ActionTest(actionRight) Then
-    '        GXEntityAnimate player.eid, actionRight.animationSeq, actionRight.animationSpeed
-    '        If __GX_EntityTestMove(player.eid, 1, 0, tpos, centity) Then
-    '            __gx_entities(player.eid).vx = player.walkSpeed
-    '        Else
-    '            __gx_entities(player.eid).vx = 0
-    '        End If
-    '        If __gx_entities(player.eid).applyGravity = 0 Then __gx_entities(player.eid).vy = 0
-    '        __GX_PlayerEvent pid, actionRight.type
-
-    '    ElseIf __GX_ActionTest(actionLeft) Then
-    '        GXEntityAnimate player.eid, actionLeft.animationSeq, actionLeft.animationSpeed
-    '        If __GX_EntityTestMove(player.eid, -1, 0, tpos, centity) Then
-    '            __gx_entities(player.eid).vx = -player.walkSpeed
-    '        Else
-    '            __gx_entities(player.eid).vx = 0
-    '        End If
-    '        If __gx_entities(player.eid).applyGravity = 0 Then __gx_entities(player.eid).vy = 0
-    '        __GX_PlayerEvent pid, actionLeft.type
-
-    '    Else
-    '        GXEntityAnimateStop player.eid
-    '        __gx_entities(player.eid).vx = 0
-    '        If __gx_entities(player.eid).applyGravity = 0 Then
-    '            __gx_entities(player.eid).vy = 0
-    '        End If
-    '    End If
-
-    '    If __gx_entities(player.eid).applyGravity = 1 Then
-    '        If __GX_ActionTest(actionJump) Or __GX_ActionTest(actionJumpLeft) Or __GX_ActionTest(actionJumpRight) Then
-    '            If __GX_EntityTestMove(player.eid, 0, 1, tpos, centity) = 0 Then
-    '                __gx_entities(player.eid).vy = -player.jumpSpeed
-    '                __gx_entities(player.eid).jumping = 1
-    '                __GX_PlayerEvent pid, GXACTION_JUMP
-    '            End If
-    '        End If
-
-    '        If __gx_entities(player.eid).jumping Then
-    '            If __gx_entities(player.eid).vx < 0 And actionJumpLeft.animationSeq Then GXEntityAnimate player.eid, actionJumpLeft.animationSeq, actionJumpLeft.animationSpeed
-    '            If __gx_entities(player.eid).vx > 0 And actionJumpRight.animationSeq Then GXEntityAnimate player.eid, actionJumpRight.animationSeq, actionJumpRight.animationSpeed
-    '        End If
-    '    End If
-
-    'End Sub
-
-    'Sub __GX_PlayerEvent (player As Integer, action As Integer)
-    '    Dim e As GXEvent
-    '    e.event = GXEVENT_PLAYER_ACTION
-    '    e.player = player
-    '    e.action = action
-    '    GXOnGameEvent e
-    'End Sub
 
 
     Sub GXDeviceInputDetect (di As GXDeviceInput)

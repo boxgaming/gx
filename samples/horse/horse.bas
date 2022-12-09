@@ -7,18 +7,23 @@ Dim Shared toggleDebug As Integer
 Dim Shared done As Integer
 Dim Shared finish As Integer
 Dim Shared gameOver As Integer
+Dim Shared endy As Integer
+endy = 550
 
 GXHardwareAcceleration GX_TRUE
 GXFrameRate 90
 GXSceneCreate 1280, 720
 GXMapLoad "map/horse.map"
 
-Dim bg As Integer
+Dim bg1 As Integer
 Dim bg2 As Integer
-bg = GXBackgroundAdd("img/scroll_bg_far.png", GXBG_SCROLL)
+Dim bg3 As Integer
+bg1 = GXBackgroundAdd("img/scroll_bg_far.png", GXBG_WRAP)
+GXBackgroundWrapFactor bg1, .1
 bg2 = GXBackgroundAdd("img/hills-scroll.png", GXBG_WRAP)
-GXBackgroundY bg2, GXSceneHeight - 256
-GXBackgroundHeight bg2, 256
+GXBackgroundWrapFactor bg2, .25
+bg3 = GXBackgroundAdd("img/hills-scroll.png", GXBG_WRAP)
+GXBackgroundWrapFactor bg3, .5
 
 Dim Shared girl As Integer
 girl = GXEntityCreate("img/girl.png", 55, 87, 5)
@@ -50,10 +55,13 @@ System 0
 
 
 Sub GXOnGameEvent (e As GXEvent)
-
     Select Case e.event
 
         Case GXEVENT_UPDATE
+            If GXKeyDown(GXKEY_UP) Then
+                GXEntityPos horse, GXEntityX(horse), GXEntityY(horse) - 1
+            End If
+
 
             If GXEntityX(horse) > 11400 And done = 0 Then
                 done = GXFrame + 30
@@ -86,8 +94,10 @@ Sub GXOnGameEvent (e As GXEvent)
             If e.entity = girl Then gameOver = GX_TRUE
 
         Case GXEVENT_DRAWSCREEN
-            If gameOver Then GXDrawText GXFONT_DEFAULT_BLACK, 675, 550, "GAME OVER"
-
+            If gameOver Then
+                GXDrawText GXFONT_DEFAULT_BLACK, 675, endy, "GAME OVER"
+                If endy > 350 Then endy = endy - 2
+            End If
 
     End Select
 
