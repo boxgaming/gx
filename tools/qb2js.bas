@@ -10,10 +10,10 @@ Const FILE = 1
 Const TEXT = 2
 Const False = 0
 Const True = Not False
+Const PrintDataTypes = True
 ' Additional Debugging output - should be set to false for final build
 Const PrintLineMapping = False
 Const PrintTokenizedLine = False
-Const PrintDataTypes = True
 
 Type CodeLine
     line As Integer
@@ -146,6 +146,7 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
     If Not selfConvert And Not isGX And moduleName = "" Then AddJSLine 0, "QB.end();"
     ConvertMethods
 
+    If Not selfConvert And moduleName = "" Then InitTypes
 
     If selfConvert Then
         AddJSLine 0, "this.compile = async function(src) {"
@@ -191,6 +192,41 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
         'Else
         '    AddJSLine 0, "} catch (error) { console.log(error); throw error; }"
     End If
+End Sub
+
+Sub InitTypes
+    Dim As Integer i, j, jsidx
+    Dim As String typestr
+    typestr = "{ "
+
+    ' Find the insertion point
+    For i = 1 To UBound(jsLines)
+        If jsLines(i).text = "QB.start();" Then
+            jsidx = i
+            Exit For
+        End If
+    Next i
+
+    For i = 1 To UBound(types)
+        typestr = typestr + types(i).name + ":["
+
+        Dim idx As Integer
+        idx = 0
+        For j = 1 To UBound(typeVars)
+            If typeVars(j).typeId = i Then
+                If idx > 0 Then typestr = typestr + ", "
+                typestr = typestr + "{ name: '" + typeVars(j).name + "', type: '" + typeVars(j).type + "' }"
+                idx = idx + 1
+            End If
+        Next j
+
+        typestr = typestr + "]"
+        If i < UBound(types) Then typestr = typestr + ", "
+    Next i
+
+    typestr = typestr + "}"
+
+    jsLines(jsidx).text = jsLines(jsidx).text + " QB.setTypeMap(" + typestr + ");"
 End Sub
 
 Sub ResetDataStructures
@@ -483,7 +519,7 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 js = "continue;"
 
             ElseIf UCase$(l) = "EXIT FUNCTION" Then
-                js = "return " + functionName + ";"
+                js = "return " + RemoveSuffix(functionName) + ";"
 
             ElseIf UCase$(l) = "EXIT SUB" Then
                 js = "return;"
@@ -680,6 +716,7 @@ Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
                 m.name = "Line Input"
                 m.jsname = "QB.sub_LineInput"
                 args = Join(parts(), 2, -1, " ")
+                m.sync = True
             End If
         End If
     End If
@@ -691,14 +728,46 @@ Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
     ElseIf m.name = "Cls" Then
         js = CallMethod(m) + "(" + ConvertCls(args, lineNumber) + ");"
 
-    ElseIf m.name = "Input" Or m.name = "Line Input" Then
-        js = ConvertInput(m, args, lineNumber)
+    ElseIf m.name = "Open" Then
+        js = CallMethod(m) + "(" + ConvertOpen(args, lineNumber) + ");"
+
+    ElseIf m.name = "Close" Then
+        js = CallMethod(m) + "(" + Replace(args, "#", "") + ");"
+
+        'ElseIf m.name = "Get" Then
+        '    js = ConvertGet(m, args, lineNumber)
+
+    ElseIf m.name = "Input" Then
+        If StartsWith(_Trim$(args), "#") Then
+            m.jsname = "QB.sub_InputFromFile"
+            js = ConvertFileInput(m, args, lineNumber)
+        Else
+            m.jsname = "QB.sub_Input"
+            js = ConvertInput(m, args, lineNumber)
+        End If
+
+    ElseIf m.name = "Line Input" Then
+        If StartsWith(_Trim$(args), "#") Then
+            m.jsname = "QB.sub_LineInputFromFile"
+            js = ConvertFileLineInput(m, args, lineNumber)
+            m.name = "Line"
+            m.jsname = "QB.sub_Line"
+        Else
+            js = ConvertInput(m, args, lineNumber)
+            m.name = "Line"
+            m.jsname = "QB.sub_Line"
+            m.sync = False
+        End If
 
     ElseIf m.name = "PSet" Or m.name = "Circle" Or m.name = "PReset" Or m.name = "Paint" Then
         js = CallMethod(m) + "(" + ConvertPSet(args, lineNumber) + ");"
 
     ElseIf m.name = "Print" Then
-        js = CallMethod(m) + "(" + ConvertPrint(args, lineNumber) + ");"
+        'js = CallMethod(m) + "(" + ConvertPrint(args, lineNumber) + ");"
+        js = ConvertPrint(m, args, lineNumber)
+
+    ElseIf m.name = "Put" Or m.name = "Get" Then
+        js = ConvertPut(m, args, lineNumber)
 
     ElseIf m.name = "Randomize" Then
         js = ConvertRandomize(m, args, lineNumber)
@@ -715,6 +784,9 @@ Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
     ElseIf m.name = "Window" Then
         js = CallMethod(m) + "(" + ConvertWindow(args, lineNumber) + ");"
 
+    ElseIf m.name = "Write" Then
+        js = ConvertWrite(m, args, lineNumber)
+
     ElseIf m.name = "_PrintString" Then
         js = CallMethod(m) + "(" + ConvertPrintString(args, lineNumber) + ");"
 
@@ -723,11 +795,66 @@ Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
 
     ElseIf m.name = "_FullScreen" Then
         js = CallMethod(m) + "(" + ConvertFullScreen(args) + ");"
+
     Else
         js = CallMethod(m) + "(" + ConvertMethodParams(args, lineNumber) + ");"
     End If
 
     ConvertSub = js
+End Function
+
+'Function ConvertGet$ (m As Method, args As String, lineNumber As Integer)
+'    ReDim parts(0) As String
+'    Dim argc As Integer
+'    argc = ListSplit(args, parts())
+
+'    If argc < 3 Then
+'        AddWarning lineNumber, "Syntax error"
+'        Exit Function
+'    End If
+
+
+'    AddWarning lineNumber, "Unsupported method: GET"
+'End Function
+
+Function ConvertPut$ (m As Method, args As String, lineNumber As Integer)
+    ReDim parts(0) As String
+    Dim argc As Integer
+    argc = ListSplit(args, parts())
+
+    If argc < 3 Then
+        AddWarning lineNumber, "Syntax error"
+        Exit Function
+    End If
+
+    Dim As String fh, position, vname
+    fh = _Trim$(parts(1))
+    position = _Trim$(parts(2))
+    vname = _Trim$(parts(3))
+    vname = Replace(vname, "()", "")
+
+    fh = Replace(fh, "#", "")
+    If position = "" Then position = "undefined"
+
+    Dim v As Variable
+    If Not FindVariable(vname, v, False) Then
+        If Not FindVariable(vname, v, True) Then
+            AddWarning lineNumber, "Invalid variable '" + vname + "'"
+            Exit Function
+        End If
+    End If
+
+    If m.name = "Put" Then
+        ConvertPut = CallMethod(m) + "(" + fh + ", " + position + ", '" + v.type + "', " + v.jsname + ");"
+    Else ' Get
+        Dim As String js, varobj
+        varobj = GenJSVar
+        js = "var " + varobj + " = { value: " + v.jsname + " }; "
+        js = js + CallMethod(m) + "(" + fh + ", " + position + ", '" + v.type + "', " + varobj + "); "
+        js = js + v.jsname + " = " + varobj + ".value;"
+        ConvertPut = js
+    End If
+
 End Function
 
 Function ConvertFullScreen$ (args As String)
@@ -755,6 +882,33 @@ Function ConvertFullScreen$ (args As String)
     ConvertFullScreen = mode + ", " + doSmooth
 End Function
 
+Function ConvertOpen$ (args As String, lineNumber As Integer)
+    Dim argc As Integer
+    ReDim parts(0) As String
+    Dim As String filename, mode, handle
+    argc = SLSplit(args, parts(), False)
+    If argc < 5 Then
+        AddWarning lineNumber, "Syntax Error in Open statement"
+        Exit Function
+    End If
+
+    If UCase$(parts(2)) <> "FOR" Then
+        AddWarning lineNumber, "Syntax Error in Open statement"
+        Exit Function
+    End If
+
+    If UCase$(parts(4)) <> "AS" Then
+        AddWarning lineNumber, "Syntax Error in Open statement"
+        Exit Function
+    End If
+
+    filename = parts(1)
+    mode = "QB." + UCase$(parts(3))
+    handle = Replace(parts(5), "#", "")
+
+    ConvertOpen = filename + ", " + mode + ", " + handle
+End Function
+
 Function ConvertLine$ (args As String, lineNumber As Integer)
     Dim argc As Integer
     ReDim parts(0) As String
@@ -766,9 +920,9 @@ Function ConvertLine$ (args As String, lineNumber As Integer)
 
     argc = ListSplit(args, parts())
     If argc >= 1 Then coord = ConvertCoordParam(parts(1), True, lineNumber)
-    If argc >= 2 Then lcolor = ConvertExpression(parts(2), lineNumber)
-    If argc >= 3 Then mode = "'" + UCase$(_Trim$(parts(3))) + "'"
-    If argc >= 4 Then style = ConvertExpression(parts(4), lineNumber)
+    If argc >= 2 And _Trim$(parts(2)) <> "" Then lcolor = ConvertExpression(parts(2), lineNumber)
+    If argc >= 3 And _Trim$(parts(3)) <> "" Then mode = "'" + UCase$(_Trim$(parts(3))) + "'"
+    If argc >= 4 And _Trim$(parts(4)) <> "" Then style = ConvertExpression(parts(4), lineNumber)
 
     ConvertLine = coord + ", " + lcolor + ", " + mode + ", " + style
 End Function
@@ -1000,17 +1154,38 @@ Function ConvertPSet$ (args As String, lineNumber As Integer)
     ConvertPSet = sstep + ", " + firstParam + ", " + theRest
 End Function
 
-Function ConvertPrint$ (args As String, lineNumber As Integer)
+Function ConvertPrint$ (m As Method, args As String, lineNumber As Integer)
+    Dim fh As String
     Dim pcount As Integer
+    Dim startIdx As Integer
     Dim parts(0) As String
     pcount = PrintSplit(args, parts())
+    startIdx = 1
+
+    m.jsname = "QB.sub_Print"
+    If pcount > 0 Then
+        If StartsWith(_Trim$(parts(1)), "#") Then
+            fh = Replace(_Trim$(parts(1)), "#", "")
+            m.jsname = "QB.sub_PrintToFile"
+            startIdx = 3
+            If _Trim$(parts(2)) <> "," Then
+                AddWarning lineNumber, "Syntax error, missing expected ','"
+                startIdx = 2
+            End If
+        End If
+    End If
 
     Dim js As String
-    js = "["
+    js = CallMethod(m) + "("
 
+    If fh <> "" Then
+        js = js + fh + ", "
+    End If
+
+    js = js + "["
     Dim i As Integer
-    For i = 1 To pcount
-        If i > 1 Then js = js + ","
+    For i = startIdx To pcount
+        If i > startIdx Then js = js + ","
 
         If parts(i) = "," Then
             js = js + "QB.COLUMN_ADVANCE"
@@ -1023,7 +1198,57 @@ Function ConvertPrint$ (args As String, lineNumber As Integer)
         End If
     Next i
 
-    ConvertPrint = js + "]"
+    ConvertPrint = js + "]);"
+End Function
+
+Function ConvertWrite$ (m As Method, args As String, lineNumber As Integer)
+    Dim fh As String
+    Dim pcount As Integer
+    Dim startIdx As Integer
+    Dim parts(0) As String
+    pcount = ListSplit(args, parts())
+    startIdx = 1
+
+    m.jsname = "QB.sub_Write"
+    If pcount > 0 Then
+        If StartsWith(_Trim$(parts(1)), "#") Then
+            fh = Replace(_Trim$(parts(1)), "#", "")
+            m.jsname = "QB.sub_WriteToFile"
+            startIdx = 2
+        End If
+    End If
+
+    Dim js As String
+    js = CallMethod(m) + "("
+
+    If fh <> "" Then
+        js = js + fh + ", "
+    End If
+
+    js = js + "["
+    Dim i As Integer
+    For i = startIdx To pcount
+        If i > startIdx Then js = js + ","
+
+        Dim t As String
+        t = "UNKNOWN"
+        Dim v As Variable
+        Dim isVar As Integer
+        isVar = FindVariable(parts(i), v, False)
+        If isVar Then
+            t = v.type
+        ElseIf StartsWith(parts(i), Chr$(34)) Then
+            t = "STRING"
+        End If
+
+        If isVar Then
+            js = js + "{ type:'" + t + "', value:" + _Trim$(ConvertExpression(parts(i), lineNumber)) + "}"
+        Else
+            js = js + "{ type:'" + t + "', value:'" + Replace(_Trim$(ConvertExpression(parts(i), lineNumber)), "'", "\'") + "'}"
+        End If
+    Next i
+
+    ConvertWrite = js + "]);"
 End Function
 
 Function ConvertPrintString$ (args As String, lineNumber As Integer)
@@ -1046,6 +1271,32 @@ Function ConvertPrintString$ (args As String, lineNumber As Integer)
     firstParam = Left$(firstParam, idx - 1)
 
     ConvertPrintString = ConvertExpression(firstParam, lineNumber) + ", " + ConvertExpression(theRest, lineNumber)
+End Function
+
+Function ConvertFileLineInput$ (m As Method, args As String, lineNumber As Integer)
+    Dim js As String
+    Dim fh As String
+    Dim vname As String
+    Dim retvar As String
+    Dim pcount As Integer
+    ReDim parts(0) As String
+
+    pcount = ListSplit(args, parts())
+    If pcount <> 2 Then
+        AddWarning lineNumber, "Syntax error"
+        ConvertFileLineInput = ""
+        Exit Function
+    End If
+
+    fh = Replace(_Trim$(parts(1)), "#", "")
+    retvar = _Trim$(parts(2))
+
+    vname = GenJSVar
+    js = "var " + vname + " = new Array(1); "
+    js = js + CallMethod(m) + "(" + fh + ", " + vname + "); "
+    js = js + ConvertExpression(retvar, lineNumber) + " = " + vname + "[0]; "
+
+    ConvertFileLineInput = js
 End Function
 
 Function ConvertInput$ (m As Method, args As String, lineNumber As Integer)
@@ -1084,11 +1335,110 @@ Function ConvertInput$ (m As Method, args As String, lineNumber As Integer)
     js = "var " + vname + " = new Array(" + Str$(UBound(vars)) + "); "
     js = js + CallMethod(m) + "(" + vname + ", " + preventNewline + ", " + addQuestionPrompt + ", " + prompt + "); "
     For i = 1 To UBound(vars)
-        If Not StartsWith(_Trim$(vars(i)), "#") Then ' special case to prevent file references from being output during self-compilation
+        'If Not StartsWith(_Trim$(vars(i)), "#") Then ' special case to prevent file references from being output during self-compilation
+        ' Convert to appropriate variable type on assignment
+        Dim vartype As String
+        vartype = GetVarType(vars(i))
+        If vartype = "_BIT" Or vartype = "_BYTE" Or vartype = "INTEGER" Or vartype = "LONG" Or vartype = "_INTEGER64" Or vartype = "_OFFSET" Or _
+           vartype = "_UNSIGNED _BIT" Or vartype = "_UNSIGNED _BYTE" Or vartype = "_UNSIGNED INTEGER" Or vartype = "_UNSIGNED LONG" Or vartype = "_UNSIGNED _INTEGER64" Or vartype = "_UNSIGNED _OFFSET" Then
+            js = js + ConvertExpression(vars(i), lineNumber) + " = QB.toInteger(" + vname + "[" + Str$(i - 1) + "]); "
+        ElseIf vartype = "SINGLE" Or vartype = "DOUBLE" Or vartype = "_FLOAT" Then
+            js = js + ConvertExpression(vars(i), lineNumber) + " = QB.toFloat(" + vname + "[" + Str$(i - 1) + "]); "
+        Else
             js = js + ConvertExpression(vars(i), lineNumber) + " = " + vname + "[" + Str$(i - 1) + "]; "
         End If
+        'End If
     Next i
     ConvertInput = js
+End Function
+
+Function ConvertFileInput$ (m As Method, args As String, lineNumber As Integer)
+    Dim js As String
+    Dim fh As String
+    Dim vname As String
+    Dim retvar As String
+    Dim pcount As Integer
+    ReDim parts(0) As String
+
+    pcount = ListSplit(args, parts())
+    If pcount < 2 Then
+        AddWarning lineNumber, "Syntax error"
+        ConvertFileInput = ""
+        Exit Function
+    End If
+
+    fh = Replace(_Trim$(parts(1)), "#", "")
+    retvar = _Trim$(parts(2))
+
+    vname = GenJSVar
+    js = "var " + vname + " = new Array(" + Str$(UBound(parts) - 1) + "); "
+    js = js + CallMethod(m) + "(" + fh + ", " + vname + "); "
+
+    Dim i As Integer
+    For i = 2 To UBound(parts)
+        ' Convert to appropriate variable type on assignment
+        Dim vartype As String
+        vartype = GetVarType(parts(i))
+        If vartype = "_BIT" Or vartype = "_BYTE" Or vartype = "INTEGER" Or vartype = "LONG" Or vartype = "_INTEGER64" Or vartype = "_OFFSET" Or _
+           vartype = "_UNSIGNED _BIT" Or vartype = "_UNSIGNED _BYTE" Or vartype = "_UNSIGNED INTEGER" Or vartype = "_UNSIGNED LONG" Or vartype = "_UNSIGNED _INTEGER64" Or vartype = "_UNSIGNED _OFFSET" Then
+            js = js + ConvertExpression(parts(i), lineNumber) + " = QB.toInteger(" + vname + "[" + Str$(i - 2) + "]); "
+        ElseIf vartype = "SINGLE" Or vartype = "DOUBLE" Or vartype = "_FLOAT" Then
+            js = js + ConvertExpression(parts(i), lineNumber) + " = QB.toFloat(" + vname + "[" + Str$(i - 2) + "]); "
+        Else
+            js = js + ConvertExpression(parts(i), lineNumber) + " = " + vname + "[" + Str$(i - 2) + "]; "
+        End If
+    Next i
+
+    ConvertFileInput = js
+End Function
+
+
+Function GetVarType$ (vname As String)
+    Dim vartype As String
+    vartype = "UNKNOWN"
+
+    ReDim parts(0) As String
+    Dim pcount As Integer
+    Dim found As Integer
+    Dim v As Variable
+    Dim pidx As Integer
+    pcount = Split(vname, ".", parts())
+    If pcount = 1 Then
+        pidx = InStr(vname, "(")
+        If pidx Then vname = Left$(vname, pidx - 1)
+        found = FindVariable(vname, v, False)
+        If Not found Then found = FindVariable(vname, v, True)
+        If found Then
+            vartype = v.type
+        End If
+    Else
+        vname = parts(1)
+        pidx = InStr(vname, "(")
+        If pidx Then vname = Left$(vname, pidx - 1)
+        found = FindVariable(vname, v, False)
+        If Not found Then found = FindVariable(vname, v, True)
+
+        If found Then
+            Dim typeId As Integer
+            typeId = FindTypeId(v.type)
+
+            Dim i As Integer
+            Dim j As Integer
+            For i = 2 To pcount
+
+                For j = 1 To UBound(typeVars)
+                    If typeVars(j).typeId = typeId And typeVars(j).name = parts(i) Then
+                        vartype = typeVars(j).type
+                        typeId = FindTypeId(vartype)
+                    End If
+                Next j
+
+            Next i
+        End If
+    End If
+
+
+    GetVarType = vartype
 End Function
 
 Function ConvertSwap$ (m As Method, args As String, lineNumber As Integer)
@@ -1231,9 +1581,8 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
         For i = 1 To vnamecount
 
             vpartcount = SLSplit2(varnames(i), vparts())
-            bvar.name = RemoveSuffix(vparts(1))
             If vpartcount = 1 Then
-                bvar.type = DataTypeFromName(bvar.name)
+                bvar.type = DataTypeFromName(vparts(1))
             ElseIf vpartcount = 3 Then
                 bvar.type = UCase$(vparts(3))
             ElseIf vpartcount = 4 Then
@@ -1241,6 +1590,7 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
             Else
                 ' Log error?
             End If
+            bvar.name = RemoveSuffix(vparts(1))
             bvar.typeId = FindTypeId(bvar.type)
 
 
@@ -1295,7 +1645,7 @@ Function FormatArraySize$ (sizeString As String)
         If i > 1 Then sizeParams = sizeParams + ","
 
         If scount = 1 Then
-            sizeParams = sizeParams + "{l:1,u:" + subparts(1) + "}"
+            sizeParams = sizeParams + "{l:0,u:" + subparts(1) + "}"
         Else
             sizeParams = sizeParams + "{l:" + subparts(1) + ",u:" + subparts(3) + "}"
         End If
@@ -1375,6 +1725,8 @@ Function ConvertExpression$ (ex As String, lineNumber As Integer)
                     js = js + " || "
                 ElseIf uword = "MOD" Then
                     js = js + " % "
+                ElseIf uword = "XOR" Then
+                    js = js + " ^ "
                 ElseIf uword = "=" Then
                     js = js + " == "
                 ElseIf uword = "<>" Then
@@ -1602,12 +1954,12 @@ Sub ConvertMethods ()
                     Dim v As Integer
                     ReDim As String parts(0)
                     v = Split(args(a), ":", parts())
-                    methodDec = methodDec + parts(1) + "/*" + parts(2) + "*/"
+                    methodDec = methodDec + RemoveSuffix(parts(1)) + "/*" + parts(2) + "*/"
                     If a < c Then methodDec = methodDec + ","
 
                     ' add the parameter to the local variables
                     Dim bvar As Variable
-                    bvar.name = parts(1)
+                    bvar.name = RemoveSuffix(parts(1))
                     bvar.type = parts(2)
                     bvar.typeId = FindTypeId(bvar.type)
                     If parts(3) = "true" Then
@@ -2359,6 +2711,19 @@ Sub AddQBMethod (mtype As String, mname As String, sync As Integer)
     AddMethod m, "QB.", sync
 End Sub
 
+Sub AddNativeMethod (mtype As String, mname As String, jsname As String, sync As Integer)
+    Dim m As Method
+    m.type = mtype
+    m.name = mname
+    m.uname = UCase$(m.name)
+    m.jsname = jsname
+    m.sync = sync
+
+    Dim mcount: mcount = UBound(methods) + 1
+    ReDim _Preserve As Method methods(mcount)
+    methods(mcount) = m
+End Sub
+
 Sub AddLine (lineIndex As Integer, fline As String)
     __AddLine lineIndex, fline
 End Sub
@@ -2825,7 +3190,7 @@ Sub InitGX
     AddGXMethod "SUB", "GXSleep", True
     AddGXMethod "FUNCTION", "GXMouseX", False
     AddGXMethod "FUNCTION", "GXMouseY", False
-    AddGXMethod "FUNCTION", "GXSoundLoad", False
+    AddGXMethod "FUNCTION", "GXSoundLoad", True
     AddGXMethod "SUB", "GXSoundPlay", False
     AddGXMethod "SUB", "GXSoundRepeat", False
     AddGXMethod "SUB", "GXSoundVolume", False
@@ -2840,6 +3205,7 @@ Sub InitGX
     AddGXMethod "FUNCTION", "GXScreenEntityCreate", False
     AddGXMethod "FUNCTION", "GXEntityCreate", False
     AddGXMethod "SUB", "GXEntityCreate", False
+    AddGXMethod "FUNCTION", "GXEntityVisible", False
     AddGXMethod "SUB", "GXEntityVisible", False
     AddGXMethod "SUB", "GXEntityMove", False
     AddGXMethod "SUB", "GXEntityPos", False
@@ -2859,6 +3225,7 @@ Sub InitGX
     AddGXMethod "FUNCTION", "GXFontUID$", False
     AddGXMethod "SUB", "GXEntityApplyGravity", False
     AddGXMethod "FUNCTION", "GXEntityApplyGravity", False
+    AddGXMethod "FUNCTION", "GXEntityCollide", False
     AddGXMethod "SUB", "GXEntityCollisionOffset", False
     AddGXMethod "FUNCTION", "GXEntityCollisionOffsetLeft", False
     AddGXMethod "FUNCTION", "GXEntityCollisionOffsetTop", False
@@ -2867,8 +3234,7 @@ Sub InitGX
     AddGXMethod "SUB", "GXFullScreen", False
     AddGXMethod "FUNCTION", "GXFullScreen", False
     AddGXMethod "FUNCTION", "GXBackgroundAdd", False
-    AddGXMethod "SUB", "GXBackgroundY", False
-    AddGXMethod "SUB", "GXBackgroundHeight", False
+    AddGXMethod "SUB", "GXBackgroundWrapFactor", False
     AddGXMethod "SUB", "GXBackgroundClear", False
     AddGXMethod "SUB", "GXSceneEmbedded", False
     AddGXMethod "FUNCTION", "GXSceneEmbedded", False
@@ -2998,13 +3364,16 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "_Cosh", False
     AddQBMethod "FUNCTION", "_Coth", False
     AddQBMethod "FUNCTION", "_Csch", False
+    AddQBMethod "FUNCTION", "_CWD$", False
     AddQBMethod "FUNCTION", "_D2G", False
     AddQBMethod "FUNCTION", "_D2R", False
     AddQBMethod "SUB", "_Delay", True
     AddQBMethod "FUNCTION", "_Dest", False
     AddQBMethod "SUB", "_Dest", False
+    AddQBMethod "FUNCTION", "_DirExists", False
     AddQBMethod "FUNCTION", "_Display", False
     AddQBMethod "SUB", "_Display", False
+    AddQBMethod "FUNCTION", "_FileExists", False
     AddQBMethod "FUNCTION", "_FontWidth", False
     AddQBMethod "SUB", "_FreeImage", False
     AddQBMethod "SUB", "_FullScreen", False
@@ -3026,6 +3395,7 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "_MouseX", False
     AddQBMethod "FUNCTION", "_MouseY", False
     AddQBMethod "FUNCTION", "_NewImage", False
+    AddQBMethod "FUNCTION", "_OS$", False
     AddQBMethod "FUNCTION", "_Pi", False
     AddQBMethod "SUB", "_PaletteColor", False
     AddQBMethod "SUB", "_PrintString", False
@@ -3054,12 +3424,13 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "_Source", False
     AddQBMethod "SUB", "_Source", False
     AddQBMethod "SUB", "_SndClose", False
-    AddQBMethod "FUNCTION", "_SndOpen", False
+    AddQBMethod "FUNCTION", "_SndOpen", True
     AddQBMethod "SUB", "_SndPlay", False
     AddQBMethod "SUB", "_SndLoop", False
     AddQBMethod "SUB", "_SndPause", False
     AddQBMethod "SUB", "_SndStop", False
     AddQBMethod "SUB", "_SndVol", False
+    AddQBMethod "FUNCTION", "_StartDir$", False
     AddQBMethod "FUNCTION", "_Strcmp", False
     AddQBMethod "FUNCTION", "_Stricmp", False
     AddQBMethod "FUNCTION", "_Tanh", False
@@ -3076,8 +3447,10 @@ Sub InitQBMethods
     AddQBMethod "SUB", "Beep", False
     AddQBMethod "FUNCTION", "Chr$", False
     AddQBMethod "FUNCTION", "Cdbl", False
+    AddQBMethod "SUB", "ChDir", False
     AddQBMethod "FUNCTION", "Cint", False
     AddQBMethod "FUNCTION", "Clng", False
+    AddQBMethod "SUB", "Close", False
     AddQBMethod "FUNCTION", "Csng", False
     AddQBMethod "SUB", "Circle", False
     AddQBMethod "SUB", "Cls", False
@@ -3089,8 +3462,13 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "Cvl", False
     AddQBMethod "FUNCTION", "Date$", False
     AddQBMethod "SUB", "Draw", False
+    AddQBMethod "FUNCTION", "EOF", False
     AddQBMethod "FUNCTION", "Exp", False
+    AddQBMethod "SUB", "Files", True
     AddQBMethod "FUNCTION", "Fix", False
+    AddQBMethod "FUNCTION", "FreeFile", False
+    AddQBMethod "SUB", "Get", False
+    AddQBMethod "FUNCTION", "Put", False
     AddQBMethod "FUNCTION", "Hex$", False
     AddQBMethod "SUB", "Input", True
     AddQBMethod "FUNCTION", "InKey$", False
@@ -3100,27 +3478,36 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "Left$", False
     AddQBMethod "FUNCTION", "LCase$", False
     AddQBMethod "FUNCTION", "Len", False
+    AddQBMethod "FUNCTION", "LOF", False
     AddQBMethod "SUB", "Line", False
     AddQBMethod "SUB", "Locate", False
     AddQBMethod "FUNCTION", "Log", False
     AddQBMethod "FUNCTION", "LTrim$", False
+    AddQBMethod "SUB", "Kill", False
     AddQBMethod "FUNCTION", "Mid$", False
+    AddQBMethod "SUB", "MkDir", False
     AddQBMethod "FUNCTION", "Mki$", False
     AddQBMethod "FUNCTION", "Mkl$", False
+    AddQBMethod "SUB", "Name", False
     AddQBMethod "FUNCTION", "Oct$", False
+    AddQBMethod "SUB", "Open", False
     AddQBMethod "SUB", "Paint", False
     AddQBMethod "FUNCTION", "Point", False
     AddQBMethod "FUNCTION", "Pos", False
     AddQBMethod "SUB", "PReset", False
     AddQBMethod "SUB", "Print", True
     AddQBMethod "SUB", "PSet", False
+    AddQBMethod "SUB", "Put", False
     AddQBMethod "SUB", "Randomize", False
     AddQBMethod "SUB", "Restore", False
     AddQBMethod "FUNCTION", "Right$", False
     AddQBMethod "FUNCTION", "RTrim$", False
     AddQBMethod "SUB", "Read", False
+    AddQBMethod "SUB", "RmDir", False
     AddQBMethod "FUNCTION", "Rnd", False
     AddQBMethod "SUB", "Screen", False
+    AddQBMethod "FUNCTION", "Seek", False
+    AddQBMethod "SUB", "Seek", False
     AddQBMethod "FUNCTION", "Sgn", False
     AddQBMethod "FUNCTION", "Sin", False
     AddQBMethod "SUB", "Sleep", True
@@ -3137,10 +3524,14 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "Val", False
     AddQBMethod "FUNCTION", "Varptr", False
     AddQBMethod "SUB", "Window", False
+    AddQBMethod "SUB", "Write", True
 
     ' QBJS-only language features
     ' --------------------------------------------------------------------------------
     AddQBMethod "SUB", "IncludeJS", True
+
+    AddNativeMethod "FUNCTION", "JSON.Parse", "JSON.parse", False
+    AddNativeMethod "FUNCTION", "JSON.Stringify", "JSON.stringify", False
 
     ' Undocumented at present
     AddSystemType "FETCHRESPONSE", "ok:INTEGER,status:INTEGER,statusText:STRING,text:STRING"
