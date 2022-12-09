@@ -4,7 +4,11 @@ var QB = new function() {
     this.PREVENT_NEWLINE = Symbol("PREVENT_NEWLINE");
     this.STRETCH = Symbol("STRETCH");
     this.SQUAREPIXELS = Symbol("SQUAREPIXELS");
-    this.OFF = Symbol("OFF");
+    this.APPEND = Symbol("APPEND");
+    this.BINARY = Symbol("BINARY");
+    this.INPUT = Symbol("INPUT");
+    this.OUTPUT = Symbol("OUTPUT");
+    this.RANDOM = Symbol("RANDOM");
 
     var _activeImage = 0;
     var _bgColor = null; 
@@ -42,6 +46,8 @@ var QB = new function() {
     var _strokeLineThickness = 2;
     var _windowAspect = [];
     var _windowDef = [];
+    var _fileHandles = null;
+    var _typeMap = {};
 
     // Array handling methods
     // ----------------------------------------------------
@@ -53,7 +59,7 @@ var QB = new function() {
         else {
             // default to single dimension to support Dim myArray() syntax
             // for convenient hashtable declaration
-            a._dimensions = [{l:1,u:1}];
+            a._dimensions = [{l:0,u:1}];
         }
         a._newObj = { value: obj };
         return a;
@@ -74,7 +80,7 @@ var QB = new function() {
         else {
             // default to single dimension to support Dim myArray() syntax
             // for convenient hashtable declaration
-            a._dimensions = [{l:1,u:1}];
+            a._dimensions = [{l:0,u:1}];
         }
     };
 
@@ -102,6 +108,23 @@ var QB = new function() {
         _resizeHeight = height;
     }
 
+    // Data type conversions
+    this.toInteger = function(value) {
+        var result = parseInt(value);
+        if (isNaN(result)) {
+            result = 0;
+        }
+        return result;
+    };
+
+    this.toFloat = function(value) {
+        var result = parseFloat(value);
+        if (isNaN(result)) {
+            result = 0;
+        }
+        return result;
+    };
+
     // Process control methods
     // -------------------------------------------
     this.halt = function() {
@@ -114,6 +137,7 @@ var QB = new function() {
     };
 
     this.end = function() {
+        _flushAllScreenCache();
         _runningFlag = false;
     };
 
@@ -128,6 +152,8 @@ var QB = new function() {
         _rndSeed = 327680;
         _runningFlag = true;
         _sourceImage = 0;
+        GX.vfsCwd(GX.vfs().rootDirectory());
+        _fileHandles = {};
         _initColorTable();
         GX._enableTouchMouse(true);
         GX.registerGameEvents(function(e){});
@@ -140,6 +166,10 @@ var QB = new function() {
 
     this.setDataLabel = function(label, dataIndex) {
         _dataLabelMap[label] = dataIndex;
+    }
+
+    this.setTypeMap = function(typeMap) {
+        _typeMap = typeMap;
     }
 
     this.running = function() {
@@ -229,6 +259,10 @@ var QB = new function() {
         return 1/Math.sinh(x);
     };
 
+    this.func__CWD = function() {
+        return GX.vfs().fullPath(GX.vfsCwd());
+    };
+
     this.func__D2R = function(x) {
         return x*Math.PI/180;
     };
@@ -243,18 +277,36 @@ var QB = new function() {
 
     this.func__Dest = function() {
         return _activeImage;
-    }
+    };
 
     this.sub__Dest = function(imageId) {
         _activeImage = imageId;
-    }
+    };
+
+    this.func__DirExists = function(path) {
+        var vfs = GX.vfs();
+        var dir = vfs.getNode(path, GX.vfsCwd());
+        if (dir && dir.type == vfs.DIRECTORY) {
+            return -1;
+        }
+        return 0;
+    };
 
     this.func__Display = function() {
         return 0;
-    }
+    };
 
     this.sub__Display = function() {
         // The canvas handles this for us, this method is included for compatibility
+    };
+
+    this.func__FileExists = function(path) {
+        var vfs = GX.vfs();
+        var file = vfs.getNode(path, GX.vfsCwd());
+        if (file && file.type == vfs.FILE) {
+            return -1;
+        }
+        return 0;
     };
 
     this.func__FontHeight = function(fnt) {
@@ -356,6 +408,7 @@ var QB = new function() {
     };
 
     this.sub__Limit = async function(fps) {
+        _flushAllScreenCache();
         await GX.sleep((1000 - (new Date() - _lastLimitTime))/fps);
         _lastLimitTime = new Date();
     };
@@ -363,18 +416,35 @@ var QB = new function() {
     this.autoLimit = async function() {
         var timeElapsed = new Date() - _lastLimitTime;
         if (timeElapsed > 1000) { 
+            _flushAllScreenCache();
             await GX.sleep(1);
             _lastLimitTime = new Date();
         }
     };
 
     this.func__LoadImage = async function(url) {
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+        var img = null;
 
-        var img = new Image();
-        img.src = url;
+        // attempt to read the image from the virtual file system
+        var file = vfs.getNode(url, vfsCwd);
+        if (file && file.type == vfs.FILE) {
+            img = new Image();
+            img.src = await vfs.getDataURL(file);
+                
+            while (!img.complete) {
+                await GX.sleep(10);
+            }
+        }
+        else {
+            // otherwise, read it from the url location
+            var img = new Image();
+            img.src = url;
 
-        while (!img.complete) {
-            await GX.sleep(10);
+            while (!img.complete) {
+                await GX.sleep(10);
+            }
         }
 
         var imgId = QB.func__NewImage(img.width, img.height);
@@ -419,6 +489,36 @@ var QB = new function() {
         return tmpId;
     };
 
+    this.func__OS = function() {
+
+        var browser = "";
+        if ((navigator.userAgent.indexOf("Opera") || navigator.userAgent.indexOf('OPR')) != -1 )  {
+            browser = "Opera";
+        }
+        else if (navigator.userAgent.indexOf("Edg") != -1 )  {
+            browser = "Edge";
+        }
+        else if (navigator.userAgent.indexOf("Chrome") != -1 ) {
+            browser = "Chrome";
+        }
+        else if (navigator.userAgent.indexOf("Safari") != -1) {
+            browser = "Safari";
+        }
+        else if(navigator.userAgent.indexOf("Firefox") != -1 ) {
+            browser = "Firefox";
+        }
+        else if((navigator.userAgent.indexOf("MSIE") != -1 ) || (!!document.documentMode == true )) //IF IE > 10
+        {
+            browser = "IE"; 
+        }  
+        else 
+        {
+            browser = "Unknown";
+        }
+
+        return "[WEB][" + browser.toUpperCase() + "]";
+    };
+
     this.sub__PaletteColor = function(x, y) {
         _colormap[x] = _color(y);
     };
@@ -427,7 +527,7 @@ var QB = new function() {
         // TODO: check the background opacity mode
         // Draw the text background
         var ctx = _images[_activeImage].ctx;
-        _images[_activeImage].dirty = true;
+        _flushScreenCache(_images[_activeImage]);
         ctx.beginPath();
         ctx.fillStyle = _bgColor.rgba();
         ctx.fillRect(x, y, QB.func__FontWidth(), QB.func__FontHeight());
@@ -528,8 +628,8 @@ var QB = new function() {
         sourceImage.lastX = sx1 + sw;
         sourceImage.lastY = sy2 + sh;
 
+        _flushScreenCache(_images[destImageId]);
         destImage.ctx.drawImage(sourceImage.canvas, sx1, sy1, sw, sh, dx1, dy1, dw, dh);
-        _images[sourceImageId].dirty = true;
     }
 
     function _rgb(r, g, b, a) {
@@ -694,6 +794,10 @@ var QB = new function() {
         GX.soundVolumne(sid, v);
     };
 
+    this.func__StartDir = function() {
+        return GX.vfs().fullPath(GX.vfs().rootDirectory());
+    }
+
     this.func__Strcmp = function(x, y) {
         return (( x == y ) ? 0 : (( x > y ) ? 1 : -1 ));
     };
@@ -766,8 +870,27 @@ var QB = new function() {
         }, 200);  
     };
 
+    this.sub_ChDir = function(path) {
+        var node = GX.vfs().getNode(path, GX.vfsCwd());
+        //alert("CHDIR: " + path + " node: " + node);
+        if (node) {
+            GX.vfsCwd(node);
+        }
+        else {
+            // TODO: error handling
+        }
+    };
+
     this.func_Chr = function(charCode) {
         return String.fromCharCode(charCode);
+    };
+
+    this.sub_Close = function(fh) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+
+        delete _fileHandles[fh];
     };
 
     this.sub_Cls = function(method, bgColor) {
@@ -779,7 +902,7 @@ var QB = new function() {
         }
         
         ctx = _images[_activeImage].ctx;
-        _images[_activeImage].dirty = true;
+        _flushScreenCache(_images[_activeImage]);
         ctx.beginPath();
         ctx.clearRect(0, 0, _width(), _height());
         //if (_screenMode == 1) { TODO: Finish implementing this.
@@ -813,23 +936,12 @@ var QB = new function() {
     }
 
     this.sub_Color = function(x, y) {
-        /*if (_screenMode == 1) { This code is fine.
-            if (x == 0) {        _bgColor = _rgb(0, 0, 0);
-            } else if (x == 1) { _bgColor = _rgb(0, 0, 168);
-            } else if (x == 2) { _bgColor = _rgb(0, 168, 0);
-            } else if (x == 3) { _bgColor = _rgb(0, 168, 168); }          
-            ctx = _images[_activeImage].ctx;
-            ctx.fillStyle = _bgColor.rgba();
-            ctx.beginPath();
-            ctx.fillRect(0, 0, _width(), _height());
-        } else {*/
         if (x != undefined) {
             _fgColor = _color(x);
         }
         if (y != undefined) {
             _bgColor = _color(y);
         }
-        //}
     };
 
     this.func_Command = function() {
@@ -939,7 +1051,7 @@ var QB = new function() {
                      ["H",Math.PI*(7/4),Math.sqrt(2)]];
 
         // Screen variables.
-        _images[_activeImage].dirty = true;
+        _flushScreenCache(_images[_activeImage]);
         var screen = _images[_activeImage];
         var ctx = screen.ctx;
 
@@ -1200,22 +1312,42 @@ var QB = new function() {
         return n.toString(16).toUpperCase();
     };
 
+    this.func_EOF = function(fh) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+
+        return (_fileHandles[fh].offset >= _fileHandles[fh].file.data.byteLength) ? -1 : 0;
+    };
+
+    this.func_LOF = function(fh) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+
+        return _fileHandles[fh].file.data.byteLength;
+    };
+
+
     this.sub_Input = async function(values, preventNewline, addQuestionPrompt, prompt) {
         _lastKey = null;
         var str = "";
         _inputMode = true;
 
+        _flushScreenCache(_images[_activeImage]);
+
         if (prompt != undefined) {
-            QB.sub_Print([prompt, QB.PREVENT_NEWLINE]);
+            await QB.sub_Print([prompt, QB.PREVENT_NEWLINE]);
         }
         if (prompt == undefined || addQuestionPrompt) {
-            QB.sub_Print(["? ", QB.PREVENT_NEWLINE]);
+            await QB.sub_Print(["? ", QB.PREVENT_NEWLINE]);
         }
 
         if (!preventNewline && _locY > _textRows()-1) {
                 await _printScroll();
             _locY = _textRows()-1;
         }
+
 
         while (_lastKey != "Enter") {
 
@@ -1253,8 +1385,31 @@ var QB = new function() {
             }
         }
         _inputMode = false;
-        _images[_activeImage].dirty = true;
     }
+
+    this.sub_InputFromFile = async function(fh, returnValues) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+        if (_fileHandles[fh].mode != QB.INPUT) {
+            throw new Error("Bad file mode");
+        }
+
+        fh = _fileHandles[fh];
+        var text = GX.vfs().readLine(fh.file, fh.offset);
+        fh.offset += text.length + 1;
+        var values = text.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        for (var i=0; i < returnValues.length; i++) {
+            if (i < values.length) {
+                var v = values[i];
+                // remove surrounding double quotes from string values
+                if (v.startsWith('"') && v.endsWith('"')) {
+                    v = v.substring(1, v.length-1);
+                }
+                returnValues[i] = v;
+            }
+        }
+    };
 
     this.func_InKey = function() {
         if (_inkeyBuffer.length < 1) {
@@ -1330,7 +1485,7 @@ var QB = new function() {
 
         var screen = _images[_activeImage];
         var ctx = screen.ctx;
-        _images[_activeImage].dirty = true;
+        _flushScreenCache(screen);
 
         if (color == undefined) {
             color = _fgColor;
@@ -1377,18 +1532,28 @@ var QB = new function() {
         _strokeDrawColor = _color(color);
     };
 
+    this.sub_Files = function(path) {
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+        var childNodes = null;
+        if (path == undefined) {
+            childNodes = vfs.getChildren(vfsCwd);
+        }
+        else {
+            var parent = vfs.getNode(path, vfsCwd);
+            childNodes = vfs.getChildren(parent);
+        }
+        for (var i=0; i < childNodes.length; i++) {
+            this.sub_Print(childNodes[i].name + ((childNodes[i].type == vfs.DIRECTORY) ? " <DIR>" : ""));
+        }
+    };
+
     this.sub_Line = function(sstep, sx, sy, estep, ex, ey, color, style, pattern) {
         var screen = _images[_activeImage];
-        //var ctx = screen.ctx;
-        _images[_activeImage].dirty = true;
+        _flushScreenCache(_images[_activeImage]);
 
         if (color == undefined) {
-            if (style == "BF") {
-                color = _bgColor;
-            }
-            else {
-                color = _fgColor;
-            }
+            color = _fgColor;
         }
         else {
             color = _color(color);
@@ -1490,7 +1655,7 @@ var QB = new function() {
         var ptn = sty;
         var slope;
         var mi;
-        if (lx > ly) {
+        if (lx >= ly) {
             var y1f = y1;
             if (lx) { slope = (y1 - y2) / lx; }
             if (x1 < x2) { mi = 1; } else { mi = -1; }
@@ -1522,6 +1687,20 @@ var QB = new function() {
         await QB.sub_Input(values, preventNewline, addQuestionPrompt, prompt);
     }
 
+    this.sub_LineInputFromFile = async function(fh, returnValues) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+        if (_fileHandles[fh].mode == QB.RANDOM) {
+            throw new Error("Bad file mode");
+        }
+
+        fh = _fileHandles[fh];
+        var text = GX.vfs().readLine(fh.file, fh.offset);
+        fh.offset += text.length + 1;
+        returnValues[0] = text;
+    };
+
     this.sub_Locate = function(row, col) {
         // TODO: implement cursor positioning/display
         if (row && row > 0 && row <= _textRows()) {
@@ -1534,7 +1713,11 @@ var QB = new function() {
 
     this.func_LTrim = function(value) {
         return String(value).trimStart();
-    }
+    };
+
+    this.sub_Kill = function(path) {
+        GX.vfs().removeFile(path, GX.vfsCwd());
+    };
 
     this.func_Mid = function(value, n, len) {
       if (len == undefined) {
@@ -1544,6 +1727,16 @@ var QB = new function() {
         return String(value).substring(n-1, n+len-1);
       }
     };
+
+    this.sub_MkDir = function(path) {
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+        var parent = vfs.getParentPath(path);
+        var filename = vfs.getFileName(path);
+        var parentNode = vfs.getNode(parent, vfsCwd);
+        if (!parentNode) { parentNode = vfsCwd; }
+        vfs.createDirectory(filename, parentNode);
+    }
 
     this.func_Mki = function(num) {
         var ascii = "";
@@ -1561,13 +1754,51 @@ var QB = new function() {
         return ascii.split("").reverse().join("");
     };
 
+    this.sub_Name = function(oldName, newName) {
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+        var node = vfs.getNode(oldName, vfsCwd);
+        vfs.renameNode(node, newName);
+    };
+
     this.func_Oct = function(n) {
         return n.toString(8).toUpperCase();
     };
 
+    this.sub_Open = function(path, mode, handle) {
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+       if (mode == QB.OUTPUT || mode == QB.APPEND || mode == QB.BINARY) {
+            var parent = vfs.getParentPath(path);
+            var filename = vfs.getFileName(path);
+            var parentNode = vfs.getNode(parent, vfsCwd);
+            if (!parentNode) { parentNode = vfsCwd; }
+            var file = null;
+            if (mode == QB.APPEND || mode == QB.BINARY) {
+                file = vfs.getNode(path, vfsCwd);
+                // TODO: make sure this is not a directory
+            }
+            if (!file) {
+                file = vfs.createFile(filename, parentNode);
+            }
+            _fileHandles[handle] = { file: file, mode: mode, offset: 0 };
+        }
+        else if (mode == QB.INPUT) {
+            var file = vfs.getNode(path, vfsCwd);
+            if (!file || file.type != vfs.FILE) {
+                throw new Error("File not found");
+            }
+            _fileHandles[handle] = { file: file, mode: mode, offset: 0 };
+        }
+        else {
+            throw new Error("Unsupported Open Method");
+        }
+    };
+
     this.sub_Paint = function(sstep, startX, startY, fillColor, borderColor) {
         // See: http://www.williammalone.com/articles/html5-canvas-javascript-paint-bucket-tool/
-        _images[_activeImage].dirty = true;
+        // TODO: this method should probably utilize the same screen cache as PSet
+        _flushScreenCache(_images[_activeImage]);
         var screen = _images[_activeImage];
         var ctx = screen.ctx;
         var data = ctx.getImageData(0, 0, screen.canvas.width, screen.canvas.height).data;
@@ -1671,18 +1902,16 @@ var QB = new function() {
                 }
             }
         } else {
-            if (screen.dirty != false) { 
+            if (!screen.cached) { 
                 var ctx = screen.ctx;
-                screen.data = ctx.getImageData(0, 0, screen.canvas.width, screen.canvas.height).data;
-                screen.dirty = false;
+                screen.imgdata = ctx.getImageData(0, 0, screen.canvas.width, screen.canvas.height);
+                screen.cached = true;
             }
-            //var data = ctx.getImageData(x, y, 1, 1).data;
-            //ret = QB.func__RGBA(data[0],data[1],data[2],data[3]);
             var pixelIndex = (y * screen.canvas.width + x) * 4;
-            ret = _rgb(screen.data[pixelIndex], 
-                       screen.data[pixelIndex + 1], 
-                       screen.data[pixelIndex + 2], 
-                       screen.data[pixelIndex + 3]);
+            ret = _rgb(screen.imgdata.data[pixelIndex], 
+                       screen.imgdata.data[pixelIndex + 1], 
+                       screen.imgdata.data[pixelIndex + 2], 
+                       screen.imgdata.data[pixelIndex + 3]);
         }
         return ret;
     };
@@ -1720,6 +1949,52 @@ var QB = new function() {
         _strokeDrawColor = _color(color);
     };
 
+    this.vfs = function() { return GX.vfs(); }
+
+    this.sub_PrintToFile = function(fh, args) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+        if (_fileHandles[fh].mode != QB.OUTPUT && _fileHandles[fh].mode != QB.APPEND) {
+            throw new Error("Bad file mode");
+        }
+        var locX = 0;
+        var file = _fileHandles[fh].file;
+        if (!file) { 
+            throw new Error("Invalid file handle");
+        }
+
+        // Print called with no arguments
+        if (args == undefined || args == null || args.length < 1) {
+            args = [""];
+        }
+
+        var preventNewline = (args[args.length-1] == QB.PREVENT_NEWLINE || args[args.length-1] == QB.COLUMN_ADVANCE);
+
+        for (var ai = 0; ai < args.length; ai++) {
+            if (args[ai] == QB.PREVENT_NEWLINE) {
+                // ignore as we will just concatenate the next arg
+            }
+            else if (args[ai] == QB.COLUMN_ADVANCE) {
+                // advance to the next column offset
+                var chars = 14 - locX % 13;
+                var padStr = "";
+                padStr = padStr.padStart(chars, " ");
+                GX.vfs().writeText(file, padStr);
+                locX += chars;
+            }
+            else {
+                //alert(args[ai]);
+                locX = args[ai].length;
+                GX.vfs().writeText(file, args[ai]);
+            }
+        }
+
+        if (!preventNewline) {
+            GX.vfs().writeText(file, "\r\n");
+        }
+    };
+
     this.sub_Print = async function(args) {
         var screen = _images[_activeImage];
 
@@ -1728,7 +2003,8 @@ var QB = new function() {
             args = [""];
         }
 
-        _images[_activeImage].dirty = true;
+        _flushScreenCache(_images[_activeImage]);
+
         var ctx = _images[_activeImage].ctx;
         var preventNewline = (args[args.length-1] == QB.PREVENT_NEWLINE || args[args.length-1] == QB.COLUMN_ADVANCE);
 
@@ -1805,8 +2081,10 @@ var QB = new function() {
     }
 
     this.sub_PSet = function(sstep, x, y, color) {
-        _images[_activeImage].dirty = true;
         var screen = _images[_activeImage];
+        
+        x = Math.round(x);
+        y = Math.round(y);
 
         if (color == undefined) {
             color = _fgColor;
@@ -1832,12 +2110,273 @@ var QB = new function() {
         screen.lastX = x;
         screen.lastY = y;
 
+        if (!screen.cached) {
         var ctx = screen.ctx;
-        ctx.fillStyle = color.rgba();
-        ctx.beginPath();
-        ctx.fillRect(x, y, 1, 1);
+        screen.imgdata = ctx.getImageData(0, 0, screen.canvas.width, screen.canvas.height);
+        screen.cached = true;
+        }
+        var pixelIndex = (y * screen.canvas.width + x) * 4;
+        screen.imgdata.data[pixelIndex] = color.r;
+        screen.imgdata.data[pixelIndex + 1] = color.g;
+        screen.imgdata.data[pixelIndex + 2] = color.b;
+        screen.imgdata.data[pixelIndex + 3] = color.a * 255;
 
         _strokeDrawColor = _color(color);
+    };
+
+    function _flushScreenCache(screen) {
+        if (screen.cached) {
+            var ctx = screen.ctx;
+            ctx.putImageData(screen.imgdata, 0, 0);
+            screen.imgdata = undefined;
+            screen.cached = false;
+        }
+    }
+
+    function _flushAllScreenCache() {
+        // TODO: this is brute force - fix it
+        for (var i=0; i < _nextImageId; i++) {
+            if (_images[i]) {
+                _flushScreenCache(_images[i]);
+            }
+        }
+    }
+
+    this.sub_Get = function(fhi, position, type, valueObj) {
+        if (!_fileHandles[fhi]) {
+            throw new Error("Invalid file handle");
+        }
+        var fh = _fileHandles[fhi];
+
+        if (fh.mode != QB.BINARY && fh.mode != QB.RANDOM) {
+            throw new Error("Bad file mode");
+        }
+
+        if (position == undefined) {
+            position = fh.offset;
+        }
+        else if (position > 0) {
+            position--;
+        }
+
+        var value = valueObj.value;
+        if (value._dimensions) {
+            // this is an array
+            var idx = [];
+            for (var di=0; di < value._dimensions.length; di++) {
+                var d = value._dimensions[di];
+                idx.push({l: d.l, u: d.u, i: d.l});
+            }
+
+            var done = false;
+            while (!done && !QB.func_EOF(fhi)) {
+                var ai = [];
+                for (var i=0; i < idx.length; i++) {
+                    ai.push(idx[i].i);
+                }
+
+                QB.arrayValue(value, ai).value = _readDataElement(fh, position, type);
+                position = fh.offset;
+
+                // increment the indexes
+                var cidx = 0;
+                var incNext = true;
+                while (cidx < idx.length) { 
+                    if (incNext) {
+                        idx[cidx].i++;
+                        if (idx[cidx].i > idx[cidx].u) {
+                            idx[cidx].i = idx[cidx].l;
+                            incNext = true;
+                        }
+                        else {
+                            incNext = false;
+                        }
+                    }
+                    cidx++;
+                }
+                if (incNext) {
+                    done = true;
+                }
+            }
+
+            return;
+        }
+        else {
+            valueObj.value = _readDataElement(fh, position, type);
+        }
+    };
+
+    function _readDataElement(fh, position, type) {
+        var vfs = GX.vfs();
+        var data = null;
+        if (type == "SINGLE") {
+            data = vfs.readData(fh.file, position, 4);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getFloat32(0, true);
+        }
+        else if (type == "DOUBLE") { 
+            data = vfs.readData(fh.file, position, 8);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getFloat64(0, true);
+        }
+        else if (type == "_BYTE") { 
+            data = vfs.readData(fh.file, position, 1);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getInt8(0, true);
+        }
+        else if (type == "_UNSIGNED _BYTE") {
+            data = vfs.readData(fh.file, position, 1);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getUint8(0, true);
+        }
+        else if (type == "INTEGER") { 
+            data = vfs.readData(fh.file, position, 2);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getInt16(0, true);
+        }
+        else if (type == "_UNSIGNED INTEGER") {
+            data = vfs.readData(fh.file, position, 2);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getUint16(0, true);
+        }
+        else if (type == "LONG") {
+            data = vfs.readData(fh.file, position, 4);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getInt32(0, true);
+        }
+        else if (type == "_UNSIGNED LONG") {
+            data = vfs.readData(fh.file, position, 4);
+            fh.offset = position + data.byteLength;
+            return (new DataView(data)).getUint32(0, true);
+        }
+        else if (type == "STRING") {
+            throw new Error("Unsupported data type: " + type);
+        }
+        else if (type == "_BIT" || type == "_UNSIGNED _BIT") {
+            // mimicking QB64 error message here
+            throw new Error("Variable/element cannot be BIT aligned on current line");
+        }
+        else if (type == "_INTEGER64" || type == "_UNSIGNED _INTEGER64" ||
+                 type == "_OFFSET" || type == "_UNSIGNED _OFFSET" ||
+                 type == "_MEM") {
+            throw new Error("Unsupported data type for operation: " + type);
+        }
+        else {
+            // handle custom type
+            var tvars = _typeMap[type];
+            if (tvars == undefined) {
+                throw new Error("Unknown type: " + type);
+            }
+
+            var resObj = {};
+            for (var i=0; i < tvars.length; i++) {
+                var tname = tvars[i].name;
+                var ttype = tvars[i].type;
+                resObj[tname] = _readDataElement(fh, position, ttype);
+                position = fh.offset;
+            }
+            return resObj;
+        }
+    }
+
+    this.sub_Put = function(fhi, position, type, value) {
+        if (!_fileHandles[fhi]) {
+            throw new Error("Invalid file handle");
+        }
+        var fh = _fileHandles[fhi];
+
+        if (fh.mode != QB.BINARY && fh.mode != QB.RANDOM) {
+            throw new Error("Bad file mode");
+        }
+
+        if (position == undefined) {
+            position = fh.offset;
+        }
+        else if (position > 0) {
+            position--;
+        }
+
+        if (value._dimensions) {
+            var idx = [];
+            for (var di=0; di < value._dimensions.length; di++) {
+                var d = value._dimensions[di];
+                idx.push({l: d.l, u: d.u, i: d.l});
+            }
+
+            var done = false;
+            while (!done) {
+                var ai = [];
+                for (var i=0; i < idx.length; i++) {
+                    ai.push(idx[i].i);
+                }
+                var v = QB.arrayValue(value, ai);
+                QB.sub_Put(fhi, position+1, type, v.value);
+                position = fh.offset;
+
+                // increment the indexes
+                var cidx = 0;
+                var incNext = true;
+                while (cidx < idx.length) { 
+                    if (incNext) {
+                        idx[cidx].i++;
+                        if (idx[cidx].i > idx[cidx].u) {
+                            idx[cidx].i = idx[cidx].l;
+                            incNext = true;
+                        }
+                        else {
+                            incNext = false;
+                        }
+                    }
+                    cidx++;
+                }
+                if (incNext) {
+                    done = true;
+                }
+            }
+
+            return;
+        }
+
+        var customType = false;
+        var data = null;
+        var bytes = 0;
+        if      (type == "SINGLE")            { data = new Float32Array([value]).buffer; }
+        else if (type == "DOUBLE")            { data = new Float64Array([value]).buffer; }
+        else if (type == "_BYTE")             { data = new Int8Array([value]).buffer; }
+        else if (type == "_UNSIGNED _BYTE")   { data = new Uint8Array([value]).buffer; }
+        else if (type == "INTEGER")           { data = new Int16Array([value]).buffer; }
+        else if (type == "_UNSIGNED INTEGER") { data = new Uint16Array([value]).buffer; }
+        else if (type == "LONG")              { data = new Int32Array([value]).buffer; }
+        else if (type == "_UNSIGNED LONG")    { data = new Uint32Array([value]).buffer; }
+        else if (type == "STRING")            { data = vfs.textToData(value); }
+        else if (type == "_BIT" || type == "_UNSIGNED _BIT") {
+            // mimicking QB64 error message here
+            throw new Error("Variable/element cannot be BIT aligned on current line");
+        }
+        else if (type == "_INTEGER64" || type == "_UNSIGNED _INTEGER64" ||
+                 type == "_OFFSET" || type == "_UNSIGNED _OFFSET" ||
+                 type == "_MEM") {
+            throw new Error ("Unsupported data type for operation: " + type);
+        }
+        else {
+            // Assume if we got here this is a custom type
+            customType = true;
+            var tvars = _typeMap[type];
+            if (tvars == undefined) {
+                throw new Error("Unknown type: " + type);
+            }
+            for (var i=0; i < tvars.length; i++) {
+                var tname = tvars[i].name;
+                var ttype = tvars[i].type;
+                QB.sub_Put(fhi, position + 1, ttype, value[tname]);
+                position = fh.offset;
+            }
+        }
+
+        if (!customType) {
+            vfs.writeData(fh.file, data, position);
+            fh.offset = position + data.byteLength;
+        }
     };
 
     this.sub_Read = function(values) {
@@ -1845,7 +2384,7 @@ var QB = new function() {
             values[i] = _dataBulk[_readCursorPosition];
             _readCursorPosition += 1;
         }
-    }
+    };
 
     this.sub_Restore = function(t) {
         if ((t == undefined) || (t.trim() == "")) {
@@ -1886,7 +2425,11 @@ var QB = new function() {
                 _rndSeed = ((m & 0xffff)<<8) | (327680 & 0xff);
             }
         }
-    }
+    };
+
+    this.sub_RmDir = function(path) {
+        vfs.removeDirectory(path, vfsCwd);
+    };
 
     this.func_Rnd = function(n) {
         if (n == undefined) {n = 1;}
@@ -1901,7 +2444,7 @@ var QB = new function() {
             _rndSeed = (_rndSeed * 16598013 + 12820163) & 0xFFFFFF;
         }
         return _rndSeed / 0x1000000;
-    }
+    };
 
     this.sub_Screen = async function(mode) {
         _activeImage = 0;
@@ -1918,7 +2461,6 @@ var QB = new function() {
         }
         else if (mode == 1) {
             GX.sceneCreate(320, 200);
-            _fgColor = _rgb(168, 168, 168);
         }
         else if (mode == 2 || mode == 7 || mode == 13) {
             GX.sceneCreate(320, 200);
@@ -1954,7 +2496,12 @@ var QB = new function() {
         
         // initialize the graphics
         _screenMode = mode;
-        _fgColor = _color(7); 
+        if (mode < 2) {
+            _fgColor = _color(7); 
+        }
+        else {
+            _fgColor = _color(15); 
+        }
         _bgColor = _color(0);
         _locX = 0;
         _locY = 0;
@@ -1978,6 +2525,22 @@ var QB = new function() {
             ctx.fillRect(0, 0, _width(), _height());
         }
         */
+    };
+
+    this.func_Seek = function(fh) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+
+        return _fileHandles[fh].offset + 1;
+    };
+
+    this.sub_Seek = function(fh, pos) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+
+        _fileHandles[fh].offset = pos - 1;
     };
 
     this.func_Sgn = function(value) {
@@ -2131,22 +2694,77 @@ var QB = new function() {
         }
     }
 
+    this.sub_Write = function(args) {
+        QB.sub_Print([_getWriteString(args)]);
+    }
+
+    this.sub_WriteToFile = function(fh, args) {
+        if (!_fileHandles[fh]) {
+            throw new Error("Invalid file handle");
+        }
+        if (_fileHandles[fh].mode != QB.OUTPUT && _fileHandles[fh].mode != QB.APPEND) {
+            throw new Error("Bad file mode");
+        }
+
+        fh = _fileHandles[fh];
+        var vfs = GX.vfs();
+        vfs.writeText(fh.file, _getWriteString(args) + "\r\n");
+    }
+
+    function _getWriteString(args) {
+        if (!args || !args.length) { return ""; }
+        var output = "";
+        for (var i=0; i < args.length; i++) {
+            if (i > 0) {
+                output += ","
+            }
+            if (args[i].type == "STRING" && !args[i].value.startsWith('"')) {
+                output += "\"" + args[i].value + "\"";
+            }
+            else {
+                output += args[i].value;
+            }
+        }
+        return output;
+    }
+
     // QBJS-only methods
     // ---------------------------------------------------------------------------------
     this.sub_IncludeJS = async function(url) {
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+
         var script = document.createElement("script")
         document.body.appendChild(script);
         script.id = url;
-        script.src = url;
+
+        var file = vfs.getNode(url, vfsCwd);
+        if (file && file.type == vfs.FILE) {
+            script.innerHTML = vfs.readText(file);
+        }
+        else {
+            script.src = url;
+        }
     };
     
     this.sub_Fetch = async function(url, fetchRes) {
-        var response = await fetch(url);
-        var responseText = await(response.text());
-        fetchRes.ok = response.ok;
-        fetchRes.status = response.status;
-        fetchRes.statusText = response.statusText;
-        fetchRes.text = responseText;
+        var vfs = GX.vfs();
+        var vfsCwd = GX.vfsCwd();
+        var file = vfs.getNode(url, vfsCwd);
+        if (file && file.type == vfs.FILE) {
+            fetchRes.ok = true;
+            fetchRes.status = 200;
+            fetchRes.statusText = "";
+            fetchRes.text = vfs.readText(file);
+        }
+        else {
+            var response = await fetch(url);
+            var responseText = await(response.text());
+            fetchRes.ok = response.ok;
+            fetchRes.status = response.status;
+            fetchRes.statusText = response.statusText;
+            fetchRes.text = responseText;
+        }
     };
 
     this.func_Fetch = async function(url) {
@@ -2739,3 +3357,5 @@ var QB = new function() {
 
     _init();
 }
+
+
