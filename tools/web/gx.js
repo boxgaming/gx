@@ -7,6 +7,7 @@ var GX = new function() {
     var _entities = [];
     var _scene = {};
     var _tileset = {};
+    var _tileset_animations = [];
     var _map = {};
     var _map_layers = [];
     var _map_layer_info = [];
@@ -30,6 +31,9 @@ var GX = new function() {
     var _touchInputFlag = false;
     var _touchPos = { x:0, y:0 };
     var _bindTouchToMouse = true;
+
+    var _vfs = new VFS();
+    var _vfsCwd = null;
 
     // javascript specific
     var _onGameEvent = null;
@@ -56,6 +60,7 @@ var GX = new function() {
         _entities = [];
         _scene = {};
         _tileset = {};
+        _tileset_animations = [];
         _map = {};
         _map_layers = [];
         _map_layer_info = [];
@@ -81,6 +86,8 @@ var GX = new function() {
         _mousePos = { x:0, y:0 };
         _mouseInputFlag = false;
     
+        _vfsCwd = _vfs.rootDirectory();
+
         // javascript specific
         _onGameEvent = null;
         _pressedKeys = {};
@@ -191,20 +198,6 @@ var GX = new function() {
                 }
             });
 
-/*
-            _canvas.addEventListener("keyup", function(event) { 
-                if (_scene.active) {
-                    event.preventDefault();
-                }
-                _pressedKeys[event.keyCode] = false;
-            });
-            _canvas.addEventListener("keydown", function(event) { 
-                if (_scene.active) {
-                    event.preventDefault();
-                }
-                _pressedKeys[event.keyCode] = true;
-            });
-            */
         }
         _canvas.width = width;
         _canvas.height = height;
@@ -478,7 +471,7 @@ var GX = new function() {
     function _updateSceneSize() {
         if (GX.tilesetWidth() < 1 || GX.tilesetHeight() < 1) { return; }
         if (GX.mapIsometric()) {
-            _scene.columns = Math.floor(GXSceneWidth() / GXTilesetWidth());
+            _scene.columns = Math.floor(GX.sceneWidth() / GX.tilesetWidth());
             _scene.rows = GX.sceneHeight() / (GX.tilesetWidth() / 4);
         } else {
             _scene.columns = Math.floor(GX.sceneWidth() / GX.tilesetWidth());
@@ -535,7 +528,17 @@ var GX = new function() {
                 callbackFn(img);
             }
         }
-        img.src = filename;
+
+        var file = _vfs.getNode(filename, _vfsCwd);
+        if (file && file.type == _vfs.FILE) {
+            //img.src = await _vfs.getDataURL(file);
+            _vfs.getDataURL(file).then((dataUrl) => {
+                img.src = dataUrl;
+            });
+        }
+        else {
+            img.src = filename;
+        }
         _images.push(img);
         return _images.length;
     }
@@ -562,50 +565,23 @@ var GX = new function() {
     // Background images are displayed in layers based on the order they are added.
     // One of the following modes must be specified:
     //   GXBG_STRETCH - Stretch the background image to the size of the scene.
-    //   GXBG_SCROLL  - Fit the height of the background image to the size of the screen.
-    //                   Scroll the horizontal position relative to the position on the map.
-    //   GXBG_WRAP    - Continuously wrap the background as the scene is moved horizontally.
+    //   GXBG_SCROLL  - Fit the height of the background image to the size of the screen. 
+    //                  Scroll the horizontal position relative to the position on the map.
+    //   GXBG_WRAP    - Continuously wrap the background as the scene is moved.
     function _backgroundAdd (imageFilename, mode) {
         var bg = {};
         bg.mode = mode;
         bg.x = 0;
         bg.y = 0;
-        if (mode == GX.BG_WRAP) {
-            _imageLoad(imageFilename, function(img) {
-                var imgCanvas = document.createElement("canvas");
-                imgCanvas.width = img.width * 2;
-                imgCanvas.height = img.height;
-                var imgCtx = imgCanvas.getContext("2d");
-                imgCtx.drawImage(img, 0, 0);
-                imgCtx.drawImage(img, img.width, 0);
-                
-                var dataUrl = imgCanvas.toDataURL("image/png");
-                var img2 = new Image();
-                img2.height = img.height;
-                img2.width = img.width * 2;
-                img2.src = dataUrl;
-                //document.body.append(img2);
-                _images.push(img2);
-                bg.image = _images.length;
-                
-                //_bg.push(bg);
-            });
-        //    Dim w As Integer, h As Integer
-        //    w = _Width(img)
-        //    h = _Height(img)
-        //    Dim newImage As Long
-        //    'newImage = _NewImage(w * 2, h, 32)
-        //    newImage = __GX_HardwareImage(w * 2, h)
-        //    _PutImage (0, 0)-(w, h), img, newImage
-        //    _PutImage (w, 0)-(w * 2, h), img, newImage
-        //    _FreeImage img
-        //    __gx_bg(__gx_bg_count).image = newImage
-        } else {
-            bg.image = _imageLoad(imageFilename);
-        }
+        bg.wrapFactor = 1;
+        bg.image = _imageLoad(imageFilename);
         
         _bg.push(bg);
         return _bg.length;
+    }
+
+    function _backgroundWrapFactor(bi, wrapFactor) {
+        _bg[bi-1].wrapFactor = wrapFactor;
     }
 
     function _backgroundDraw (bi) {
@@ -626,31 +602,49 @@ var GX = new function() {
         }
 
         else if (_bg[bi].mode == GX.BG_WRAP) {
-            var img = _image(_bg[bi].image);
-            var h = img.height;
-            var w = GX.sceneWidth();
-            var y = _bg[bi].y;
-            var x = (GX.sceneX() % img.width) / 2;
-            _ctx.drawImage(img, x, 0, w, img.height, 0, y, GX.sceneWidth(), h);
-            _bg[bi].x = x + 1;
-            if (_bg[bi].x > img.width / 2) {
-                _bg[bi].x = 0;
-            }
+            _backgroundDrawWrap(bi);
         }
     }
 
-    function _backgroundY (bi, y) {
-        if (y != undefined) {
-            _bg[bi-1].y = y;
-        }
-        return _bg[bi-1].y;
-    }
+    function _backgroundDrawWrap(bi) {
+        var img;
+        var x, y, x2, y2, xx, yy, w, h;
+        var wrapFactor;
 
-    function _backgroundHeight (bi, height) {
-        if (height != undefined) {
-            _bg[bi-1].height = height;
+        img = _image(_bg[bi].image);
+        wrapFactor = _bg[bi].wrapFactor;
+
+        x = (GX.sceneX() * wrapFactor) % img.width;
+        y = (GX.sceneY() * wrapFactor) % img.height;
+        if (x < 0) { x = img.width + x; }
+        if (y < 0) { y = img.height + y; }
+        x2 = GX.sceneWidth() + x;
+        y2 = GX.sceneHeight() + y;
+
+        _ctx.drawImage(img, x, y, GX.sceneWidth(), GX.sceneHeight(), 0, 0, GX.sceneWidth(), GX.sceneHeight());
+
+        if (x2 > img.width) {
+            w = x2 - img.width;
+            xx = GX.sceneWidth() - w;
+
+            _ctx.drawImage(img, 0, y, w, GX.sceneHeight(), xx, 0, w, GX.sceneHeight());
         }
-        return _bg[bi-1].height;
+
+        if (y2 > img.height) {
+            h = y2 - img.height;
+            yy = GX.sceneHeight() - h;
+
+            _ctx.drawImage(img, x, 0, GX.sceneWidth(), h, 0, yy, GX.sceneWidth(), h);
+        }
+
+        if (x2 > img.width && y2 > img.height) {
+            w = x2 - img.width;
+            h = y2 - img.height;
+            xx = GX.sceneWidth() - w;
+            yy = GX.sceneHeight() - h;
+
+            _ctx.drawImage(img, 0, 0, w, h, xx, yy, w, h);
+        }
     }
 
     // Removes all background images from the scene.
@@ -666,9 +660,18 @@ var GX = new function() {
         _sounds[sid-1] = undefined;
     }
 
-    function _soundLoad (filename) {
-        var a = new Audio(filename);
-        _sounds.push(a);
+    async function _soundLoad (filename) {
+        var file = _vfs.getNode(filename, _vfsCwd);
+        if (file && file.type == _vfs.FILE) {
+            var dataUrl = await _vfs.getDataURL(file);
+            var a = new Audio(dataUrl);
+            _sounds.push(a);
+        }
+        else {
+            var a = new Audio(filename);
+            _sounds.push(a);
+        }
+
         return _sounds.length;
     }
 
@@ -884,6 +887,7 @@ var GX = new function() {
         _map.rows = rows;
         _map.layers = layers;
         _map.version = 2;
+        _map.isometric = false;
 
         var layerSize = rows * columns;
         _map_layers = [];
@@ -901,11 +905,22 @@ var GX = new function() {
 
     async function _mapLoad(filename) {
         _map_loading = true;
-        var data = await _getJSON(filename);
+        var data = null;
+
+        var file = _vfs.getNode(filename, _vfsCwd);
+        if (file && file.type == _vfs.FILE) {
+            data = JSON.parse(_vfs.readText(file));
+        }
+        else {
+            data = await _getJSON(filename);
+        }
         var parentPath = filename.substring(0, filename.lastIndexOf("/")+1);
         var imagePath = data.tileset.image.substring(data.tileset.image.lastIndexOf("/")+1);
-        GX.tilesetCreate(parentPath + imagePath, data.tileset.width, data.tileset.height);
+        GX.tilesetCreate(parentPath + imagePath, data.tileset.width, data.tileset.height, data.tileset.tiles, data.tileset.animations);
         GX.mapCreate(data.columns, data.rows, data.layers.length);
+        if (data.isometric) {
+            GX.mapIsometric(true);
+        }
         for (var layer=0; layer < data.layers.length; layer++) {
             for (var row=0; row < GX.mapRows(); row++) {
                 for (var col=0; col < GX.mapColumns(); col++) {
@@ -1070,7 +1085,7 @@ var GX = new function() {
                         colOffset = 0;
                     } else {
                         colOffset = 0;
-                        if (row % 2 == 0) { colOffset = GXTilesetWidth / 2; }
+                        if (row % 2 == 0) { colOffset = GX.tilesetWidth() / 2; }
                     }
 
                     if (GX.mapIsometric()) {
@@ -1172,26 +1187,51 @@ var GX = new function() {
             Next layer
         End If
     End Sub
-
-    Function GXMapVersion
-        GXMapVersion = __gx_map.version
-    End Function
     */
+
+    function _mapVersion() {
+        return _map.version
+    }
 
 
     // Tileset Methods
     // ----------------------------------------------------------------------------
-    function _tilesetCreate (tilesetFilename, tileWidth, tileHeight) {
+    function _tilesetCreate (tilesetFilename, tileWidth, tileHeight, tiles, animations) {
         GX.tilesetReplaceImage(tilesetFilename, tileWidth, tileHeight);
 
         _tileset_tiles = [];
-        for (var i=0; i < GX.tilesetColumns() * GX.tilesetRows(); i++) {
-            _tileset_tiles.push({
-                id: i+1,
-                animationId: 0,
-                animationSpeed: 0,
-                animationFrame: 0
-            });
+        if (tiles != undefined) {
+            for (var i=0; i < tiles.length; i++) {
+                var tile = tiles[i];
+                _tileset_tiles.push({
+                    id: i+1,
+                    animationId: tile[0],
+                    animationSpeed: tile[1],
+                    animationFrame: tiles[2]
+                });
+            }
+        }
+        else {
+            for (var i=0; i < GX.tilesetColumns() * GX.tilesetRows(); i++) {
+                _tileset_tiles.push({
+                    id: i+1,
+                    animationId: 0,
+                    animationSpeed: 0,
+                    animationFrame: 0
+                });
+            }
+        }
+
+        _tileset_animations = [];
+        if (animations != undefined) {
+            for (var i=0; i < animations.length; i++) {
+                var animation = animations[i];
+                _tileset_animations.push({
+                    tileId: animation[0],
+                    firstFrame: animation[1],
+                    nextFrame: animation[2]
+                });
+            }
         }
     }
 
@@ -1310,130 +1350,97 @@ var GX = new function() {
     function _tilesetFilename() { return _tileset.filename; }
     function _tilesetImage() { return _tileset.image; }
 
-/*
-    Sub GXTilesetAnimationCreate (tileId As Integer, animationSpeed As Integer)
-        Dim frameId As Integer
-        frameId = UBound(__gx_tileset_animations) + 1
-        ReDim _Preserve __gx_tileset_animations(frameId) As GXTileFrame
-        __gx_tileset_animations(frameId).tileId = tileId
-        __gx_tileset_animations(frameId).firstFrame = frameId
-        __gx_tileset_tiles(tileId).animationId = frameId
-        __gx_tileset_tiles(tileId).animationSpeed = animationSpeed
-    End Sub
 
-    Sub GXTilesetAnimationAdd (firstTileId As Integer, addTileId As Integer)
-        Dim firstFrame As Integer
-        firstFrame = __gx_tileset_tiles(firstTileId).animationId
+    function _tilesetAnimationCreate (tileId, animationSpeed) {
+        var frameId = _tileset_animations.length;
+        _tileset_animations[frameId] = { tileId: 0, firstFrame: 0, nextFrame: 0 };
+        _tileset_animations[frameId].tileId = tileId;
+        _tileset_animations[frameId].firstFrame = frameId + 1;
+        _tileset_tiles[tileId-1].animationId = frameId + 1;
+        _tileset_tiles[tileId-1].animationSpeed = animationSpeed;
+    }
 
-        ' find the last frame
-        Dim lastFrame As Integer
-        lastFrame = firstFrame
-        While __gx_tileset_animations(lastFrame).nextFrame > 0
-            lastFrame = __gx_tileset_animations(lastFrame).nextFrame
-        Wend
+    function _tilesetAnimationAdd (firstTileId, addTileId) {
+        var firstFrame = _tileset_tiles[firstTileId-1].animationId;
 
-        Dim frameId As Integer
-        frameId = UBound(__gx_tileset_animations) + 1
-        ReDim _Preserve __gx_tileset_animations(frameId) As GXTileFrame
-        __gx_tileset_animations(frameId).tileId = addTileId
-        __gx_tileset_animations(frameId).firstFrame = firstFrame
-        __gx_tileset_animations(lastFrame).nextFrame = frameId
-    End Sub
-
-    Sub GXTilesetAnimationRemove (firstTileId As Integer)
-        ' TODO: replace with implementation that will remove unused
-        '       animation data from the array
-        __gx_tileset_tiles(firstTileId).animationId = 0
-    End Sub
-
-    Function GXTilesetAnimationFrames (tileId As Integer, tileFrames() As Integer)
-        If tileId < 0 Or tileId > GXTilesetRows * GXTilesetColumns Then
-            GXTilesetAnimationFrames = 0
-            Exit Function
-        End If
-
-        ReDim tileFrames(0) As Integer
-        Dim frame As Integer
-        Dim frameCount As Integer
-        frameCount = 0
-        frame = __gx_tileset_tiles(tileId).animationId
-        While frame > 0
-            frameCount = frameCount + 1
-            ReDim _Preserve tileFrames(frameCount) As Integer
-            tileFrames(frameCount) = __gx_tileset_animations(frame).tileId
-            frame = __gx_tileset_animations(frame).nextFrame
-        Wend
-        GXTilesetAnimationFrames = frameCount
-    End Function
-
-    Function GXTilesetAnimationSpeed (tileId As Integer)
-        If tileId > GXTilesetRows * GXTilesetColumns Then Exit Function
-        GXTilesetAnimationSpeed = __gx_tileset_tiles(tileId).animationSpeed
-    End Function
-
-    Sub GXTilesetAnimationSpeed (tileId As Integer, speed As Integer)
-        'IF tileId < 1 THEN EXIT SUB
-
-        'DIM firstFrame AS INTEGER
-        'firstFrame = gx_tileset_tiles(tileId).animationId
-        'IF firstFrame < 1 THEN EXIT SUB
-
-        'gx_tileset_animations(firstFrame).animationSpeed = speed
-        __gx_tileset_tiles(tileId).animationSpeed = speed
-    End Sub
-*/
-    function _tileFrame (tileId) {
-        return tileId;
-/*        if (tileId < 0 || tileId > _tileset_tiles.length) {
-            return tileId;
+        // find the last frame
+        var lastFrame  = firstFrame;
+        while (_tileset_animations[lastFrame-1].nextFrame > 0) {
+            lastFrame = _tileset_animations[lastFrame-1].nextFrame;
         }
 
-        if _tileset_tiles(tileId).animationId = 0 Then
-            __GX_TileFrame = tileId
-            Exit Function
-        End If
+        var frameId = _tileset_animations.length;
+        _tileset_animations[frameId] = { tileId: 0, firstFrame: 0, nextFrame: 0 };
+        _tileset_animations[frameId].tileId = addTileId;
+        _tileset_animations[frameId].firstFrame = firstFrame;
+        _tileset_animations[lastFrame-1].nextFrame = frameId + 1;
+    }
 
-        Dim currFrame As Integer
-        currFrame = __gx_tileset_tiles(tileId).animationId
-        If __gx_tileset_tiles(tileId).animationFrame > 0 Then
-            currFrame = __gx_tileset_tiles(tileId).animationFrame
-        End If
+    function _tilesetAnimationRemove (firstTileId) {
+        // TODO: replace with implementation that will remove unused
+        //       animation data from the array
+        _tileset_tiles[firstTileId-1].animationId = 0;
+    }
 
-        __GX_TileFrame = __gx_tileset_animations(currFrame).tileId
-*/
+    function _tilesetAnimationFrames (tileId, tileFrames /* QB Array */) {
+        // TODO: create an overriden version of this method that returns a standard javascript array
+        if (tileId < 0 || tileId > GX.tilesetRows() * GX.tilesetColumns()) { return 0; }
+
+        var tileFrames = GX.initArray([0], { tileId: 0, firstFrame: 0, nextFrame: 0 });
+        var frameCount = 0;
+        var frame = _tileset_tiles[tileId-1].animationId;
+        while (frame > 0) {
+            frameCount = frameCount + 1
+            GX.resizeArray(tileFrames, [frameCount], { tileId: 0, firstFrame: 0, nextFrame: 0 }, true);
+            GX.arrayValue(tileFrames, [frameCount]).value = _tileset_animations[frame-1].tileId;
+            frame = _tileset_animations[frame-1].nextFrame;
+        }
+        return frameCount;
+    }
+
+    function _tilesetAnimationSpeed (tileId) {
+        if (tileId > GX.tilesetRows() * GX.tilesetColumns()) { return; }
+        return _tileset_tiles[tileId-1].animationSpeed;
+    }
+
+    function _tilesetAnimationSpeed (tileId, speed) {
+        _tileset_tiles[tileId-1].animationSpeed = speed;
+    }
+
+    function _tileFrame (tileId) {
+        if (tileId < 0 || tileId > _tileset_tiles.length) { return tileId; }
+        if (_tileset_tiles[tileId-1].animationId == 0) { return tileId; }
+
+        var currFrame = _tileset_tiles[tileId-1].animationId;
+        if (_tileset_tiles[tileId-1].animationFrame > 0) {
+            currFrame = _tileset_tiles[tileId-1].animationFrame;
+        }
+
+        return _tileset_animations[currFrame-1].tileId;
     }
 
 
     function _tileFrameNext (tileId) {
-    /*
-        If tileId < 0 Or tileId > UBound(__gx_tileset_tiles) Then Exit Sub
-        If __gx_tileset_tiles(tileId).animationId = 0 Then Exit Sub
+        if (tileId < 0 || tileId > _tileset_tiles.length) { return; }
+        if (_tileset_tiles[tileId-1].animationId == 0) { return; }
 
-        Dim frame As Integer
-        frame = GXFrame Mod GXFrameRate + 1
+        var frame = GX.frame() % GX.frameRate() + 1;
+        var firstFrame = _tileset_tiles[tileId-1].animationId;
+        var animationSpeed = _tileset_tiles[tileId-1].animationSpeed;
 
-        Dim firstFrame As Integer
-        firstFrame = __gx_tileset_tiles(tileId).animationId
+        if (frame % (GX.frameRate() / animationSpeed) == 0) {
+            var currFrame = firstFrame;
+            if (_tileset_tiles[tileId-1].animationFrame > 0) {
+                currFrame = _tileset_tiles[tileId-1].animationFrame;
+            }
 
-        Dim animationSpeed As Integer
-        animationSpeed = __gx_tileset_tiles(tileId).animationSpeed
+            var nextFrame = _tileset_animations[currFrame-1].nextFrame;
+            if (nextFrame == 0) {
+                nextFrame = firstFrame;
+            }
 
-        If frame Mod (GXFrameRate / animationSpeed) = 0 Then
-            Dim currFrame As Integer
-            currFrame = firstFrame
-            If __gx_tileset_tiles(tileId).animationFrame > 0 Then
-                currFrame = __gx_tileset_tiles(tileId).animationFrame
-            End If
-
-            Dim nextFrame As Integer
-            nextFrame = __gx_tileset_animations(currFrame).nextFrame
-            If nextFrame = 0 Then
-                nextFrame = firstFrame
-            End If
-
-            __gx_tileset_tiles(tileId).animationFrame = nextFrame
-        End If
-    */
+            _tileset_tiles[tileId-1].animationFrame = nextFrame;
+        }
     }    
 
 
@@ -1653,6 +1660,17 @@ var GX = new function() {
         return move;
     }
 
+    function _entityCollide (eid1, eid2) {
+        return _rectCollide( 
+            GX.entityX(eid1) + GX.entityCollisionOffsetLeft(eid1), 
+            GX.entityY(eid1) + GX.entityCollisionOffsetTop(eid1), 
+            GX.entityWidth(eid1) - GX.entityCollisionOffsetLeft(eid1) - GX.entityCollisionOffsetRight(eid1) - 1,
+            GX.entityHeight(eid1) - GX.entityCollisionOffsetTop(eid1) - GX.entityCollisionOffsetBottom(eid1) - 1,
+            GX.entityX(eid2) + GX.entityCollisionOffsetLeft(eid2),
+            GX.entityY(eid2) + GX.entityCollisionOffsetTop(eid2),
+            GX.entityWidth(eid2) - GX.entityCollisionOffsetLeft(eid2) - GX.entityCollisionOffsetRight(eid2) - 1,
+            GX.entityHeight(eid2) - GX.entityCollisionOffsetTop(eid2) - GX.entityCollisionOffsetBottom(eid2) - 1);
+    }
 
     function _entityCollision(eid, movex, movey, entities) {
         var ecount = 0;
@@ -2364,6 +2382,8 @@ var GX = new function() {
     };
 
     function _init() {
+        _vfsCwd = _vfs.rootDirectory();
+
         // init
         _fontCreateDefault(GX.FONT_DEFAULT);
         _fontCreateDefault(GX.FONT_DEFAULT_BLACK);
@@ -2386,6 +2406,13 @@ var GX = new function() {
 
     this.ctx = function() { return _ctx; };
     this.canvas = function() { return _canvas; };
+    this.vfs = function() { return _vfs; };
+    this.vfsCwd = function(cwd) {
+        if (cwd != undefined) {
+            _vfsCwd = cwd;
+        }
+        return _vfsCwd;
+    };
 
     this.frame = _frame;
     this.frameRate = _frameRate;
@@ -2412,8 +2439,7 @@ var GX = new function() {
     this.spriteDrawScaled = _spriteDrawScaled;
 
     this.backgroundAdd = _backgroundAdd;
-    this.backgroundY = _backgroundY;
-    this.backgroundHeight = _backgroundHeight;
+    this.backgroundWrapFactor = _backgroundWrapFactor;
     this.backgroundClear = _backgroundClear;
 
     this.soundClose = _soundClose;
@@ -2446,6 +2472,7 @@ var GX = new function() {
     this.entityCollisionOffsetTop = _entityCollisionOffsetTop;
     this.entityCollisionOffsetRight = _entityCollisionOffsetRight;
     this.entityCollisionOffsetBottom = _entityCollisionOffsetBottom;
+    this.entityCollide = _entityCollide;
     this.entityApplyGravity = _entityApplyGravity;
     this.entityVisible = _entityVisible;
     
@@ -2530,7 +2557,6 @@ var GX = new function() {
     this.BG_STRETCH = 1;
     this.BG_SCROLL = 2;
     this.BG_WRAP = 3;
-
 
     this.KEY_ESC = 'Escape';
     this.KEY_1 = 'Digit1';
@@ -2670,6 +2696,63 @@ var GX = new function() {
     this.CR = "\r";
     this.LF = "\n";
     this.CRLF = "\r\n"
+
+
+
+    // Array handling methods
+    // TODO: These methods are included here to avoid a circular dependency with qb.js
+    //       Implementation should be moved to a separated shared js file
+    // ----------------------------------------------------
+    this.initArray = function(dimensions, obj) {
+        var a = {};
+        if (dimensions && dimensions.length > 0) {
+            a._dimensions = dimensions;
+        }
+        else {
+            // default to single dimension to support Dim myArray() syntax
+            // for convenient hashtable declaration
+            a._dimensions = [{l:0,u:1}];
+        }
+        a._newObj = { value: obj };
+        return a;
+    };
+
+    this.resizeArray = function(a, dimensions, obj, preserve) {
+       if (!preserve) {
+            var props = Object.getOwnPropertyNames(a);
+            for (var i = 0; i < props.length; i++) {
+                if (props[i] != "_newObj") {
+                    delete a[props[i]];
+                }
+            }
+        }
+        if (dimensions && dimensions.length > 0) {
+            a._dimensions = dimensions;
+        }
+        else {
+            // default to single dimension to support Dim myArray() syntax
+            // for convenient hashtable declaration
+            a._dimensions = [{l:0,u:1}];
+        }
+    };
+
+    this.arrayValue = function(a, indexes) {
+        var value = a;
+        for (var i=0; i < indexes.length; i++) {
+            if (value[indexes[i]] == undefined) {
+                if (i == indexes.length-1) {
+                    value[indexes[i]] = JSON.parse(JSON.stringify(a._newObj));
+                }
+                else {
+                    value[indexes[i]] = {};
+                }
+            }
+            value = value[indexes[i]];
+        }
+
+        return value;
+    };
+
 };    
     
 
