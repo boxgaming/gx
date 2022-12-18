@@ -1,10 +1,21 @@
 #!/bin/sh
 CURDIR=`pwd`
+QB64BIN=
 
 if test -f "$QB64_HOME/qb64"
 then
+	QB64BIN="$QB64_HOME/qb64"
+else
+	if test -f "$QB64_HOME/qb64pe"
+	then
+		QB64BIN="$QB64_HOME/qb64pe"
+	fi
+fi
+
+if [ "$QB64BIN" != "" ]
+then
 	cp $CURDIR/inform/gx_falcon.h $QB64_HOME
-	$QB64_HOME/qb64 -x $CURDIR/MapMaker.bas -o $CURDIR/MapMaker
+	$QB64BIN -x $CURDIR/MapMaker.bas -o $CURDIR/MapMaker
 else
 	if [ -z "$QB64_HOME" ]
 	then

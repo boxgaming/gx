@@ -1,12 +1,23 @@
 #!/bin/sh
 CURDIR=`pwd`
+QB64BIN=
 
 if test -f "$QB64_HOME/qb64"
 then
-	$QB64_HOME/qb64 -x $CURDIR/gx2web.bas -o $CURDIR/gx2web
-	$QB64_HOME/qb64 -x $CURDIR/map2web.bas -o $CURDIR/map2web
-	$QB64_HOME/qb64 -x $CURDIR/qb2js.bas -o $CURDIR/qb2js
-	$QB64_HOME/qb64 -x $CURDIR/webserver.bas -o $CURDIR/webserver
+	QB64BIN="$QB64_HOME/qb64"
+else
+	if test -f "$QB64_HOME/qb64pe"
+	then
+		QB64BIN="$QB64_HOME/qb64pe"
+	fi
+fi
+
+if [ "$QB64BIN" != "" ]
+then
+	$QB64BIN -x $CURDIR/gx2web.bas -o $CURDIR/gx2web
+	$QB64BIN -x $CURDIR/map2web.bas -o $CURDIR/map2web
+	$QB64BIN -x $CURDIR/qb2js.bas -o $CURDIR/qb2js
+	$QB64BIN -x $CURDIR/webserver.bas -o $CURDIR/webserver
 else
 	if [ -z "$QB64_HOME" ]
 	then
