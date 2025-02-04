@@ -6,8 +6,8 @@ $Console:Only
 '2) Compile to EXE only.
 '3) In console, run:    qb2js qb2js.bas > ../qb2js.js
 
-Const FILE = 1
-Const TEXT = 2
+Const FILE = 1, TEXT = 2
+Const MWARNING = 0, MERROR = 1
 Const False = 0
 Const True = Not False
 Const PrintDataTypes = True
@@ -18,6 +18,7 @@ Const PrintTokenizedLine = False
 Type CodeLine
     line As Integer
     text As String
+    mtype As Integer
 End Type
 
 Type Method
@@ -30,6 +31,7 @@ Type Method
     args As String
     jsname As String
     sync As Integer
+    builtin As Integer
 End Type
 
 Type Argument
@@ -59,6 +61,13 @@ Type Label
     index As Integer
 End Type
 
+Type Container
+    mode As Integer
+    type As String
+    label As String
+    line As Integer
+End Type
+
 ReDim Shared As CodeLine lines(0)
 ReDim Shared As CodeLine jsLines(0)
 ReDim Shared As Method methods(0)
@@ -72,10 +81,14 @@ ReDim Shared As Variable exportConsts(0)
 ReDim Shared As Method exportMethods(0)
 ReDim Shared As String dataArray(0)
 ReDim Shared As Label dataLabels(0)
+Dim Shared As String jsReservedWords(54)
 Dim Shared modLevel As Integer
 Dim Shared As String currentMethod
 Dim Shared As String currentModule
 Dim Shared As Integer programMethods
+Dim Shared As Integer staticVarLine
+Dim Shared As String condWords(4)
+Dim Shared As Integer forceSelfConvert
 
 ' Only execute the conversion from the native version if we have been passed the
 ' source file to convert on the command line
@@ -88,6 +101,7 @@ End If
 '$Include: 'qb2js.bi'
 
 Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
+    condWords(1) = "IF": condWords(2) = "ELSEIF": condWords(3) = "WHILE": condWords(4) = "UNTIL"
     currentModule = moduleName
 
     ResetDataStructures
@@ -103,6 +117,7 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
     programMethods = UBound(methods)
     InitGX
     InitQBMethods
+    InitJSReservedWords
 
     ' Detect whether we are converting ourself to javascript. If so:
     '   1) Place the converted code into an object named QB6Compiler
@@ -112,8 +127,10 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
     Dim selfConvert As Integer
     Dim isGX As Integer: isGX = False
     If sourceType = FILE Then selfConvert = EndsWith(source, "qb2js.bas")
+    If forceSelfConvert Then selfConvert = True
 
     If selfConvert Then
+        AddJSLine 0, "if (typeof QB == 'undefined' && module) { QB = require('./qb-console.js').QB(); }"
         AddJSLine 0, "async function _QBCompiler() {"
 
     ElseIf moduleName <> "" Then
@@ -126,11 +143,17 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
         '    AddJSLine 0, "try {"
     End If
 
+    ' Add a placeholder line for static method variables
+    ' This line will be appended to as static variable declarations are encountered
+    AddJSLine 0, "/* static method variables: */ "
+    staticVarLine = UBound(jsLines)
+
+
     If Not selfConvert And moduleName = "" Then AddJSLine 0, "QB.start();"
 
     If Not selfConvert And moduleName = "" Then
         Dim mtest As Method
-        If FindMethod("GXOnGameEvent", mtest, "SUB") Then
+        If FindMethod("GXOnGameEvent", mtest, "SUB", True) Then
             AddJSLine 0, "    await GX.registerGameEvents(sub_GXOnGameEvent);"
             isGX = True
         Else
@@ -149,7 +172,7 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
     If Not selfConvert And moduleName = "" Then InitTypes
 
     If selfConvert Then
-        AddJSLine 0, "this.compile = async function(src) {"
+        AddJSLine 0, "async function compile(src) {"
         AddJSLine 0, "   await sub_QBToJS(src, TEXT, '');"
         AddJSLine 0, "   var js = '';"
         AddJSLine 0, "   for (var i=1; i<= QB.func_UBound(jsLines); i++) {"
@@ -160,29 +183,69 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
         End If
         AddJSLine 0, "   }"
         AddJSLine 0, "   return js;"
-        AddJSLine 0, "};"
-        AddJSLine 0, "this.getWarnings = function() {"
+        AddJSLine 0, "}"
+        AddJSLine 0, "function getWarnings() {"
         AddJSLine 0, "   var w = [];"
         AddJSLine 0, "   for (var i=1; i <= QB.func_UBound(warnings); i++) {"
         AddJSLine 0, "      w.push({"
         AddJSLine 0, "         line: QB.arrayValue(warnings, [i]).value.line,"
-        AddJSLine 0, "         text: QB.arrayValue(warnings, [i]).value.text"
+        AddJSLine 0, "         text: QB.arrayValue(warnings, [i]).value.text,"
+        AddJSLine 0, "         mtype: QB.arrayValue(warnings, [i]).value.mtype"
         AddJSLine 0, "      });"
         AddJSLine 0, "   }"
         AddJSLine 0, "   return w;"
-        AddJSLine 0, "};"
-        AddJSLine 0, "this.getSourceLine = function(jsLine) {"
+        AddJSLine 0, "}"
+        AddJSLine 0, "function _getMethods(methods) {"
+        AddJSLine 0, "   var m = [];"
+        AddJSLine 0, "   for (var i=1; i <= QB.func_UBound(methods); i++) {"
+        AddJSLine 0, "      var lidx = QB.arrayValue(methods, [i]).value.line;"
+        AddJSLine 0, "      m.push({"
+        AddJSLine 0, "         line: QB.arrayValue(lines, [lidx]).value.line,"
+        AddJSLine 0, "         type: QB.arrayValue(methods, [i]).value.type,"
+        AddJSLine 0, "         returnType: QB.arrayValue(methods, [i]).value.returnType,"
+        AddJSLine 0, "         name: QB.arrayValue(methods, [i]).value.name,"
+        AddJSLine 0, "         uname: QB.arrayValue(methods, [i]).value.uname,"
+        AddJSLine 0, "         jsname: QB.arrayValue(methods, [i]).value.jsname,"
+        AddJSLine 0, "         argc: QB.arrayValue(methods, [i]).value.argc,"
+        AddJSLine 0, "         args: QB.arrayValue(methods, [i]).value.args"
+        AddJSLine 0, "      });"
+        AddJSLine 0, "   }"
+        AddJSLine 0, "   return m;"
+        AddJSLine 0, "}"
+        AddJSLine 0, "function getMethods() { return _getMethods(methods); }"
+        AddJSLine 0, "function getExportMethods() { return _getMethods(exportMethods); }"
+        AddJSLine 0, "function getExportConsts() {"
+        AddJSLine 0, "   var c = [];"
+        AddJSLine 0, "   for (var i=1; i <= QB.func_UBound(exportConsts); i++) {"
+        AddJSLine 0, "      c.push({"
+        AddJSLine 0, "         name: QB.arrayValue(exportConsts, [i]).value.name,"
+        AddJSLine 0, "         jsname: QB.arrayValue(exportConsts, [i]).value.jsname"
+        AddJSLine 0, "      });"
+        AddJSLine 0, "   }"
+        AddJSLine 0, "   return c;"
+        AddJSLine 0, "}"
+        AddJSLine 0, "function getSourceLine(jsLine) {"
         AddJSLine 0, "   if (jsLine == 0) { return 0; }"
         AddJSLine 0, "   var line = QB.arrayValue(jsLines, [jsLine]).value.line;"
         AddJSLine 0, "   line = QB.arrayValue(lines, [line]).value.line;"
         AddJSLine 0, "   return line;"
-        AddJSLine 0, "};"
-        AddJSLine 0, ""
-        AddJSLine 0, "return this;"
         AddJSLine 0, "}"
+        AddJSLine 0, "function setSelfConvert() { sub_SetSelfConvert(); }"
+        AddJSLine 0, ""
+        AddJSLine 0, "return {"
+        AddJSLine 0, "   compile: compile,"
+        AddJSLine 0, "   getWarnings: getWarnings,"
+        AddJSLine 0, "   getMethods: getMethods,"
+        AddJSLine 0, "   getExportMethods: getExportMethods,"
+        AddJSLine 0, "   getExportConsts: getExportConsts,"
+        AddJSLine 0, "   getSourceLine: getSourceLine,"
+        AddJSLine 0, "   setSelfConvert: setSelfConvert,"
+        AddJSLine 0, "};"
+        AddJSLine 0, "}"
+        AddJSLine 0, "if (typeof module != 'undefined') { module.exports.QBCompiler = _QBCompiler; }"
 
     ElseIf moduleName <> "" Then
-        AddJSLine 0, "return this;"
+        'AddJSLine 0, "return this;"
         AddJSLine 0, "}"
         AddJSLine 0, "const " + moduleName + " = await _" + moduleName + "();"
 
@@ -192,6 +255,10 @@ Sub QBToJS (source As String, sourceType As Integer, moduleName As String)
         'Else
         '    AddJSLine 0, "} catch (error) { console.log(error); throw error; }"
     End If
+End Sub
+
+Sub SetSelfConvert ()
+    forceSelfConvert = True
 End Sub
 
 Sub InitTypes
@@ -245,6 +312,7 @@ Sub ResetDataStructures
     End If
     currentMethod = ""
     programMethods = 0
+    staticVarLine = 0
 End Sub
 
 Sub InitData
@@ -270,18 +338,21 @@ End Sub
 Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As String)
     Dim typeMode As Integer: typeMode = False
     Dim jsMode As Integer: jsMode = False
-    Dim i As Integer
+    Dim ignoreMode As Integer: ignoreMode = False
+    Dim As Integer i, j
     Dim indent As Integer
     Dim tempIndent As Integer
     Dim m As Method
     Dim totalIndent As Integer
     totalIndent = 1
     Dim caseCount As Integer
-    Dim loopMode(100) As Integer ' TODO: only supports 100 levels of do/loop nesting
-    Dim loopLevel As Integer
+    Dim containers(10000) As Container ' TODO: replace hardcoded limit?
+    Dim cindex As Integer
     Dim caseVar As String
     Dim currType As Integer
     Dim loopIndex As String
+    Dim sfix As String
+    Dim ctype As String
 
     For i = firstLine To lastLine
         indent = 0
@@ -300,13 +371,27 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
         Dim first As String
         first = UCase$(parts(1))
 
+        sfix = FixCondition(first, parts(), 1, "")
+        If sfix <> "" Then first = sfix
+
         If jsMode = True Then
             If first = "$END" Then
-                jsMode = False
-                AddJSLine 0, "//-------- END JS native code block --------"
+                If jsMode Then
+                    jsMode = False
+                    AddJSLine 0, "//-------- END JS native code block --------"
+                End If
             Else
                 AddJSLine i, lines(i).text
             End If
+
+        ElseIf ignoreMode = True Then
+            If first = "$END" Then ignoreMode = False
+
+        ElseIf first = "$END" Then
+            ' shrug
+
+        ElseIf first = "$ELSE" Or first = "$ELSEIF" Then
+            ignoreMode = True
 
         ElseIf typeMode = True Then
             If first = "END" Then
@@ -315,14 +400,11 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     typeMode = False
                 End If
             Else
-                Dim tvar As Variable
-                tvar.typeId = currType
-                tvar.name = parts(1)
-                tvar.type = UCase$(parts(3))
-                If tvar.type = "_UNSIGNED" Then tvar.type = tvar.type + " " + UCase$(parts(4))
-                AddVariable tvar, typeVars()
+                DeclareTypeVar parts(), currType, i
             End If
         Else
+            CheckParen lines(i).text, i
+
             If first = "CONST" Then
                 ReDim As String constParts(0)
                 Dim As Integer constCount
@@ -338,15 +420,19 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                         cleft = Left$(constParts(constIdx), eqi - 1)
                         cright = Mid$(constParts(constIdx), eqi + 1)
                         js = js + "const " + cleft + " = " + ConvertExpression(cright, i) + "; "
-                        AddConst cleft
+                        AddConst _Trim$(cleft)
                     End If
                 Next constIdx
 
-            ElseIf first = "DIM" Or first = "REDIM" Or first = "STATIC" Then
+            ElseIf first = "DIM" Or first = "REDIM" Or first = "STATIC" Or first = "SHARED" Then
                 js = DeclareVar(parts(), i)
 
 
             ElseIf first = "SELECT" Then
+                cindex = cindex + 1
+                containers(cindex).type = "SELECT CASE"
+                containers(cindex).line = i
+
                 caseVar = GenJSVar
                 js = "var " + caseVar + " = " + ConvertExpression(Join(parts(), 3, -1, " "), i) + "; "
                 js = js + "switch (" + caseVar + ") {"
@@ -399,8 +485,13 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
                 If Left$(_Trim$(fstep), 1) = "-" Then fcond = " >= "
 
+                cindex = cindex + 1
+                containers(cindex).type = "FOR"
+                containers(cindex).label = GenJSLabel
+                containers(cindex).line = i
+
                 loopIndex = GenJSVar
-                js = "var " + loopIndex + " = 0;"
+                js = "var " + loopIndex + " = 0; " + containers(cindex).label + ":"
                 js = js + " for (" + fvar + "=" + sval + "; " + fvar + fcond + uval + "; " + fvar + "=" + fvar + " + " + fstep + ") {"
                 js = js + " if (QB.halted()) { return; } "
                 js = js + loopIndex + "++; "
@@ -409,6 +500,10 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 indent = 1
 
             ElseIf first = "IF" Then
+                cindex = cindex + 1
+                containers(cindex).type = "IF"
+                containers(cindex).line = i
+
                 Dim thenIndex As Integer
                 For thenIndex = 2 To UBound(parts)
                     If UCase$(parts(thenIndex)) = "THEN" Then Exit For
@@ -432,21 +527,42 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     Dim npi As Integer
                     npcount = ListSplit(Join(parts(), 2, -1, " "), nparts())
                     For npi = 1 To npcount
-                        js = js + "} "
-                        indent = indent - 1
+                        If CheckBlockEnd(containers(), cindex, first, i) Then
+                            js = js + "} "
+                            indent = -1
+                            cindex = cindex - 1
+                        Else
+                            Exit For
+                        End If
                     Next npi
                 Else
-                    js = js + "}"
-                    indent = -1
+                    If CheckBlockEnd(containers(), cindex, first, i) Then
+                        js = js + "}"
+                        indent = -1
+                        cindex = cindex - 1
+                    End If
                 End If
 
             ElseIf first = "END" Then
                 If UBound(parts) = 1 Then
                     js = "QB.halt(); return;"
                 Else
-                    If UCase$(parts(2)) = "SELECT" Then js = "break;"
-                    js = js + "}"
-                    indent = -1
+                    second = UCase$(parts(2))
+                    If second = "IF" Then
+                        If CheckBlockEnd(containers(), cindex, "END IF", i) Then
+                            js = js + "}"
+                            indent = -1
+                            cindex = cindex - 1
+                        End If
+                    ElseIf second = "SELECT" Then
+                        If CheckBlockEnd(containers(), cindex, "END SELECT", i) Then
+                            js = "break;" + " }"
+                            indent = -1
+                            cindex = cindex - 1
+                        End If
+                    Else
+                        AddError i, "Syntax error after END"
+                    End If
                 End If
 
             ElseIf first = "SYSTEM" Then
@@ -457,25 +573,32 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     If UCase$(parts(2)) = "JAVASCRIPT" Then
                         jsMode = True
                         js = "//-------- BEGIN JS native code block --------"
+                    ElseIf UCase$(parts(2)) <> "WEB" Then
+                        ignoreMode = True
                     End If
                 End If
 
             ElseIf first = "DO" Then
-                loopLevel = loopLevel + 1
+                cindex = cindex + 1
+                containers(cindex).label = GenJSLabel
+                containers(cindex).type = "DO"
+                containers(cindex).line = i
 
                 loopIndex = GenJSVar
-                js = "var " + loopIndex + " = 0;"
+                js = "var " + loopIndex + " = 0; " + containers(cindex).label + ":"
 
                 If UBound(parts) > 1 Then
+                    sfix = FixCondition(UCase$(parts(2)), parts(), 2, "DO ")
+
                     If UCase$(parts(2)) = "WHILE" Then
                         js = js + " while (" + ConvertExpression(Join(parts(), 3, -1, " "), i) + ") {"
                     Else
                         js = js + " while (!(" + ConvertExpression(Join(parts(), 3, -1, " "), i) + ")) {"
                     End If
-                    loopMode(loopLevel) = 1
+                    containers(cindex).mode = 1
                 Else
                     js = js + " do {"
-                    loopMode(loopLevel) = 2
+                    containers(cindex).mode = 2
                 End If
                 indent = 1
                 js = js + " if (QB.halted()) { return; }"
@@ -484,10 +607,13 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
 
             ElseIf first = "WHILE" Then
-                loopLevel = loopLevel + 1
+                cindex = cindex + 1
+                containers(cindex).label = GenJSLabel
+                containers(cindex).type = "WHILE"
+                containers(cindex).line = i
 
                 loopIndex = GenJSVar
-                js = "var " + loopIndex + " = 0;"
+                js = "var " + loopIndex + " = 0; " + containers(cindex).label + ":"
                 js = js + " while (" + ConvertExpression(Join(parts(), 2, -1, " "), i) + ") {"
                 js = js + " if (QB.halted()) { return; }"
                 js = js + loopIndex + "++; "
@@ -496,36 +622,65 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                 indent = 1
 
             ElseIf first = "WEND" Then
-                js = "}"
-                loopLevel = loopLevel - 1
-                indent = -1
+                'ctype = ""
+                'If cindex > 0 Then ctype = containers(cindex).type
+                'If ctype <> "WHILE" Then
+                '    AddWarning i, "WEND without WHILE"
+                'Else
+                If CheckBlockEnd(containers(), cindex, first, i) Then
+                    js = "}"
+                    cindex = cindex - 1
+                    indent = -1
+                End If
 
             ElseIf first = "LOOP" Then
-                If loopMode(loopLevel) = 1 Then
-                    js = "}"
-                Else
-                    js = "} while (("
-                    If UBound(parts) < 2 Then
-                        js = js + "1));"
+                If CheckBlockEnd(containers(), cindex, first, i) Then
+                    If containers(cindex).mode = 1 Then
+                        js = "}"
                     Else
-                        If UCase$(parts(2)) = "UNTIL" Then js = "} while (!("
-                        js = js + ConvertExpression(Join(parts(), 3, UBound(parts), " "), i) + "))"
-                    End If
-                End If
-                loopLevel = loopLevel - 1
-                indent = -1
+                        sfix = FixCondition(UCase$(parts(2)), parts(), 2, "LOOP ")
 
-            ElseIf first = "_CONTINUE" Then
+                        js = "} while (("
+                        If UBound(parts) < 2 Then
+                            js = js + "1));"
+                        Else
+                            If UCase$(parts(2)) = "UNTIL" Then js = "} while (!("
+                            js = js + ConvertExpression(Join(parts(), 3, UBound(parts), " "), i) + "))"
+                        End If
+                    End If
+                    cindex = cindex - 1
+                    indent = -1
+                End If
+
+            ElseIf first = "_CONTINUE" Or first = "CONTINUE" Then
                 js = "continue;"
 
-            ElseIf UCase$(l) = "EXIT FUNCTION" Then
-                js = "return " + RemoveSuffix(functionName) + ";"
-
-            ElseIf UCase$(l) = "EXIT SUB" Then
-                js = "return;"
-
             ElseIf first = "EXIT" Then
-                js = "break;"
+                second = ""
+                If UBound(parts) > 1 Then second = UCase$(parts(2))
+
+                If second = "FUNCTION" Then
+                    js = "return " + RemoveSuffix(functionName) + ";"
+
+                ElseIf second = "SUB" Then
+                    js = "return;"
+
+                ElseIf second = "DO" Or second = "WHILE" Or second = "FOR" Then
+                    Dim lli As Integer
+                    For lli = cindex To 0 Step -1
+                        If lli > 0 Then
+                            If containers(lli).type = second Then Exit For
+                        End If
+                    Next lli
+                    If lli > 0 Then
+                        js = "break " + containers(lli).label + ";"
+                    Else
+                        AddError i, "EXIT " + second + " without " + second
+                    End If
+
+                Else
+                    AddError i, "Syntax error after EXIT"
+                End If
 
             ElseIf first = "TYPE" Then
                 typeMode = True
@@ -564,7 +719,7 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     subname = Left$(subline, subend - 1)
                 End If
 
-                If FindMethod(subname, m, "SUB") Then
+                If FindMethod(subname, m, "SUB", True) Then
                     Dim subargs As String
                     If subname = subline Then
                         subargs = ""
@@ -579,7 +734,6 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
             ElseIf c > 2 Or first = "LET" Then
                 Dim assignment As Integer
                 assignment = 0
-                Dim j As Integer
                 For j = 1 To UBound(parts)
                     If parts(j) = "=" Then
                         assignment = j
@@ -598,7 +752,18 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
                     js = RemoveSuffix(ConvertExpression(Join(parts(), asnVarIndex, assignment - 1, " "), i)) + " = " + ConvertExpression(Join(parts(), assignment + 1, -1, " "), i) + ";"
 
                 Else
-                    If FindMethod(parts(1), m, "SUB") Then
+                    ' Check to see if there was no space left between the sub name and initial paren
+                    Dim parendx As Integer
+                    parendx = InStr(parts(1), "(")
+                    If parendx > 0 Then
+                        ' If so, resplit the line with a space between
+                        Dim As String sname, arg1
+                        sname = Mid$(parts(1), 1, parendx - 1)
+                        arg1 = Mid$(parts(1), parendx)
+                        c = SLSplit(sname + " " + arg1 + Join(parts(), 2, -1, " "), parts(), True)
+                    End If
+
+                    If FindMethod(parts(1), m, "SUB", True) Then
                         js = ConvertSub(m, Join(parts(), 2, -1, " "), i)
                     Else
                         js = "// " + l
@@ -608,7 +773,7 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
 
             Else
-                If FindMethod(parts(1), m, "SUB") Then
+                If FindMethod(parts(1), m, "SUB", True) Then
                     js = ConvertSub(m, Join(parts(), 2, -1, " "), i)
                 Else
                     js = "// " + l
@@ -628,7 +793,66 @@ Sub ConvertLines (firstLine As Integer, lastLine As Integer, functionName As Str
 
     Next i
 
+    If cindex > 0 Then
+        AddError containers(cindex).line, containers(cindex).type + " without " + EndPhraseFor(containers(cindex).type)
+    End If
+
 End Sub
+
+Function BeginPhraseFor$ (endPhrase As String)
+    Dim bp As String
+    Select Case endPhrase
+        Case "NEXT": bp = "FOR"
+        Case "LOOP": bp = "DO"
+        Case "WEND": bp = "WHILE"
+        Case "END IF": bp = "IF"
+        Case "END SELECT": bp = "SELECT CASE"
+    End Select
+    BeginPhraseFor = bp
+End Function
+
+Function EndPhraseFor$ (beginPhrase As String)
+    Dim ep As String
+    Select Case beginPhrase
+        Case "FOR": ep = "NEXT"
+        Case "DO": ep = "LOOP"
+        Case "WHILE": ep = "WEND"
+        Case "IF": ep = "END IF"
+        Case "SELECT CASE": ep = "END SELECT"
+    End Select
+    EndPhraseFor = ep
+End Function
+
+Function CheckBlockEnd (cstack() As Container, cindex As Integer, endPhrase As String, lineNumber As Integer)
+    Dim As String ctype, beginPhrase
+    Dim success As Integer
+    success = True
+    beginPhrase = BeginPhraseFor(endPhrase)
+    If cindex > 0 Then ctype = cstack(cindex).type
+    If ctype <> beginPhrase Then
+        AddError lineNumber, endPhrase + " without " + beginPhrase
+        success = False
+    End If
+
+    CheckBlockEnd = success
+End Function
+
+Function FixCondition$ (word As String, parts() As String, idx As Integer, prefix As String)
+    ' The fact that we are doing this probably means we need to improve the initial "tokenizer"
+    ' Is this is a condition keyword with no space between the keyword and the open paren?
+    FixCondition = ""
+    Dim As Integer c, j
+    For j = 0 To UBound(condWords)
+        If InStr(word, condWords(j) + "(") = 1 Then
+            ' If so, resplit the line with a space between
+            Dim As String a1
+            a1 = Mid$(parts(idx), Len(condWords(j)) + 1)
+            c = SLSplit(prefix + condWords(j) + " " + a1 + Join(parts(), idx + 1, -1, " "), parts(), True)
+            FixCondition = condWords(j)
+            Exit For
+        End If
+    Next j
+End Function
 
 Sub ParseExport (s As String, lineIndex As Integer)
     Dim exportedItem As String
@@ -642,7 +866,9 @@ Sub ParseExport (s As String, lineIndex As Integer)
     Dim c As Integer
     c = SLSplit(s, parts(), False)
 
-    If FindMethod(parts(1), es, "SUB") Then
+    'AddWarning lineIndex, "ParseExport: [" + s + "]"
+
+    If FindMethod(parts(1), es, "SUB", False) Then
         If c > 2 Then
             exportName = parts(3)
         Else
@@ -656,7 +882,7 @@ Sub ParseExport (s As String, lineIndex As Integer)
         found = True
     End If
 
-    If FindMethod(parts(1), ef, "FUNCTION") Then
+    If FindMethod(parts(1), ef, "FUNCTION", False) Then
         If c > 2 Then
             exportName = parts(3)
         Else
@@ -689,6 +915,7 @@ Sub ParseExport (s As String, lineIndex As Integer)
     End If
 
     If Not found Then
+        ' TODO: this is not actually being reported - warnings seem to be cleared after module compilation is complete
         AddWarning lineIndex, "Invalid export [" + parts(1) + "].  Exported items must be a Sub, Function or Const in the current module."
     End If
 
@@ -698,7 +925,7 @@ Sub RegisterExport (exportName As String, exportedItem As String)
     Dim esize
     esize = UBound(exportLines) + 1
     ReDim _Preserve exportLines(esize) As String
-    exportLines(esize) = "this." + exportName + " = " + exportedItem + ";"
+    exportLines(esize) = exportName + ": " + exportedItem + ","
 End Sub
 
 Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
@@ -759,6 +986,9 @@ Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
             m.sync = False
         End If
 
+    ElseIf m.name = "Name" Then
+        js = CallMethod(m) + "(" + ConvertSubName(args, lineNumber) + ");"
+
     ElseIf m.name = "PSet" Or m.name = "Circle" Or m.name = "PReset" Or m.name = "Paint" Then
         js = CallMethod(m) + "(" + ConvertPSet(args, lineNumber) + ");"
 
@@ -787,13 +1017,13 @@ Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
     ElseIf m.name = "Write" Then
         js = ConvertWrite(m, args, lineNumber)
 
-    ElseIf m.name = "_PrintString" Then
+    ElseIf m.name = "_PrintString" Or m.name = "PrintString" Then
         js = CallMethod(m) + "(" + ConvertPrintString(args, lineNumber) + ");"
 
-    ElseIf m.name = "_PutImage" Then
+    ElseIf m.name = "_PutImage" Or m.name = "PutImage" Then
         js = CallMethod(m) + "(" + ConvertPutImage(args, lineNumber) + ");"
 
-    ElseIf m.name = "_FullScreen" Then
+    ElseIf m.name = "_FullScreen" Or m.name = "FullScreen" Then
         js = CallMethod(m) + "(" + ConvertFullScreen(args) + ");"
 
     Else
@@ -802,20 +1032,6 @@ Function ConvertSub$ (m As Method, args As String, lineNumber As Integer)
 
     ConvertSub = js
 End Function
-
-'Function ConvertGet$ (m As Method, args As String, lineNumber As Integer)
-'    ReDim parts(0) As String
-'    Dim argc As Integer
-'    argc = ListSplit(args, parts())
-
-'    If argc < 3 Then
-'        AddWarning lineNumber, "Syntax error"
-'        Exit Function
-'    End If
-
-
-'    AddWarning lineNumber, "Unsupported method: GET"
-'End Function
 
 Function ConvertPut$ (m As Method, args As String, lineNumber As Integer)
     ReDim parts(0) As String
@@ -867,16 +1083,16 @@ Function ConvertFullScreen$ (args As String)
     If argc > 0 Then
         Dim arg As String
         arg = UCase$(parts(1))
-        If arg = "_OFF" Then
+        If arg = "_OFF" Or arg = "OFF" Then
             mode = "QB.OFF"
-        ElseIf arg = "_STRETCH" Then
+        ElseIf arg = "_STRETCH" Or arg = "STRETCH" Then
             mode = "QB.STRETCH"
-        ElseIf arg = "_SQUAREPIXELS" Then
+        ElseIf arg = "_SQUAREPIXELS" Or arg = "SQUAREPIXELS" Then
             mode = "QB.SQUAREPIXELS"
         End If
     End If
     If argc > 1 Then
-        If UCase$(parts(2)) = "_SMOOTH" Then doSmooth = "true"
+        If UCase$(parts(2)) = "_SMOOTH" Or UCase$(parts(2)) = "SMOOTH" Then doSmooth = "true"
     End If
 
     ConvertFullScreen = mode + ", " + doSmooth
@@ -937,7 +1153,7 @@ Function ConvertPutImage$ (args As String, lineNumber As Integer)
     destImage = "undefined"
 
     doSmooth = "false"
-    If EndsWith(_Trim$(UCase$(args)), "_SMOOTH") Then
+    If EndsWith(_Trim$(UCase$(args)), "_SMOOTH") Or EndsWith(_Trim$(UCase$(args)), "SMOOTH") Then
         doSmooth = "true"
         args = Left$(_Trim$(args), Len(_Trim$(args)) - 7)
     End If
@@ -950,7 +1166,7 @@ Function ConvertPutImage$ (args As String, lineNumber As Integer)
     End If
     If argc >= 4 Then destCoord = ConvertCoordParam(parts(4), True, lineNumber)
     If argc >= 5 Then
-        If _Trim$(UCase$(parts(5))) = "_SMOOTH" Then doSmooth = "true"
+        If _Trim$(UCase$(parts(5))) = "_SMOOTH" Or _Trim$(UCase$(parts(5))) = "SMOOTH" Then doSmooth = "true"
     End If
 
     ConvertPutImage = startCoord + ", " + sourceImage + ", " + destImage + ", " + destCoord + ", " + doSmooth
@@ -1026,6 +1242,29 @@ Function ConvertCls$ (args As String, lineNumber As Integer)
     If argc >= 2 Then bgcolor = ConvertExpression(parts(2), lineNumber)
 
     ConvertCls$ = method + ", " + bgcolor
+End Function
+
+Function ConvertSubName$ (args As String, lineNumber As Integer)
+    Dim argc As Integer
+    ReDim parts(0) As String
+    Dim asIndex As Integer
+
+    argc = SLSplit2(args, parts())
+
+    Dim i As Integer
+    For i = 1 To argc
+        If UCase$(parts(i)) = "AS" Then asIndex = i
+    Next i
+
+    If asIndex = 0 Or asIndex = argc Then
+        AddWarning lineNumber, "Syntax Error"
+        ConvertSubName$ = "undefined, undefined"
+    Else
+        Dim As String oldname, newname
+        oldname = Join(parts(), 1, asIndex - 1, " ")
+        newname = Join(parts(), asIndex + 1, -1, " ")
+        ConvertSubName$ = ConvertExpression(oldname, lineNumber) + ", " + ConvertExpression(newname, lineNumber)
+    End If
 End Function
 
 Function ConvertRandomize$ (m As Method, args As String, lineNumber As Integer)
@@ -1335,7 +1574,6 @@ Function ConvertInput$ (m As Method, args As String, lineNumber As Integer)
     js = "var " + vname + " = new Array(" + Str$(UBound(vars)) + "); "
     js = js + CallMethod(m) + "(" + vname + ", " + preventNewline + ", " + addQuestionPrompt + ", " + prompt + "); "
     For i = 1 To UBound(vars)
-        'If Not StartsWith(_Trim$(vars(i)), "#") Then ' special case to prevent file references from being output during self-compilation
         ' Convert to appropriate variable type on assignment
         Dim vartype As String
         vartype = GetVarType(vars(i))
@@ -1459,7 +1697,15 @@ Function ConvertSwap$ (m As Method, args As String, lineNumber As Integer)
 End Function
 
 Function GenJSVar$
-    GenJSVar = "___v" + _Trim$(Str$(_Round(Rnd * 10000000)))
+    GenJSVar = "___v" + GenJSName
+End Function
+
+Function GenJSLabel$
+    GenJSLabel = "___l" + GenJSName
+End Function
+
+Function GenJSName$
+    GenJSName$ = _Trim$(Str$(_Round(Rnd * 10000000)))
 End Function
 
 Function FindParamChar (s As String, char As String)
@@ -1487,6 +1733,69 @@ Function FindParamChar (s As String, char As String)
     FindParamChar = idx
 End Function
 
+Sub DeclareTypeVar (parts() As String, typeId As Integer, lineNumber As Integer)
+
+    Dim vname As String
+    Dim vtype As String: vtype = ""
+    Dim vtypeIndex As Integer: vtypeIndex = 4
+    Dim isGlobal As Integer: isGlobal = False
+    Dim isArray As Integer: isArray = False
+    Dim isStatic As Integer: isStatic = False
+    Dim arraySize As String
+    Dim pstart As Integer
+    Dim bvar As Variable
+    Dim varnames(0) As String
+    Dim vnamecount As Integer
+    Dim findVar As Variable
+    Dim asIdx As Integer
+    asIdx = 0
+    bvar.typeId = typeId
+
+
+    Dim i As Integer
+    For i = 1 To UBound(parts)
+        If UCase$(parts(i)) = "AS" Then asIdx = i
+    Next i
+
+    If asIdx = 1 Then
+
+        ' Handle Dim As syntax
+        bvar.type = UCase$(parts(asIdx + 1))
+        Dim nextIdx As Integer
+        nextIdx = asIdx + 2
+        If bvar.type = "_UNSIGNED" Or bvar.type = "UNSIGNED" Then
+            bvar.type = NormalizeType("_UNSIGNED " + UCase$(parts(asIdx + 2)))
+            nextIdx = asIdx + 3
+        End If
+        'bvar.typeId = FindTypeId(bvar.type)
+
+        vnamecount = ListSplit(Join(parts(), nextIdx, -1, " "), varnames())
+        For i = 1 To vnamecount
+            vname = _Trim$(varnames(i))
+            pstart = InStr(vname, "(")
+            If pstart > 0 Then
+                bvar.isArray = True
+                arraySize = ConvertExpression(Mid$(vname, pstart + 1, Len(vname) - pstart - 1), lineNumber)
+                bvar.name = RemoveSuffix(Left$(vname, pstart - 1))
+            Else
+                bvar.isArray = False
+                arraySize = ""
+                bvar.name = vname
+            End If
+            AddVariable bvar, typeVars()
+        Next i
+
+    Else
+        'Handle traditional syntax
+        bvar.name = parts(1)
+        bvar.type = UCase$(parts(3))
+        If bvar.type = "_UNSIGNED" Or bvar.type = "UNSIGNED" Then bvar.type = NormalizeType("_UNSIGNED " + UCase$(parts(4)))
+        'bvar.typeId = FindTypeId(bvar.type)
+        AddVariable bvar, typeVars()
+    End If
+
+End Sub
+
 Function DeclareVar$ (parts() As String, lineNumber As Integer)
 
     Dim vname As String
@@ -1494,6 +1803,7 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
     Dim vtypeIndex As Integer: vtypeIndex = 4
     Dim isGlobal As Integer: isGlobal = False
     Dim isArray As Integer: isArray = False
+    Dim isStatic As Integer: isStatic = False
     Dim arraySize As String
     Dim pstart As Integer
     Dim bvar As Variable
@@ -1505,10 +1815,32 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
     Dim js As String: js = ""
     Dim preserve As String: preserve = "false"
 
+    If UCase$(parts(1)) = "STATIC" Then
+        If currentMethod = "" Then
+            AddWarning lineNumber, "STATIC must be used within a SUB/FUNCTION"
+            DeclareVar = ""
+            Exit Function
+        Else
+            isStatic = True
+        End If
+    ElseIf UCase$(parts(1)) = "SHARED" Then
+        If currentMethod = "" Then
+            AddWarning lineNumber, "SHARED must be used within a SUB/FUNCTION"
+            DeclareVar = ""
+        Else
+            ' We get this for "free" due to the fact that all variables
+            ' declared in the main module are effectively shared.
+            ' This will need to be revisited when support for
+            ' implicit variable declaration is added
+            DeclareVar = "/* shared variable(s): " + Join(parts(), 1, -1, " ") + " */"
+        End If
+        Exit Function
+    End If
+
     Dim i As Integer
     For i = 1 To UBound(parts)
         If UCase$(parts(i)) = "AS" Then asIdx = i
-        If UCase$(parts(i)) = "_PRESERVE" Then preserve = "true"
+        If UCase$(parts(i)) = "_PRESERVE" Or UCase$(parts(i)) = "PRESERVE" Then preserve = "true"
         If UCase$(parts(i)) = "SHARED" Then isGlobal = True
     Next i
 
@@ -1521,7 +1853,7 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
         bvar.type = UCase$(parts(asIdx + 1))
         Dim nextIdx As Integer
         nextIdx = asIdx + 2
-        If bvar.type = "_UNSIGNED" Then
+        If bvar.type = "_UNSIGNED" Or bvar.type = "UNSIGNED" Then
             bvar.type = bvar.type + " " + UCase$(parts(asIdx + 2))
             nextIdx = asIdx + 3
         End If
@@ -1540,27 +1872,8 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
                 arraySize = ""
                 bvar.name = vname
             End If
-            bvar.jsname = ""
 
-            ' TODO: this code is in two places - refactor into a separate function
-            If Not bvar.isArray Then
-                js = js + "var " + bvar.name + " = " + InitTypeValue(bvar.type) + "; "
-
-            Else
-                If FindVariable(bvar.name, findVar, True) Then
-                    js = js + "QB.resizeArray(" + bvar.name + ", [" + FormatArraySize(arraySize) + "], " + InitTypeValue(bvar.type) + ", " + preserve + "); "
-                Else
-                    js = js + "var " + bvar.name + " = QB.initArray([" + FormatArraySize(arraySize) + "], " + InitTypeValue(bvar.type) + "); "
-                End If
-            End If
-
-            If isGlobal Then
-                AddVariable bvar, globalVars()
-            Else
-                AddVariable bvar, localVars()
-            End If
-
-            If PrintDataTypes Then js = js + " /* " + bvar.type + " */ "
+            js = RegisterVar(bvar, js, isGlobal, isStatic, preserve, arraySize)
         Next i
 
 
@@ -1572,7 +1885,7 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
         For i = 1 To UBound(parts)
             Dim p As String
             p = UCase$(parts(i))
-            If p = "DIM" Or p = "REDIM" Or p = "SHARED" Or p = "_PRESERVE" Then
+            If p = "DIM" Or p = "REDIM" Or p = "SHARED" Or p = "_PRESERVE" Or p = "PRESERVE" Or p = "STATIC" Then
                 nextIdx = i + 1
             End If
         Next i
@@ -1603,32 +1916,51 @@ Function DeclareVar$ (parts() As String, lineNumber As Integer)
                 bvar.isArray = False
                 arraySize = ""
             End If
-            bvar.jsname = ""
 
-
-            ' TODO: this code is in two places - refactor into a separate function
-            If Not bvar.isArray Then
-                js = js + "var " + bvar.name + " = " + InitTypeValue(bvar.type) + "; "
-
-            Else
-                If FindVariable(bvar.name, findVar, True) Then
-                    js = js + "QB.resizeArray(" + bvar.name + ", [" + FormatArraySize(arraySize) + "], " + InitTypeValue(bvar.type) + ", " + preserve + "); "
-                Else
-                    js = js + "var " + bvar.name + " = QB.initArray([" + FormatArraySize(arraySize) + "], " + InitTypeValue(bvar.type) + "); "
-                End If
-            End If
-
-            If isGlobal Then
-                AddVariable bvar, globalVars()
-            Else
-                AddVariable bvar, localVars()
-            End If
-
-            If PrintDataTypes Then js = js + " /* " + bvar.type + " */ "
+            js = RegisterVar(bvar, js, isGlobal, isStatic, preserve, arraySize)
         Next i
     End If
 
-    DeclareVar = js
+    If isStatic Then
+        jsLines(staticVarLine).text = jsLines(staticVarLine).text + js
+        DeclareVar = "/* static variable(s): " + Join(parts(), 1, -1, " ") + " */"
+    Else
+        DeclareVar = js
+    End If
+End Function
+
+Function RegisterVar$ (bvar As Variable, js As String, isGlobal As Integer, isStatic As Integer, preserve As String, arraySize As String)
+    Dim findVar As Variable
+    Dim varExists As Integer
+
+    bvar.jsname = RemoveSuffix(bvar.name)
+    If isStatic Then
+        bvar.jsname = "$" + currentMethod + "__" + bvar.jsname
+    End If
+    bvar.type = NormalizeType(bvar.type)
+
+    varExists = FindVariable(bvar.name, findVar, True)
+
+    If isGlobal Then
+        AddVariable bvar, globalVars()
+    Else
+        AddVariable bvar, localVars()
+    End If
+
+    If Not bvar.isArray Then
+        js = js + "var " + bvar.jsname + " = " + InitTypeValue(bvar.type) + "; "
+
+    Else
+        If varExists Then
+            js = js + "QB.resizeArray(" + bvar.jsname + ", [" + FormatArraySize(arraySize) + "], " + InitTypeValue(bvar.type) + ", " + preserve + "); "
+        Else
+            js = js + "var " + bvar.jsname + " = QB.initArray([" + FormatArraySize(arraySize) + "], " + InitTypeValue(bvar.type) + "); "
+        End If
+    End If
+
+    If PrintDataTypes Then js = js + " /* " + bvar.type + " */ "
+
+    RegisterVar = js
 End Function
 
 Function FormatArraySize$ (sizeString As String)
@@ -1644,10 +1976,23 @@ Function FormatArraySize$ (sizeString As String)
 
         If i > 1 Then sizeParams = sizeParams + ","
 
-        If scount = 1 Then
+        Dim As Integer j, toIndex
+        toIndex = 0
+        For j = 0 To scount
+            If "TO" = UCase$(subparts(j)) Then
+                toIndex = j
+                Exit For
+            End If
+        Next j
+
+        If toIndex = 0 Then
             sizeParams = sizeParams + "{l:0,u:" + subparts(1) + "}"
         Else
-            sizeParams = sizeParams + "{l:" + subparts(1) + ",u:" + subparts(3) + "}"
+            ' This must be the "x To y" format
+            Dim As String lb, ub
+            lb = Join(subparts(), 1, toIndex - 1, " ")
+            ub = Join(subparts(), toIndex + 1, -1, " ")
+            sizeParams = sizeParams + "{l:" + lb + ",u:" + ub + "}"
         End If
     Next i
     FormatArraySize = sizeParams
@@ -1718,11 +2063,11 @@ Function ConvertExpression$ (ex As String, lineNumber As Integer)
                 If i = Len(ex) Then word = word + c
                 Dim uword As String: uword = UCase$(_Trim$(word))
                 If uword = "NOT" Then
-                    js = js + "!"
+                    js = js + "~"
                 ElseIf uword = "AND" Then
-                    js = js + " && "
+                    js = js + " & "
                 ElseIf uword = "OR" Then
-                    js = js + " || "
+                    js = js + " | "
                 ElseIf uword = "MOD" Then
                     js = js + " % "
                 ElseIf uword = "XOR" Then
@@ -1746,8 +2091,8 @@ Function ConvertExpression$ (ex As String, lineNumber As Integer)
                         ' TODO: Need a more sophisticated way to determine whether
                         '       the return value is being assigned in the method.
                         '       Currently, this does not support recursive calls.
-                        '       (is this still true?)
-                        If FindMethod(word, m, "FUNCTION") Then
+                        '       (is this comment still true?)
+                        If FindMethod(word, m, "FUNCTION", True) Then
                             If m.name <> currentMethod Then
                                 js = js + CallMethod$(m) + "()"
                             Else
@@ -1810,7 +2155,7 @@ Function ConvertExpression$ (ex As String, lineNumber As Integer)
                         ' This is the case where a dimension is specified in order to retrieve or set a value in the array
                         js = js + fneg + "QB.arrayValue(" + bvar.jsname + ", [" + ConvertExpression(ex2, lineNumber) + "]).value"
                     End If
-                ElseIf FindMethod(word, m, "FUNCTION") Then
+                ElseIf FindMethod(word, m, "FUNCTION", True) Then
                     js = js + fneg + "(" + CallMethod(m) + "(" + ConvertMethodParams(ex2, lineNumber) + "))"
                 Else
                     If _Trim$(word) <> "" Then AddWarning lineNumber, "Missing function or array [" + word + "]"
@@ -1890,11 +2235,13 @@ Function FindVariable (varname As String, bvar As Variable, isArray As Integer)
     FindVariable = found
 End Function
 
-Function FindMethod (mname As String, m As Method, t As String)
+Function FindMethod (mname As String, m As Method, t As String, includeBuiltIn As Integer)
     Dim found As Integer: found = False
     Dim i As Integer
     For i = 1 To UBound(methods)
-        If methods(i).uname = _Trim$(UCase$(RemoveSuffix(mname))) And methods(i).type = t Then
+        If (Not includeBuiltIn) And methods(i).builtin Then
+            ' Skip it
+        ElseIf methods(i).uname = _Trim$(UCase$(RemoveSuffix(mname))) And methods(i).type = t Then
             found = True
             m.line = methods(i).line
             m.type = methods(i).type
@@ -1940,6 +2287,8 @@ Sub ConvertMethods ()
 
             ' clear the local variables
             ReDim As Variable localVars(0)
+            Dim intConv As String
+            intConv = ""
 
             ' All program methods are defined as async as we do not know whether
             ' a synchronous wait will occur downstream
@@ -1960,7 +2309,7 @@ Sub ConvertMethods ()
                     ' add the parameter to the local variables
                     Dim bvar As Variable
                     bvar.name = RemoveSuffix(parts(1))
-                    bvar.type = parts(2)
+                    bvar.type = NormalizeType(parts(2))
                     bvar.typeId = FindTypeId(bvar.type)
                     If parts(3) = "true" Then
                         bvar.isArray = True
@@ -1968,11 +2317,28 @@ Sub ConvertMethods ()
                     bvar.jsname = ""
                     AddVariable bvar, localVars()
 
+                    ' convert integer parameters from floating point (or string)
+                    If Not bvar.isArray Then
+                        Dim typeName As String
+                        typeName = UCase$(bvar.type)
+                        If typeName = "_BIT" Or typeName = "_UNSIGNED _BIT" Or _
+                           typeName = "_BYTE" Or typeName = "_UNSIGNED _BYTE" Or _
+                           typeName = "INTEGER" Or typeName = "_UNSIGNED INTEGER" Or _
+                           typeName = "LONG" Or typeName = "_UNSIGNED LONG" Or _
+                           typeName = "_INTEGER64" Or typeName = "_UNSIGNED _INTEGER64" Then
+                            ' lookup the variable to get the jsname
+                            Dim varIsArray As Integer
+                            If FindVariable(bvar.name, bvar, varIsArray) Then
+                                intConv = intConv + bvar.jsname + " = Math.round(" + bvar.jsname + "); "
+                            End If
+                        End If
+                    End If
                 Next a
             End If
             methodDec = methodDec + ") {"
+
             AddJSLine methods(i).line, methodDec
-            AddJSLine methods(i).line, "if (QB.halted()) { return; }"
+            AddJSLine methods(i).line, "if (QB.halted()) { return; }; " + intConv
             If methods(i).type = "FUNCTION" Then
                 AddJSLine methods(i).line, "var " + RemoveSuffix(methods(i).name) + " = null;"
             End If
@@ -1988,10 +2354,14 @@ Sub ConvertMethods ()
     Next i
 
     ' Add the export lines
-    For i = 1 To UBound(exportLines)
-        AddJSLine i, exportLines(i)
-    Next i
-    ReDim exportLines(0) As String
+    If UBound(exportLines) > 0 Then
+        AddJSLine 0, "return {"
+        For i = 1 To UBound(exportLines)
+            AddJSLine i, exportLines(i)
+        Next i
+        AddJSLine 0, "};"
+        ReDim exportLines(0) As String
+    End If
 End Sub
 
 
@@ -2033,7 +2403,7 @@ Sub ReadLinesFromText (sourceText As String)
             Dim lineIndex As Integer
             lineIndex = i
 
-            If StartsWith(UCase$(fline), "IMPORT") Then
+            If StartsWith(LTrim$(UCase$(fline)), "IMPORT") Then
                 ReDim parts(0) As String
                 Dim pcount As Integer
                 pcount = SLSplit(fline, parts(), False)
@@ -2053,11 +2423,13 @@ Sub ReadLinesFromText (sourceText As String)
                 End If
             End If
 
-            While EndsWith(fline, "_")
+            fline = Replace(fline, CR, "")
+            While EndsWith(fline, " _")
                 i = i + 1
                 Dim nextLine As String
-                nextLine = sourceLines(i)
+                nextLine = Replace(sourceLines(i), CR, "")
                 fline = Left$(fline, Len(fline) - 1) + nextLine
+                'AddWarning i, "Found it: [" + fline + "]"
             Wend
 
             rawJS = ReadLine(i, fline, rawJS)
@@ -2155,9 +2527,16 @@ Function ReadLine (lineIndex As Integer, fline As String, rawJS As Integer)
         End If
     Next i
 
+    ' If there is content before the IF, split it into individual lines
+    If ifIdx > 1 Then
+        ' Unless it is an END IF
+        If UCase$(words(ifIdx - 1)) <> "END" Then
+            AddSubLines lineIndex, Join(words(), 1, ifIdx - 1, " ")
+        End If
+    End If
 
     If thenIdx > 0 And thenIdx < wcount Then
-        AddLine lineIndex, Join(words(), 1, thenIdx, " ")
+        AddLine lineIndex, Join(words(), ifIdx, thenIdx, " ")
         If elseIdx > 0 Then
             AddSubLines lineIndex, Join(words(), thenIdx + 1, elseIdx - 1, " ")
             AddLine lineIndex, "Else"
@@ -2256,8 +2635,16 @@ Sub FindMethods
                         isArray = "true"
                         argname = Left$(argname, Len(argname) - 2)
                     End If
-                    If apcount = 3 Then
-                        args = args + argname + ":" + UCase$(aparts(3)) + ":" + isArray
+                    If apcount > 2 Then
+                        Dim typeName As String
+                        typeName = UCase$(aparts(3))
+                        If apcount > 3 Then
+                            If typeName = "UNSIGNED" Or typeName = "_UNSIGNED" Then
+                                typeName = NormalizeType("_UNSIGNED " + UCase$(aparts(4)))
+                            End If
+                        End If
+                        'args = args + argname + ":" + UCase$(aparts(3)) + ":" + isArray
+                        args = args + argname + ":" + typeName + ":" + isArray
                     Else
                         args = args + argname + ":" + DataTypeFromName(aparts(1)) + ":" + isArray
                     End If
@@ -2426,6 +2813,35 @@ Function FindOperator (c As String, c2 As String)
         FindOperator = 0
     End If
 End Function
+
+Sub CheckParen (sourceString As String, lineNumber As Long)
+    Dim i As Integer
+    Dim quoteMode As Integer
+    Dim paren As Integer
+    For i = 1 To Len(sourceString)
+        Dim c As String
+        c = Mid$(sourceString, i, 1)
+
+        If c = Chr$(34) Then
+            quoteMode = Not quoteMode
+
+        ElseIf quoteMode Then
+            ' skip the remaining checks and move to the next char
+
+        ElseIf c = "(" Then
+            paren = paren + 1
+
+        ElseIf c = ")" Then
+            paren = paren - 1
+        End If
+    Next i
+
+    If paren < 0 Then
+        AddError lineNumber, "Missing ("
+    ElseIf paren > 0 Then
+        AddError lineNumber, "Missing )"
+    End If
+End Sub
 
 ' String literal-aware split - copy
 Function SLSplit2 (sourceString As String, results() As String)
@@ -2648,10 +3064,17 @@ Sub PrintTypes
     Next i
 End Sub
 
-Function CopyMethod (fromMethod As Method, toMethod As Method)
+Sub CopyMethod (fromMethod As Method, toMethod As Method)
     toMethod.type = fromMethod.type
     toMethod.name = fromMethod.name
-End Function
+    toMethod.returnType = fromMethod.returnType
+    toMethod.name = fromMethod.name
+    toMethod.uname = fromMethod.uname
+    toMethod.argc = fromMethod.argc
+    toMethod.args = fromMethod.args
+    toMethod.jsname = fromMethod.jsname
+    toMethod.sync = fromMethod.sync
+End Sub
 
 Sub AddMethod (m As Method, prefix As String, sync As Integer)
     Dim mcount: mcount = UBound(methods) + 1
@@ -2664,7 +3087,6 @@ Sub AddMethod (m As Method, prefix As String, sync As Integer)
     m.sync = sync
     methods(mcount) = m
 End Sub
-
 
 Sub AddExportMethod (m As Method, prefix As String, sync As Integer)
     Dim mcount: mcount = UBound(exportMethods) + 1
@@ -2697,6 +3119,7 @@ Sub AddGXMethod (mtype As String, mname As String, sync As Integer)
     m.name = mname
     m.uname = UCase$(m.name)
     m.sync = sync
+    m.builtin = True
     m.jsname = GXMethodJS(RemoveSuffix(mname))
     If mtype = "FUNCTION" Then
         m.returnType = DataTypeFromName(mname)
@@ -2708,7 +3131,19 @@ Sub AddQBMethod (mtype As String, mname As String, sync As Integer)
     Dim m As Method
     m.type = mtype
     m.name = mname
+    m.builtin = True
     AddMethod m, "QB.", sync
+    If InStr(mname, "_") = 1 Then
+        ' Register the method again without the "_" prefix
+        Dim m2 As Method
+        CopyMethod methods(UBound(methods)), m2
+        m2.name = Mid$(mname, 2)
+        m2.uname = UCase$(RemoveSuffix(m2.name))
+        m2.builtin = True
+        Dim mcount: mcount = UBound(methods) + 1
+        ReDim _Preserve As Method methods(mcount)
+        methods(mcount) = m2
+    End If
 End Sub
 
 Sub AddNativeMethod (mtype As String, mname As String, jsname As String, sync As Integer)
@@ -2718,6 +3153,7 @@ Sub AddNativeMethod (mtype As String, mname As String, jsname As String, sync As
     m.uname = UCase$(m.name)
     m.jsname = jsname
     m.sync = sync
+    m.builtin = True
 
     Dim mcount: mcount = UBound(methods) + 1
     ReDim _Preserve As Method methods(mcount)
@@ -2754,6 +3190,10 @@ Sub AddWarning (sourceLine As Integer, msgText As String)
     warnings(lcount).text = msgText
 End Sub
 
+Sub AddError (sourceLine As Integer, msgText As String)
+    AddWarning sourceLine, msgText
+    warnings(UBound(warnings)).mtype = MERROR
+End Sub
 
 Sub AddConst (vname As String)
     Dim v As Variable
@@ -2768,9 +3208,9 @@ Sub AddGXConst (vname As String)
     v.type = "CONST"
     v.name = vname
     If vname = "GX_TRUE" Then
-        v.jsname = "true"
+        v.jsname = "GX.TRUE"
     ElseIf vname = "GX_FALSE" Then
-        v.jsname = "false"
+        v.jsname = "GX.FALSE"
     Else
         Dim jsname As String
         jsname = Mid$(vname, 3, Len(vname) - 2)
@@ -2788,6 +3228,14 @@ Sub AddQBConst (vname As String)
     v.jsname = "QB." + vname
     v.isConst = True
     AddVariable v, globalVars()
+    If InStr(vname, "_") = 1 Then
+        Dim v2 As Variable
+        v2.type = v.type
+        v2.name = Mid$(v.name, 2)
+        v2.jsname = v.jsname
+        v2.isConst = v.isConst
+        AddVariable v2, globalVars()
+    End If
 End Sub
 
 Sub AddGlobal (vname As String, vtype As String, arraySize As Integer)
@@ -2812,7 +3260,7 @@ Sub AddVariable (bvar As Variable, vlist() As Variable)
     Dim vcount: vcount = UBound(vlist) + 1
     ReDim _Preserve As Variable vlist(vcount)
     Dim nvar As Variable
-    nvar.type = bvar.type
+    nvar.type = NormalizeType(bvar.type)
     nvar.name = bvar.name
     nvar.jsname = bvar.jsname
     nvar.isConst = bvar.isConst
@@ -2820,9 +3268,46 @@ Sub AddVariable (bvar As Variable, vlist() As Variable)
     nvar.arraySize = bvar.arraySize
     nvar.typeId = bvar.typeId
 
-    If nvar.jsname = "" Then nvar.jsname = RemoveSuffix(nvar.name)
+    If nvar.jsname = "" Then
+        nvar.jsname = RemoveSuffix(nvar.name)
+        bvar.jsname = nvar.jsname
+    End If
+    If IsJSReservedWord(nvar.jsname) Then
+        nvar.jsname = nvar.jsname + "_" + GenJSName$
+        bvar.jsname = nvar.jsname
+    End If
+
     vlist(vcount) = nvar
 End Sub
+
+Function NormalizeType$ (itype As String)
+    ' Replace non-underscore prefixed type names with the underscore version
+    Dim otype As String
+
+    If itype = "BIT" Then
+        otype = "_BIT"
+    ElseIf itype = "_UNSIGNED BIT" Then
+        otype = "_UNSIGNED _BIT"
+    ElseIf itype = "BYTE" Then
+        otype = "_BYTE"
+    ElseIf itype = "_UNSIGNED BYTE" Then
+        otype = "_UNSIGNED _BYTE"
+    ElseIf itype = "INTEGER64" Then
+        otype = "_INTEGER64"
+    ElseIf itype = "_UNSIGNED INTEGER64" Then
+        otype = "_UNSIGNED _INTEGER64"
+    ElseIf itype = "FLOAT" Then
+        otype = "_FLOAT"
+    ElseIf itype = "OFFSET" Then
+        otype = "_OFFSET"
+    ElseIf itype = "_UNSIGNED OFFSET" Then
+        otype = "_UNSIGNED _OFFSET"
+    Else
+        otype = itype
+    End If
+
+    NormalizeType = otype
+End Function
 
 Sub AddType (t As QBType)
     Dim tcount: tcount = UBound(types) + 1
@@ -2874,6 +3359,17 @@ Function RemoveSuffix$ (vname As String)
         End If
     Wend
     RemoveSuffix = Left$(vname, i)
+End Function
+
+Function IsJSReservedWord (vname As String)
+    Dim As Integer found, i
+    For i = 1 To UBound(jsReservedWords)
+        If jsReservedWords(i) = vname Then
+            found = True
+            Exit For
+        End If
+    Next i
+    IsJSReservedWord = found
 End Function
 
 Function DataTypeFromName$ (vname As String)
@@ -2997,10 +3493,14 @@ Function MethodJS$ (m As Method, prefix As String)
     For i = 1 To Len(m.name)
         c = Mid$(m.name, i, 1)
         a = Asc(c)
-        ' uppercase, lowercase, numbers, - and .
-        If (a >= 65 And a <= 90) Or (a >= 97 And a <= 122) Or _
-           (a >= 48 And a <= 57) Or _
-           a = 95 Or a = 46 Then
+
+        If a = 46 Then
+            ' replace period with underscore
+            jsname = jsname + "_"
+
+        ElseIf (a >= 65 And a <= 90) Or (a >= 97 And a <= 122) Or _
+           (a >= 48 And a <= 57) Or a = 95 Then
+            ' uppercase, lowercase, numbers, and -
             jsname = jsname + c
         End If
     Next i
@@ -3027,15 +3527,80 @@ Function GXMethodJS$ (mname As String)
         c = Mid$(mname, i, 1)
         a = Asc(c)
         ' uppercase, lowercase, numbers, - and .
-        If (a >= 65 And a <= 90) Or (a >= 97 And a <= 122) Or _
-           (a >= 48 And a <= 57) Or _
-           a = 95 Or a = 46 Then
+        If (a >= 65 And a <= 90) Or (a >= 97 And a <= 122) Or (a >= 48 And a <= 57) Or a = 95 Or a = 46 Then
             jsname = jsname + c
         End If
     Next i
 
     GXMethodJS = jsname
 End Function
+
+Sub InitJSReservedWords
+    jsReservedWords(1) = "abstract"
+    jsReservedWords(2) = "arguments"
+    jsReservedWords(3) = "await"
+    jsReservedWords(4) = "boolean"
+    jsReservedWords(5) = "break"
+    ' byte, case
+    jsReservedWords(6) = "catch"
+    jsReservedWords(7) = "char"
+    jsReservedWords(8) = "class"
+    ' const, continue
+    jsReservedWords(9) = "debugger"
+    jsReservedWords(10) = "default"
+    jsReservedWords(11) = "delete"
+    ' do, double, else
+    jsReservedWords(12) = "enum"
+    jsReservedWords(13) = "eval"
+    ' export
+    jsReservedWords(14) = "extends"
+    jsReservedWords(15) = "false"
+    jsReservedWords(16) = "final"
+    jsReservedWords(17) = "finally"
+    ' float, for, function, goto, if
+    jsReservedWords(18) = "implements"
+    ' import, in
+    jsReservedWords(19) = "instanceof"
+    ' int
+    jsReservedWords(20) = "interface"
+    ' let, long
+    jsReservedWords(21) = "native"
+    jsReservedWords(22) = "new"
+    jsReservedWords(23) = "null"
+    jsReservedWords(24) = "package"
+    jsReservedWords(25) = "private"
+    jsReservedWords(26) = "protected"
+    jsReservedWords(27) = "public"
+    ' return, short, static
+    jsReservedWords(28) = "super"
+    jsReservedWords(29) = "switch"
+    jsReservedWords(30) = "synchronized"
+    jsReservedWords(31) = "this"
+    jsReservedWords(32) = "throw"
+    jsReservedWords(33) = "throws"
+    jsReservedWords(34) = "transient"
+    jsReservedWords(35) = "true"
+    jsReservedWords(36) = "try"
+    jsReservedWords(37) = "typeof"
+    jsReservedWords(38) = "var"
+    jsReservedWords(39) = "void"
+    jsReservedWords(40) = "volitile"
+    ' while
+    jsReservedWords(41) = "with"
+    jsReservedWords(42) = "yield"
+    jsReservedWords(43) = "window"
+    jsReservedWords(44) = "document"
+    jsReservedWords(45) = "location"
+    jsReservedWords(46) = "global"
+    jsReservedWords(47) = "history"
+    jsReservedWords(48) = "setTimeout"
+    jsReservedWords(49) = "setInterval"
+    jsReservedWords(50) = "alert"
+    jsReservedWords(51) = "confirm"
+    jsReservedWords(52) = "prompt"
+    jsReservedWords(53) = "require"
+    jsReservedWords(54) = "process"
+End Sub
 
 Sub InitGX
     AddSystemType "GXPOSITION", "x:LONG,y:LONG"
@@ -3207,6 +3772,8 @@ Sub InitGX
     AddGXMethod "SUB", "GXEntityCreate", False
     AddGXMethod "FUNCTION", "GXEntityVisible", False
     AddGXMethod "SUB", "GXEntityVisible", False
+    AddGXMethod "FUNCTION", "GXEntityMapLayer", False
+    AddGXMethod "SUB", "GXEntityMapLayer", False
     AddGXMethod "SUB", "GXEntityMove", False
     AddGXMethod "SUB", "GXEntityPos", False
     AddGXMethod "SUB", "GXEntityVX", False
@@ -3218,6 +3785,8 @@ Sub InitGX
     AddGXMethod "FUNCTION", "GXEntityWidth", False
     AddGXMethod "FUNCTION", "GXEntityHeight", False
     AddGXMethod "SUB", "GXEntityFrameNext", False
+    AddGXMethod "FUNCTION", "GXEntityFrames", False
+    AddGXMethod "SUB", "GXEntityFrames", False
     AddGXMethod "SUB", "GXEntityFrameSet", False
     AddGXMethod "SUB", "GXEntityType", False
     AddGXMethod "FUNCTION", "GXEntityType", False
@@ -3286,7 +3855,7 @@ Sub InitGX
     AddGXMethod "SUB", "GXMapIsometric", False
     AddGXMethod "SUB", "GXSpriteDraw", False
     AddGXMethod "SUB", "GXSpriteDrawScaled", False
-    AddGXMethod "SUB", "GXTilesetCreate", False
+    AddGXMethod "SUB", "GXTilesetCreate", True
     AddGXMethod "SUB", "GXTilesetReplaceImage", False
     AddGXMethod "SUB", "GXTilesetLoad", False
     AddGXMethod "SUB", "GXTilesetSave", False
@@ -3345,35 +3914,63 @@ Sub InitGX
 End Sub
 
 Sub InitQBMethods
+    ' QB64 Constants
+    ' ----------------------------------------------------------
+    AddQBConst "_KEEPBACKGROUND"
+    AddQBConst "_ONLYBACKGROUND"
+    AddQBConst "_FILLBACKGROUND"
+    AddQBConst "_OFF"
+    AddQBConst "_STRETCH"
+    AddQBConst "_SQUAREPIXELS"
+    AddQBConst "_SMOOTH"
+
     ' QB64 Methods
     ' ----------------------------------------------------------
     AddQBMethod "FUNCTION", "_Alpha", False
     AddQBMethod "FUNCTION", "_Alpha32", False
     AddQBMethod "FUNCTION", "_Acos", False
     AddQBMethod "FUNCTION", "_Acosh", False
+    AddQBMethod "FUNCTION", "_Arccot", False
+    AddQBMethod "FUNCTION", "_Arccsc", False
+    AddQBMethod "FUNCTION", "_Arcsec", False
     AddQBMethod "FUNCTION", "_Atanh", False
     AddQBMethod "FUNCTION", "_Asin", False
     AddQBMethod "FUNCTION", "_Asinh", False
     AddQBMethod "FUNCTION", "_Atan2", False
     AddQBMethod "FUNCTION", "_AutoDisplay", False
     AddQBMethod "SUB", "_AutoDisplay", False
+    AddQBMethod "FUNCTION", "_BackgroundColor", False
     AddQBMethod "FUNCTION", "_Blue", False
     AddQBMethod "FUNCTION", "_Blue32", False
+    AddQBMethod "FUNCTION", "_CapsLock", False
     AddQBMethod "FUNCTION", "_Ceil", False
+    AddQBMethod "FUNCTION", "_CommandCount", False
     AddQBMethod "FUNCTION", "_CopyImage", False
     AddQBMethod "FUNCTION", "_Cosh", False
+    AddQBMethod "FUNCTION", "_Cot", False
     AddQBMethod "FUNCTION", "_Coth", False
+    AddQBMethod "FUNCTION", "_Csc", False
     AddQBMethod "FUNCTION", "_Csch", False
     AddQBMethod "FUNCTION", "_CWD$", False
     AddQBMethod "FUNCTION", "_D2G", False
     AddQBMethod "FUNCTION", "_D2R", False
+    AddQBMethod "FUNCTION", "_DefaultColor", False
+    AddQBMethod "FUNCTION", "_Deflate", False
     AddQBMethod "SUB", "_Delay", True
+    AddQBMethod "FUNCTION", "_DesktopHeight", False
+    AddQBMethod "FUNCTION", "_DesktopWidth", False
     AddQBMethod "FUNCTION", "_Dest", False
     AddQBMethod "SUB", "_Dest", False
+    AddQBMethod "FUNCTION", "_Dir", False
     AddQBMethod "FUNCTION", "_DirExists", False
     AddQBMethod "FUNCTION", "_Display", False
     AddQBMethod "SUB", "_Display", False
-    AddQBMethod "FUNCTION", "_FileExists", False
+    AddQBMethod "SUB", "_Echo", False
+    AddQBMethod "FUNCTION", "_EnvironCount", False
+    AddQBMethod "FUNCTION", "_FileExists", True
+    AddQBMethod "FUNCTION", "_Font", False
+    AddQBMethod "SUB", "_Font", False
+    AddQBMethod "FUNCTION", "_FontHeight", False
     AddQBMethod "FUNCTION", "_FontWidth", False
     AddQBMethod "SUB", "_FreeImage", False
     AddQBMethod "SUB", "_FullScreen", False
@@ -3384,20 +3981,28 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "_Green32", False
     AddQBMethod "FUNCTION", "_Height", False
     AddQBMethod "FUNCTION", "_Hypot", False
+    AddQBMethod "FUNCTION", "_Inflate", False
     AddQBMethod "FUNCTION", "_InStrRev", False
     AddQBMethod "SUB", "_Limit", True
     AddQBMethod "SUB", "_KeyClear", False
     AddQBMethod "FUNCTION", "_KeyDown", False
     AddQBMethod "FUNCTION", "_KeyHit", False
+    AddQBMethod "FUNCTION", "_LoadFont", True
     AddQBMethod "FUNCTION", "_LoadImage", True
     AddQBMethod "FUNCTION", "_MouseButton", False
     AddQBMethod "FUNCTION", "_MouseInput", False
+    AddQBMethod "SUB", "_MouseShow", False
+    AddQBMethod "SUB", "_MouseHide", False
+    AddQBMethod "FUNCTION", "_MouseWheel", False
     AddQBMethod "FUNCTION", "_MouseX", False
     AddQBMethod "FUNCTION", "_MouseY", False
     AddQBMethod "FUNCTION", "_NewImage", False
+    AddQBMethod "FUNCTION", "_NumLock", False
     AddQBMethod "FUNCTION", "_OS$", False
     AddQBMethod "FUNCTION", "_Pi", False
     AddQBMethod "SUB", "_PaletteColor", False
+    AddQBMethod "FUNCTION", "_PrintMode", False
+    AddQBMethod "SUB", "_PrintMode", False
     AddQBMethod "SUB", "_PrintString", False
     AddQBMethod "FUNCTION", "_PrintWidth", False
     AddQBMethod "SUB", "_PutImage", False
@@ -3416,6 +4021,11 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "_RGBA32", False
     AddQBMethod "FUNCTION", "_Round", False
     AddQBMethod "FUNCTION", "_ScreenExists", False
+    AddQBMethod "SUB", "_ScreenMove", False
+    AddQBMethod "FUNCTION", "_ScreenX", False
+    AddQBMethod "FUNCTION", "_ScreenY", False
+    AddQBMethod "FUNCTION", "_ScrollLock", False
+    AddQBMethod "FUNCTION", "_Sec", False
     AddQBMethod "FUNCTION", "_Sech", False
     AddQBMethod "FUNCTION", "_Setbit", False
     AddQBMethod "FUNCTION", "_Shl", False
@@ -3434,6 +4044,7 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "_Strcmp", False
     AddQBMethod "FUNCTION", "_Stricmp", False
     AddQBMethod "FUNCTION", "_Tanh", False
+    AddQBMethod "FUNCTION", "_Title", False
     AddQBMethod "SUB", "_Title", False
     AddQBMethod "FUNCTION", "_Togglebit", False
     AddQBMethod "FUNCTION", "_Trim", False
@@ -3462,6 +4073,9 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "Cvl", False
     AddQBMethod "FUNCTION", "Date$", False
     AddQBMethod "SUB", "Draw", False
+    AddQBMethod "FUNCTION", "Environ", False
+    AddQBMethod "SUB", "Environ", False
+    AddQBMethod "SUB", "Error", False
     AddQBMethod "FUNCTION", "EOF", False
     AddQBMethod "FUNCTION", "Exp", False
     AddQBMethod "SUB", "Files", True
@@ -3478,9 +4092,10 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "Left$", False
     AddQBMethod "FUNCTION", "LCase$", False
     AddQBMethod "FUNCTION", "Len", False
-    AddQBMethod "FUNCTION", "LOF", False
     AddQBMethod "SUB", "Line", False
+    AddQBMethod "FUNCTION", "Loc", False
     AddQBMethod "SUB", "Locate", False
+    AddQBMethod "FUNCTION", "LOF", False
     AddQBMethod "FUNCTION", "Log", False
     AddQBMethod "FUNCTION", "LTrim$", False
     AddQBMethod "SUB", "Kill", False
@@ -3490,8 +4105,9 @@ Sub InitQBMethods
     AddQBMethod "FUNCTION", "Mkl$", False
     AddQBMethod "SUB", "Name", False
     AddQBMethod "FUNCTION", "Oct$", False
-    AddQBMethod "SUB", "Open", False
+    AddQBMethod "SUB", "Open", True
     AddQBMethod "SUB", "Paint", False
+    AddQBMethod "SUB", "Play", True
     AddQBMethod "FUNCTION", "Point", False
     AddQBMethod "FUNCTION", "Pos", False
     AddQBMethod "SUB", "PReset", False
@@ -3505,12 +4121,14 @@ Sub InitQBMethods
     AddQBMethod "SUB", "Read", False
     AddQBMethod "SUB", "RmDir", False
     AddQBMethod "FUNCTION", "Rnd", False
+    AddQBMethod "FUNCTION", "Screen", False
     AddQBMethod "SUB", "Screen", False
     AddQBMethod "FUNCTION", "Seek", False
     AddQBMethod "SUB", "Seek", False
     AddQBMethod "FUNCTION", "Sgn", False
     AddQBMethod "FUNCTION", "Sin", False
     AddQBMethod "SUB", "Sleep", True
+    AddQBMethod "SUB", "Sound", True
     AddQBMethod "FUNCTION", "Space", False
     AddQBMethod "FUNCTION", "String", False
     AddQBMethod "FUNCTION", "Sqr", False
@@ -3537,7 +4155,5 @@ Sub InitQBMethods
     AddSystemType "FETCHRESPONSE", "ok:INTEGER,status:INTEGER,statusText:STRING,text:STRING"
     AddQBMethod "FUNCTION", "Fetch", True
     AddQBMethod "SUB", "Fetch", True
-    AddQBMethod "FUNCTION", "FromJSON", False
-    AddQBMethod "FUNCTION", "ToJSON", False
 
 End Sub

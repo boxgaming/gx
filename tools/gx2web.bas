@@ -31,8 +31,8 @@ ConvertSource
 '       does not depend on the project folder structure
 CopyFolder "img", "images"
 CopyFolder "snd", "sounds"
-'CopyFolder "qb64", "qb64"
-ConvertMaps
+CopyFolder "map", "maps"
+'ConvertMaps - deprecated as of 0.6.0 - web uses same map format now
 CopyWebFramework
 
 System
@@ -114,7 +114,7 @@ Sub CopyWebFramework
     $If WIN Then
         Shell "xcopy /E " + Chr$(32) + webDir + Chr$(32) + " " + Chr$(32) + outputDir + Chr$(32)
     $Else
-        Shell "cp -R " + Chr$(32) + webDir + Chr$(32) + " " + Chr$(32) + outputDir + Chr$(32)
+        Shell "cp -R " + Chr$(32) + webDir + "/*" + Chr$(32) + " " + Chr$(32) + outputDir + Chr$(32)
     $End If
 
     ' Copy the default font images
