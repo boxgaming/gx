@@ -45,7 +45,8 @@ Sub CreatePlayer
 
     GXEntityAnimate player, 3, 0
     GXEntityPos player, 100, 100
-    GXEntityCollisionOffset player, 4, 12, 4, 0
+    GXEntityCollisionOffset player, 4, 12, 4, 1
+    GXEntityMapLayer player, 3
     GXSceneFollowEntity player, GXSCENE_FOLLOW_ENTITY_CENTER
 End Sub
 

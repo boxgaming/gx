@@ -177,14 +177,6 @@ $If GXBM = UNDEFINED Then
         GXEntityVisible = Not __gx_entities(eid).hidden
     End Function
 
-    'Sub GXEntityHide (eid As Integer)
-    '    __gx_entities(eid).hidden = GX_TRUE '1
-    'End Sub
-
-    'Sub GXEntityShow (eid As Integer)
-    '    __gx_entities(eid).hidden = GX_FALSE '0
-    'End Sub
-
     Sub __GX_EntityDraw (ent As GXEntity)
         If ent.hidden Then Exit Sub
         Dim x, y As Long
@@ -198,6 +190,15 @@ $If GXBM = UNDEFINED Then
         GXSpriteDraw ent.image, x, y, ent.spriteSeq, ent.spriteFrame, ent.width, ent.height, __gx_scene.image
         If GXDebug Then __GX_DebugEntity ent, x, y
     End Sub
+
+    Sub GXEntityMapLayer (eid As Integer, layer As Integer)
+        __gx_entities(eid).mapLayer = layer
+    End Sub
+
+    Function GXEntityMapLayer% (eid As Integer)
+        GXEntityMapLayer = __gx_entities(eid).mapLayer
+    End Function
+
 
     Sub GXEntityMove (eid As Integer, x As Long, y As Long)
         __gx_entities(eid).x = __gx_entities(eid).x + x
@@ -388,15 +389,15 @@ $If GXBM = UNDEFINED Then
         If di.inputType = GXDEVICE_BUTTON Then
             $If WIN Then
                 If _Button(di.inputId) = di.inputValue Then
-                    result = GX_TRUE
+                result = GX_TRUE
                 End If
             $Else
                 If di.deviceType = GXDEVICE_KEYBOARD Then
-                result = __GX_DeviceKeyDown(di.inputId)
+                    result = __GX_DeviceKeyDown(di.inputId)
                 Else
-                If _Button(di.inputId) = di.inputValue Then
-                result = GX_TRUE
-                End If
+                    If _Button(di.inputId) = di.inputValue Then
+                        result = GX_TRUE
+                    End If
                 End If
             $End If
 
@@ -411,18 +412,18 @@ $If GXBM = UNDEFINED Then
 
     $If LINUX OR MAC Then
         Function __GX_DeviceKeyDown% (inputId As Integer)
-        Dim k As KeyEntry
-        k = __gx_keymap(inputId)
+            Dim k As KeyEntry
+            k = __gx_keymap(inputId)
 
-        Dim result As Integer
-        result = GX_FALSE
-        If _KeyDown(k.value) Then
-        result = GX_TRUE
-        ElseIf k.shift <> 0 Then
-        If _KeyDown(k.shift) Then result = GX_TRUE
-        End If
+            Dim result As Integer
+            result = GX_FALSE
+            If _KeyDown(k.value) Then
+                result = GX_TRUE
+            ElseIf k.shift <> 0 Then
+                If _KeyDown(k.shift) Then result = GX_TRUE
+            End If
 
-        __GX_DeviceKeyDown = result
+            __GX_DeviceKeyDown = result
         End Function
     $End If
 
@@ -778,6 +779,21 @@ $If GXBM = UNDEFINED Then
         'Call out to any custom screen drawing
         __GX_CustomDrawEvent GXEVENT_DRAWBG
 
+        ' Initialize the renderable entities
+        ReDim __gx_entities_active(0) As Integer
+        Dim ent As GXEntity
+        For ei = 1 To UBound(__gx_entities) ' _entities.length; ei++) {
+            ent = __gx_entities(ei)
+            If Not ent.screen Then ') {
+                If __GX_RectCollide(ent.x, ent.y, ent.width, ent.height, GXSceneX, GXSceneY, GXSceneWidth, GXSceneHeight) Then
+                    Dim ecount As Integer
+                    ecount = UBound(__gx_entities_active) + 1
+                    ReDim _Preserve __gx_entities_active(ecount) As Integer
+                    __gx_entities_active(ecount) = ei
+                End If
+            End If
+        Next ei
+
         ' Draw the map tiles
         GXMapDraw
         If GXDebug Then __GX_DebugMapTile
@@ -786,22 +802,25 @@ $If GXBM = UNDEFINED Then
         __GX_CustomDrawEvent GXEVENT_DRAWMAP
 
         ' Draw the entities
-        Dim e As GXEntity
-        For ei = 1 To __gx_entity_count
-            e = __gx_entities(ei)
-            If e.screen = 0 Then
-                If __GX_RectCollide(e.x, e.y, e.width, e.height, GXSceneX, GXSceneY, GXSceneWidth, GXSceneHeight) Then
-                    'Print ei, e.image
-                    'Dim a: Input a
-                    __GX_EntityDraw e
-                End If
-            End If
-            If e.animate > 0 Then
-                If frame Mod (GXFrameRate / e.animate) = 0 Then
-                    GXEntityFrameNext ei
-                End If
-            End If
-        Next ei
+        __GX_DrawEntityLayer 0
+
+        ' Draw the entities
+        'Dim e As GXEntity
+        'For ei = 1 To __gx_entity_count
+        '    e = __gx_entities(ei)
+        '    If e.screen = 0 Then
+        '        If __GX_RectCollide(e.x, e.y, e.width, e.height, GXSceneX, GXSceneY, GXSceneWidth, GXSceneHeight) Then
+        '            'Print ei, e.image
+        '            'Dim a: Input a
+        '            __GX_EntityDraw e
+        '        End If
+        '    End If
+        '    If e.animate > 0 Then
+        '        If frame Mod (GXFrameRate / e.animate) = 0 Then
+        '            GXEntityFrameNext ei
+        '        End If
+        '   End If
+        'Next ei
 
         ' Draw the screen entities which should appear on top of the other game entities
         ' and have a fixed position
@@ -825,6 +844,26 @@ $If GXBM = UNDEFINED Then
         _Blend
         __GX_CustomEvent GXEVENT_PAINTAFTER
     End Sub
+
+    Sub __GX_DrawEntityLayer (layer As Integer)
+        Dim As Integer frame, i, ei
+        Dim As GXEntity e
+        frame = __gx_scene.frame Mod GXFrameRate + 1
+
+        For i = 1 To UBound(__gx_entities_active)
+            ei = __gx_entities_active(i)
+            e = __gx_entities(ei)
+            If e.mapLayer = layer Then
+                __GX_EntityDraw e
+                If e.animate > 0 Then
+                    If frame Mod (GXFrameRate / e.animate) = 0 Then
+                        GXEntityFrameNext ei
+                    End If
+                End If
+            End If
+        Next i
+    End Sub
+
 
     ' Moves the scene position by the number of pixels specified by the dx and dy values.
     ' The default position for a scene is (0,0). Negative x and y values are valid.
@@ -1313,6 +1352,7 @@ $If GXBM = UNDEFINED Then
                 Next row
 
             End If ' layer is not hidden
+            __GX_DrawEntityLayer li
         Next li
 
         ' Perform tile animation
@@ -2571,32 +2611,32 @@ $If GXBM = UNDEFINED Then
             $If LINUX OR MAC Then
                 ' No device input found, as a workaround let's loop through the key map looking for a keydown
                 For i = UBound(__gx_keymap) To 1 Step -1
-                Dim keyIsDown As Integer, inputId As Integer
-                keyIsDown = GX_FALSE
-                If __gx_keymap(i).value <> 0 Then
-                'If i > 29 Then
-                '    Print i; __gx_keymap(i).value
-                '    Dim x: Input x
-                'End If
-                If _KeyDown(__gx_keymap(i).value) Then
-                keyIsDown = GX_TRUE
-                inputId = i
-                ElseIf __gx_keymap(i).shift <> 0 Then
-                If _KeyDown(__gx_keymap(i).shift) Then
-                keyIsDown = GX_TRUE
-                inputId = i
-                End If
-                End If
-                End If
-                If keyIsDown Then
-                di.deviceId = GXDEVICE_KEYBOARD
-                di.deviceType = __GX_DeviceTypeName(GXDEVICE_KEYBOARD)
-                di.inputType = GXDEVICE_BUTTON
-                di.inputId = inputId
-                di.inputValue = GX_TRUE
-                found = 1
-                Exit Do
-                End If
+                    Dim keyIsDown As Integer, inputId As Integer
+                    keyIsDown = GX_FALSE
+                    If __gx_keymap(i).value <> 0 Then
+                        'If i > 29 Then
+                        '    Print i; __gx_keymap(i).value
+                        '    Dim x: Input x
+                        'End If
+                        If _KeyDown(__gx_keymap(i).value) Then
+                            keyIsDown = GX_TRUE
+                            inputId = i
+                        ElseIf __gx_keymap(i).shift <> 0 Then
+                            If _KeyDown(__gx_keymap(i).shift) Then
+                                keyIsDown = GX_TRUE
+                                inputId = i
+                            End If
+                        End If
+                    End If
+                    If keyIsDown Then
+                        di.deviceId = GXDEVICE_KEYBOARD
+                        di.deviceType = __GX_DeviceTypeName(GXDEVICE_KEYBOARD)
+                        di.inputType = GXDEVICE_BUTTON
+                        di.inputId = inputId
+                        di.inputValue = GX_TRUE
+                        found = 1
+                        Exit Do
+                    End If
                 Next i
             $End If
         Loop Until found

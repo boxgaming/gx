@@ -253,6 +253,7 @@ $If GXBI = UNDEFINED Then
         jumpstart As Integer '    used for applying gravity
         vx As Double '            move vector x
         vy As Double '            move vector y
+        mapLayer As Integer '     optional map layer to enable rendering entities under map tiles
     End Type
 
     Type GXBackground
@@ -361,6 +362,7 @@ $If GXBI = UNDEFINED Then
 
     Dim Shared __gx_entity_count As Integer
     ReDim Shared __gx_entities(0) As GXEntity
+    ReDim Shared __gx_entities_active(0) As Integer
 
     ReDim Shared __gx_fonts(2) As GXFont
     ReDim Shared __gx_font_charmap(256, 2) As GXPosition
@@ -393,8 +395,8 @@ $If GXBI = UNDEFINED Then
     ' Remove this section if keyboard device input fixed for linux and macos
     $If LINUX OR MAC Then
         Type KeyEntry
-        value As Long
-        shift As Long
+            value As Long
+            shift As Long
         End Type
         Dim Shared __gx_keymap(350) As KeyEntry
         __gx_keymap(GXKEY_ESC).value = 27
