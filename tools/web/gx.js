@@ -1006,7 +1006,7 @@ var GX = new function() {
                 var tmpDir = _vfs.getNode("_gxtmp", _vfs.rootDirectory());
                 if (!tmpDir) { tmpDir = _vfs.createDirectory("_gxtmp", _vfs.rootDirectory()); }
                 file = _vfs.createFile(crypto.randomUUID(), tmpDir);  
-                var res = await fetch(filename);
+                var res = await fetch(filename, { signal: AbortSignal.timeout(30000) });
                 _vfs.writeData(file, await res.arrayBuffer());
                 await _mapLoadV2(_vfs.fullPath(file));
                 _vfs.removeFile(file);

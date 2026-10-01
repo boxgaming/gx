@@ -3757,7 +3757,7 @@ var QB = new function() {
             fetchRes.text = vfs.readText(file);
         }
         else {
-            var response = await fetch(url);
+            var response = await fetch(url, { signal: AbortSignal.timeout(30000) });
             var responseText = await(response.text());
             fetchRes.ok = response.ok;
             fetchRes.status = response.status;
